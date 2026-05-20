@@ -11,6 +11,17 @@
 
 export const cache = new Map()
 
+// Global change listeners — notified on every load-state transition so
+// React components (e.g. the 3D viewer's loading indicator) can re-render.
+const changeListeners = new Set()
+export function onCacheChange(fn) {
+  changeListeners.add(fn)
+  return () => changeListeners.delete(fn)
+}
+export function notifyCacheChange() {
+  for (const fn of changeListeners) fn()
+}
+
 export function getModelStatus(url) {
   if (!url) return 'no-model'
   return cache.get(url)?.state ?? 'no-model'
