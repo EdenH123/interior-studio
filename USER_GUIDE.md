@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-20_  <!-- lighting system: placed lights + 3D toolbar -->
+_Last updated: 2026-05-20_  <!-- walkthrough (first-person) mode -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -492,6 +492,39 @@ Click a lamp on the 2D canvas to select it. The right panel shows:
 - Up to **8 active lights** (on = true, master lights = on) are rendered in full. If you place more than 8, the extra ones are silenced and a warning toast appears. Turn some off via the Power toggle to re-enable others.
 - Shadow resolution is 512 × 512 per placed light. The directional sun uses 2048 × 2048.
 
+## Walkthrough mode
+
+When the 3D pane is open, a **Walk** button appears in the top bar next to the **3D** button. Click it to enter first-person walkthrough mode — you'll see your room from eye level as if you were standing inside it.
+
+### Entering walkthrough
+
+1. Enable 3D with the **3D** button.
+2. Click **Walk** (the button turns green).
+3. Click anywhere in the 3D view to lock the mouse cursor.
+
+A crosshair appears in the centre of the screen and the orbit-camera hint is replaced by the HUD:
+> `WASD to move · Shift to run · Space to jump · Esc to exit`
+
+### Moving around
+
+| Control | Action |
+|---|---|
+| **W / ↑** | Walk forward |
+| **S / ↓** | Walk backward |
+| **A / ←** | Strafe left |
+| **D / →** | Strafe right |
+| **Shift** (hold) | Run (double speed) |
+| **Space** | Jump |
+| **Mouse** | Look around |
+
+The camera stays at eye height (1.65 m). Gravity pulls you back to the floor after a jump. Wall collision stops you from walking through walls; if you press diagonally into a corner you'll slide along the face instead of sticking.
+
+### Exiting walkthrough
+
+Press **Esc** at any time. The cursor is released, the **Walk** button turns grey, and the orbit camera is restored. You can also click **Walk** again from the toolbar to toggle it off.
+
+> **Note:** The lighting toolbar (time of day, ambient slider) is hidden while walkthrough is active. Exit walkthrough to adjust lighting, then re-enter.
+
 ## AI design assistant
 
 Click **AI** in the top bar to open a chat panel on the right side (it
@@ -675,6 +708,11 @@ your cursor position in metres.
 | Right-click (empty canvas, while drawing) | Cancel the chain |
 | 3D view: left-drag | Orbit camera |
 | 3D view: right-drag | Pan camera |
+| Walk button (toolbar) | Toggle first-person walkthrough mode |
+| `W/A/S/D` or arrow keys (walkthrough) | Move forward/left/back/right |
+| `Shift` (walkthrough) | Run |
+| `Space` (walkthrough) | Jump |
+| `Esc` (walkthrough) | Exit walkthrough, release cursor |
 
 ## Frequently asked
 

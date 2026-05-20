@@ -100,7 +100,9 @@ interior-studio/
 │   │       ├── furnitureModelCache.js # pure-JS module: cache + getModelStatus + isModelLoaded + onceModelLoaded (no three import; safe to use from PropertiesPanel)
 │   │       ├── furnitureModels.js     # three-side helpers: GLTFLoader, cloneLoadedModel (deep clone materials), fitToBox; re-exports cache getters
 │   │       ├── selectionHighlight.js # applySelectionHighlight (traverse-based) + setObjectEmissive
-│   │       └── picking.js       # attachPicking — raycaster (recursive) + parent walk + click-vs-drag guard
+│   │       ├── picking.js       # attachPicking — raycaster (recursive) + parent walk + click-vs-drag guard
+│   │       ├── walkthroughCollision.js  # pure 2D ray-segment math for wall collision: raySegmentIntersect + rayHitsWalls (no THREE import)
+│   │       └── walkthroughCollision.test.js
 │   ├── hooks/
 │   │   ├── useElementSize.js    # ResizeObserver hook for fluid stage sizing
 │   │   ├── useViewport.js       # scale/pan state, wheel-zoom-around-cursor, drag-pan, client→world helper
@@ -110,6 +112,7 @@ interior-studio/
 │   │   ├── useOpeningDrop.js    # sidebar→wall drop handlers (wall-snap within 28 screen px, addOpening on drop, toast on rejection)
 │   │   ├── useProjectIO.js      # toolbar export/import flow: exportPng, exportJson (.studio.json save), openJson (file picker → validate → confirm → loadProject)
 │   │   ├── useUndoRedo.js       # reactive read of the zundo temporal store (canUndo/canRedo + undo/redo actions)
+│   │   ├── useWalkthrough.js    # PointerLockControls hook — physics (gravity/jump/wall-collision) wired to stateRef.current.onFrame
 │   │   ├── useApiKey.js         # sessionStorage-backed [key, setKey] for the Anthropic API key — never persisted
 │   │   ├── useAiProposalSync.js # watches the latest assistant message; parses ```json → validates → diffs → setAiProposal; returns helpers for the panel UI
 │   │   └── useThree.js          # the only file outside viewer3d/ that imports `three`; owns scene/camera/renderer/controls/RAF/resize, reconciles walls + furniture + rooms from the store via useEffect
@@ -122,7 +125,9 @@ interior-studio/
 │   │       ├── roomsSlice.js
 │   │       ├── underlaySlice.js
 │   │       ├── viewSlice.js     # show3d + drawStart
-│   │       └── uiSlice.js       # selection + dragGhost (now carries kind/wallId/position) + toast
+│   │       ├── uiSlice.js       # selection + dragGhost (now carries kind/wallId/position) + toast
+│   │       ├── lightingSlice.js # lightsOn + timeOfDay + ambientStrength — persisted, not in undo
+│   │       └── walkthroughSlice.js  # walkthrough bool — NOT persisted, NOT in undo history
 │   ├── App.jsx                  # root layout: Toolbar + Sidebar + Canvas + (PropertiesPanel ↔ AiPanel) + Toast
 │   ├── index.css                # Tailwind import + full-height reset
 │   ├── test/
@@ -369,6 +374,15 @@ interior-studio/
   - `PropertiesPanel.jsx` routes `type.startsWith('lighting:')` furniture selections to `LightingProps` instead of `FurnitureProps`.
   - Tests: `+27` (colorTemp × 9, lightingSlice × 7, reconcileLights × 11). 238 total passing.
 
+- [x] Walkthrough (first-person) mode (2026-05-20)
+  - **Walk button** in Toolbar (visible only when 3D is on): calls `toggleWalkthrough`; emerald-green when active.
+  - `walkthroughSlice.js` — `walkthrough: bool` + `setWalkthrough` + `toggleWalkthrough`. NOT persisted (boots in orbit), NOT in undo history.
+  - `walkthroughCollision.js` — pure 2D ray-segment math: `raySegmentIntersect(pos, dir, A, B, maxDist)` and `rayHitsWalls(posXZ, dirXZ, walls, maxDist)` converting Konva wall coords to Three.js units (× 0.02). No Three.js dependency.
+  - `useWalkthrough(stateRef, active)` hook — activates when `active` is true; disables OrbitControls, creates `PointerLockControls(camera, renderer.domElement)`, locks cursor, sets `camera.position.y = EYE_HEIGHT (1.65 m)`. WASD/arrow keys + Shift to run + Space to jump. Physics: gravity −12 m/s², jump 5 m/s, dt capped 50 ms. Wall collision in XZ via `rayHitsWalls`; blocked moves try X-only then Z-only (sliding). Escape fires `unlock` event → `setWalkthrough(false)`. Cleanup: removes event listeners, disposes PLC, re-enables OrbitControls.
+  - `useThree.js` extended: `stateRef.current.onFrame` slot (initially null); tick loop calls `stateRef.current.onFrame?.()` before `controls.update()`; hook now returns `stateRef`.
+  - `Viewer3D.jsx` updated: receives `stateRef` from `useThree`, passes to `useWalkthrough`. Tracks `ptrLocked` via `document.pointerlockchange`. Shows click-to-enter overlay when `walkthrough && !ptrLocked`; shows crosshair + HUD when `walkthrough && ptrLocked`; hides LightingToolbar and orbit hint while walkthrough is active.
+  - Tests: +17 (walkthroughSlice × 5, walkthroughCollision × 12). 255 total passing.
+
 ### 🚧 In Progress
 - (nothing active)
 
@@ -423,6 +437,9 @@ interior-studio/
 
 // Lighting slice (persisted, not in undo history)
 { lightsOn: bool, timeOfDay: 0-24, ambientStrength: 0-1 }
+
+// Walkthrough slice (NOT persisted, NOT in undo history)
+{ walkthrough: bool }
 
 // Layers (persisted, not in undo history)
 { walls: bool, furniture: bool, openings: bool, rooms: bool, underlay: bool, grid: bool }
@@ -736,6 +753,10 @@ interior-studio/
 - **Lighting items mount at ceiling or floor**: ceiling-lamp and pendant position their Group at `WALL_HEIGHT − height` (so top flush with ceiling); floor-lamp and table-lamp sit at y=0. The Three.js light itself is placed at `lightSourceY` — roughly the shade position — regardless of Group Y. The formula is encoded in `reconcileFurniture.js:lightSourceY()`.
 - **Active light cap**: only the first 8 `on=true` lighting items (in furniture array order) are given non-zero intensity. Items beyond the cap are kept in the scene but silenced. `useThree.js` watches the count and fires a toast when the user first exceeds 8. Reducing below 8 re-enables the previously-silenced lights on the next reconcile.
 - **Sun is reactive, not per-frame**: `applySunForTime(sunRef.current, timeOfDay)` runs in a dedicated `useEffect` on `lighting.timeOfDay`. Sun colour uses the Kelvin→RGB curve (2500 K at horizon, 6500 K at noon). Intensity tracks `max(0, elevation) * 1.2`, so the sun disappears below the horizon at night.
+- **Walkthrough uses an `onFrame` slot on `stateRef`**: `useThree` now returns `stateRef` (the stable ref holding `{ scene, camera, renderer, controls, … }`). `useWalkthrough` sets `stateRef.current.onFrame` to its per-frame physics callback when active; the RAF tick calls it before `controls.update()`. When inactive, the slot is null and the tick is a no-op. This avoids a second RAF loop and lets the walkthrough hook co-exist cleanly with the Three.js render loop.
+- **Walkthrough is NOT persisted and NOT in undo history**: it's a viewport mode, like `show3d`. The app always boots in orbit mode. `walkthroughSlice` keys are intentionally excluded from both `HISTORY_SLICE` and `persist.partialize`.
+- **PointerLockControls and OrbitControls coexist by disabling orbit while locked**: when walkthrough is active, `orbit.enabled = false`; on cleanup, it's restored. OrbitControls' `update()` returns early when disabled, so it won't fight with PLC for camera control.
+- **Wall collision in walkthrough is XZ-only**: `walkthroughCollision.js` works entirely in the XZ plane (no Y component). Walls are treated as infinitely tall 2D line segments. The sliding fallback tries X-only then Z-only movement so the player glides along walls instead of sticking.
 - **Shadows are always on** (once enabled): `renderer.shadowMap.enabled = true` is set once at mount and never toggled. Per-item `castShadow` on placed lights is controlled per-item from `LightingProps`. Turning off a light (intensity→0) doesn't toggle `castShadow` — Three.js ignores inactive lights' shadow maps automatically.
 - **Debugging discipline** (`.claude/skills/debugging-discipline/`): no work
   begins on a red build; never comment out broken code; `npm run build` after

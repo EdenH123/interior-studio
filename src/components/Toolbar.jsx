@@ -32,6 +32,8 @@ function persistedUnderlayMatches(dataUrl) {
 export default function Toolbar() {
   const show3d = useStore((s) => s.show3d)
   const toggle3d = useStore((s) => s.toggle3d)
+  const walkthrough = useStore((s) => s.walkthrough)
+  const toggleWalkthrough = useStore((s) => s.toggleWalkthrough)
   const aiPanelOpen = useStore((s) => s.aiPanelOpen)
   const toggleAiPanel = useStore((s) => s.toggleAiPanel)
   const underlay = useStore((s) => s.underlay)
@@ -122,6 +124,15 @@ export default function Toolbar() {
         }`}>
         {show3d ? '3D · on' : '3D'}
       </button>
+      {show3d && (
+        <button type="button" onClick={toggleWalkthrough} aria-pressed={walkthrough}
+          title="Walkthrough mode — WASD to move, Shift to run, Space to jump, Esc to exit"
+          className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
+            walkthrough ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
+          }`}>
+          Walk
+        </button>
+      )}
       <button type="button" onClick={toggleAiPanel} aria-pressed={aiPanelOpen}
         className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
           aiPanelOpen ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
