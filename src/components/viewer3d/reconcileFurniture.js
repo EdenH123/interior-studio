@@ -58,6 +58,11 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
 
     // ── mesh group ──────────────────────────────────────────────────────────
     const yOff = lightYOffset(f.type, f.height)
+    // tintColor is non-null only when the user has explicitly set a material
+    // override — it's null when the piece uses its catalog default color so
+    // the GLB's authored materials are left untouched.
+    const tintColor = f.material ? color : null
+
     let group = meshMap.get(f.id)
     if (!group) {
       group = new THREE.Group()
@@ -65,6 +70,7 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       group.userData.id = f.id
       group.userData.dims = { width: f.width, depth: f.depth, height: f.height }
       group.userData.color = color
+      group.userData.tintColor = tintColor
       group.userData.modelUrl = f.model ?? null
       scene.add(group)
       meshMap.set(f.id, group)
@@ -73,8 +79,10 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
     } else {
       const d = group.userData.dims
       const dimsChanged = !d || d.width !== f.width || d.depth !== f.depth || d.height !== f.height
+      const tintChanged = group.userData.tintColor !== tintColor
       group.userData.dims = { width: f.width, depth: f.depth, height: f.height }
-      if (dimsChanged) {
+      group.userData.tintColor = tintColor
+      if (dimsChanged || (tintChanged && group.userData.childKind === 'model')) {
         group.userData.color = color
         rebuildChild(group)
       } else if (group.userData.childKind === 'box') {
@@ -193,6 +201,7 @@ function populateLoadedModel(group) {
   })
   group.add(clone)
   group.userData.childKind = 'model'
+  applyTint(group)
   if (group.userData.highlighted) setObjectEmissive(clone, true)
 }
 
@@ -206,6 +215,24 @@ function clearChildren(group) {
     group.remove(child)
     disposeSubtree(child)
   }
+}
+
+// Tints every MeshStandardMaterial in the group's model child with the
+// override color stored in userData.tintColor. No-op when tintColor is null
+// (keeps the GLB's authored colors). Materials were already cloned per-instance
+// by cloneLoadedModel so changing one group's tint is isolated.
+function applyTint(group) {
+  const color = group.userData.tintColor
+  if (!color) return
+  group.traverse((node) => {
+    if (node === group) return
+    if (node.isMesh) {
+      const mats = Array.isArray(node.material) ? node.material : [node.material]
+      for (const mat of mats) {
+        if (mat.isMeshStandardMaterial) mat.color.set(color)
+      }
+    }
+  })
 }
 
 function disposeSubtree(obj) {

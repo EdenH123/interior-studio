@@ -111,6 +111,7 @@ function OpeningTile({ item }) {
 }
 
 function TileGlyph({ item }) {
+  if (item.type.startsWith('lighting:')) return <LightTileGlyph color={item.color} />
   const aspect = item.width / item.depth
   const boxW = aspect >= 1 ? 36 : 36 * aspect
   const boxH = aspect >= 1 ? 36 / aspect : 36
@@ -118,6 +119,27 @@ function TileGlyph({ item }) {
     <div className="h-10 flex items-center justify-center">
       <div style={{ width: boxW, height: boxH, background: item.color }}
         className="rounded-sm border border-black/30" />
+    </div>
+  )
+}
+
+function LightTileGlyph({ color }) {
+  const spokes = 8
+  return (
+    <div className="h-10 flex items-center justify-center">
+      <svg width="36" height="36" viewBox="-18 -18 36 36">
+        {Array.from({ length: spokes }, (_, i) => {
+          const a = (i / spokes) * Math.PI * 2
+          return (
+            <line key={i}
+              x1={Math.cos(a) * 8} y1={Math.sin(a) * 8}
+              x2={Math.cos(a) * 13} y2={Math.sin(a) * 13}
+              stroke={color} strokeWidth="1.5" opacity="0.8"
+            />
+          )
+        })}
+        <circle r="6" fill={color} opacity="0.9" />
+      </svg>
     </div>
   )
 }
