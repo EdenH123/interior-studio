@@ -7,6 +7,7 @@ import {
   openingsOverlap,
   wallSegmentsForRendering,
   openingPlacement,
+  wallMountedPlacement,
 } from './openingGeometry'
 
 const wallH = { id: 'h', x1: 0, y1: 0, x2: 500, y2: 0 }
@@ -105,5 +106,53 @@ describe('openingPlacement', () => {
     expect(p.ux).toBeCloseTo(1)
     expect(p.uy).toBeCloseTo(0)
     expect(p.widthPx).toBe(50)
+  })
+})
+
+describe('wallMountedPlacement', () => {
+  // Horizontal wall (left→right). Drop point above wall (y < 0) → item faces up.
+  const wallH = { id: 'h', x1: 0, y1: 0, x2: 500, y2: 0 }
+  // Vertical wall (top→bottom). Drop point to the right (x > 0) → item faces right.
+  const wallV = { id: 'v', x1: 0, y1: 0, x2: 0, y2: 500 }
+
+  function makeSnap(wall, t = 0.5) {
+    const x = wall.x1 + (wall.x2 - wall.x1) * t
+    const y = wall.y1 + (wall.y2 - wall.y1) * t
+    return { wall, point: { x, y }, position: t }
+  }
+
+  it('places item above a horizontal wall when drop is above', () => {
+    const snap = makeSnap(wallH, 0.5)           // midpoint (250, 0)
+    const depthMetres = 0.5                      // 25 px at 50px/m
+    const world = { x: 250, y: -30 }            // cursor above the wall
+    const result = wallMountedPlacement(snap, depthMetres, world)
+    expect(result.x).toBeCloseTo(250)            // centre along wall unchanged
+    expect(result.y).toBeCloseTo(-12.5)          // 25/2 px above projection
+    expect(result.rotation).toBeCloseTo(0)       // facing up = 0°
+  })
+
+  it('places item below a horizontal wall when drop is below', () => {
+    const snap = makeSnap(wallH, 0.5)
+    const world = { x: 250, y: 30 }             // cursor below the wall
+    const result = wallMountedPlacement(snap, 0.5, world)
+    expect(result.y).toBeCloseTo(12.5)           // 25/2 px below projection
+    expect(result.rotation).toBeCloseTo(180)     // facing down = 180°
+  })
+
+  it('places item to the right of a vertical wall when drop is to the right', () => {
+    const snap = makeSnap(wallV, 0.5)            // midpoint (0, 250)
+    const world = { x: 30, y: 250 }             // cursor to the right
+    const result = wallMountedPlacement(snap, 0.5, world)
+    expect(result.x).toBeCloseTo(12.5)           // 25/2 px right of projection
+    expect(result.y).toBeCloseTo(250)
+    expect(result.rotation).toBeCloseTo(90)      // facing right = 90°
+  })
+
+  it('center is always at projection + half-depth offset', () => {
+    const snap = makeSnap(wallH, 0.5)
+    const depthM = 0.6                           // 30 px
+    const world = { x: 250, y: -50 }
+    const result = wallMountedPlacement(snap, depthM, world)
+    expect(result.y).toBeCloseTo(-15)            // 30/2 = 15 px above
   })
 })

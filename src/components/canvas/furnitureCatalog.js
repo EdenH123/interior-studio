@@ -65,9 +65,47 @@ export const FURNITURE = [
     width: 0.9, depth: 3.0, height: 2.7, color: '#8b7355', model: null,
     stairType: true,
   },
+
+  // ── Bathroom ────────────────────────────────────────────────────────────────
+  { type: 'toilet',          label: 'Toilet',          category: 'Bathroom', width: 0.4, depth: 0.7, height: 0.8,  color: '#e2e8f0', model: null },
+  { type: 'sink-vanity',     label: 'Sink / vanity',   category: 'Bathroom', width: 0.6, depth: 0.5, height: 0.9,  color: '#e2e8f0', model: null },
+  { type: 'bathtub',         label: 'Bathtub',         category: 'Bathroom', width: 1.7, depth: 0.7, height: 0.6,  color: '#e2e8f0', model: null },
+  { type: 'shower-stall',    label: 'Shower stall',    category: 'Bathroom', width: 0.9, depth: 0.9, height: 2.0,  color: '#94a3b8', model: null },
+  { type: 'walk-in-shower',  label: 'Walk-in shower',  category: 'Bathroom', width: 1.2, depth: 0.9, height: 2.0,  color: '#94a3b8', model: null },
+  { type: 'bidet',           label: 'Bidet',           category: 'Bathroom', width: 0.4, depth: 0.6, height: 0.4,  color: '#e2e8f0', model: null },
+  {
+    type: 'towel-rack', label: 'Towel rack', category: 'Bathroom',
+    width: 0.6, depth: 0.1, height: 0.3, color: '#cbd5e1', model: null,
+    wallMounted: true, mountHeight: 1.2,
+  },
+  {
+    type: 'bathroom-mirror', label: 'Bathroom mirror', category: 'Bathroom',
+    width: 0.6, depth: 0.05, height: 0.8, color: '#e2e8f0', model: null,
+    wallMounted: true, mountHeight: 1.4,
+  },
+
+  // ── Kitchen ─────────────────────────────────────────────────────────────────
+  { type: 'refrigerator',      label: 'Refrigerator',        category: 'Kitchen', width: 0.7, depth: 0.7,  height: 1.8,  color: '#64748b', model: null },
+  { type: 'stove',             label: 'Stove / oven',        category: 'Kitchen', width: 0.6, depth: 0.6,  height: 0.9,  color: '#1e293b', model: null },
+  { type: 'kitchen-sink',      label: 'Kitchen sink',        category: 'Kitchen', width: 0.6, depth: 0.6,  height: 0.9,  color: '#94a3b8', model: null },
+  { type: 'dishwasher',        label: 'Dishwasher',          category: 'Kitchen', width: 0.6, depth: 0.6,  height: 0.85, color: '#64748b', model: null },
+  { type: 'microwave',         label: 'Microwave',           category: 'Kitchen', width: 0.5, depth: 0.4,  height: 0.3,  color: '#374151', model: null },
+  { type: 'lower-cabinet-60',  label: 'Lower cabinet 60cm',  category: 'Kitchen', width: 0.6, depth: 0.6,  height: 0.9,  color: '#e7e5e4', model: null },
+  { type: 'lower-cabinet-90',  label: 'Lower cabinet 90cm',  category: 'Kitchen', width: 0.9, depth: 0.6,  height: 0.9,  color: '#e7e5e4', model: null },
+  {
+    type: 'upper-cabinet', label: 'Upper cabinet', category: 'Kitchen',
+    width: 0.6, depth: 0.35, height: 0.7, color: '#e7e5e4', model: null,
+    wallMounted: true, mountHeight: 1.4,
+  },
+  { type: 'kitchen-island',    label: 'Kitchen island',      category: 'Kitchen', width: 1.5, depth: 0.9,  height: 0.9,  color: '#78716c', model: null },
+  {
+    type: 'range-hood', label: 'Range hood', category: 'Kitchen',
+    width: 0.9, depth: 0.5, height: 0.4, color: '#71717a', model: null,
+    wallMounted: true, mountHeight: 1.8,
+  },
 ]
 
-export const CATEGORIES = ['Architecture', 'Seating', 'Tables', 'Bedroom', 'Storage', 'Decor', 'Lighting']
+export const CATEGORIES = ['Architecture', 'Seating', 'Tables', 'Bedroom', 'Storage', 'Bathroom', 'Kitchen', 'Decor', 'Lighting']
 
 const BY_TYPE = Object.fromEntries(FURNITURE.map((f) => [f.type, f]))
 

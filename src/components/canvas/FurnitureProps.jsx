@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { formatMeters } from './constants'
 import { getFurnitureSpec } from './furnitureCatalog'
+
 import { FURNITURE_MATERIALS, resolveFurnitureMaterialId } from './furnitureMaterials'
 import { getModelStatus, onCacheChange } from '../viewer3d/furnitureModelCache'
 import MaterialPicker from './MaterialPicker'
@@ -27,6 +28,7 @@ export default function FurnitureProps({ item, onUpdate }) {
       <Row label="Rotation" value={`${item.rotation}°`} />
       <Row label="Position" value={`${formatMeters(item.x)}, ${formatMeters(item.y)}`} />
       <Row label="Model" value={describeModelStatus(item.model)} />
+      {item.wallMounted && <MountHeightField item={item} onUpdate={onUpdate} />}
 
       <div className="mt-3">
         <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Material</div>
@@ -42,6 +44,35 @@ export default function FurnitureProps({ item, onUpdate }) {
         Drag on canvas to move · drag the blue handle (or R / Shift+R) to rotate · Del to remove. Material override colors the 2D footprint and all 3D meshes (box fallback and loaded GLB).
       </p>
     </div>
+  )
+}
+
+function MountHeightField({ item, onUpdate }) {
+  const [val, setVal] = useState((item.mountHeight ?? 0).toFixed(2))
+  useEffect(() => { setVal((item.mountHeight ?? 0).toFixed(2)) }, [item.mountHeight])
+
+  function commit() {
+    const m = parseFloat(val)
+    if (!isFinite(m) || m < 0 || m > 4) { setVal((item.mountHeight ?? 0).toFixed(2)); return }
+    onUpdate(item.id, { mountHeight: Math.round(m * 100) / 100 })
+    setVal(m.toFixed(2))
+  }
+
+  return (
+    <label className="block mt-2">
+      <span className="text-gray-500 text-[11px] uppercase tracking-wider">Mount height (m)</span>
+      <input
+        type="number" step="0.05" min="0" max="4"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { e.preventDefault(); commit() }
+          if (e.key === 'Escape') { e.preventDefault(); setVal((item.mountHeight ?? 0).toFixed(2)); e.currentTarget.blur() }
+        }}
+        className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-sm font-mono focus:border-blue-500 focus:outline-none"
+      />
+    </label>
   )
 }
 
