@@ -115,6 +115,53 @@ describe('openingsSlice.updateOpening', () => {
   })
 })
 
+describe('openingsSlice.toggleDoorOpen', () => {
+  let store
+  let wallId
+  let doorId
+
+  beforeEach(() => {
+    store = makeStore()
+    store.getState().addWall(0, 0, 500, 0)
+    wallId = store.getState().walls[0].id
+    doorId = store.getState().addOpening('door', wallId, 0.5).id
+  })
+
+  it('new doors have open: false by default', () => {
+    expect(store.getState().openings[0].open).toBe(false)
+  })
+
+  it('new windows have no open field', () => {
+    const wid = store.getState().addOpening('window', wallId, 0.8).id
+    const win = store.getState().openings.find((o) => o.id === wid)
+    expect(win.open).toBeUndefined()
+  })
+
+  it('toggleDoorOpen sets open to true', () => {
+    store.getState().toggleDoorOpen(doorId)
+    expect(store.getState().openings[0].open).toBe(true)
+  })
+
+  it('toggleDoorOpen flips back to false on second call', () => {
+    store.getState().toggleDoorOpen(doorId)
+    store.getState().toggleDoorOpen(doorId)
+    expect(store.getState().openings[0].open).toBe(false)
+  })
+
+  it('toggleDoorOpen ignores unknown ids', () => {
+    const before = store.getState().openings[0].open
+    store.getState().toggleDoorOpen('no-such-id')
+    expect(store.getState().openings[0].open).toBe(before)
+  })
+
+  it('toggleDoorOpen ignores window ids', () => {
+    const winId = store.getState().addOpening('window', wallId, 0.8).id
+    store.getState().toggleDoorOpen(winId)
+    const win = store.getState().openings.find((o) => o.id === winId)
+    expect(win.open).toBeUndefined()
+  })
+})
+
 describe('openingsSlice.removeOpening + wall cascade', () => {
   let store
   beforeEach(() => {

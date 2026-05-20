@@ -5,6 +5,7 @@ import useStore from '../store/useStore'
 import {
   reconcileWalls, reconcileFurniture, reconcileRooms, disposeAll,
 } from '../components/viewer3d/sceneReconcilers'
+import { reconcileDoors, tickDoorAnims } from '../components/viewer3d/reconcileDoors'
 import { applySelectionHighlight } from '../components/viewer3d/selectionHighlight'
 import { attachPicking } from '../components/viewer3d/picking'
 import { detectRooms } from '../components/canvas/roomDetection'
@@ -50,6 +51,8 @@ export default function useThree(containerRef) {
   const wallMeshes  = useRef(new Map())
   const furnMeshes  = useRef(new Map())
   const roomMeshes  = useRef(new Map())
+  const doorMeshes  = useRef(new Map())
+  const doorAnims   = useRef(new Map())
   const lightMap    = useRef(new Map())
   const sunRef      = useRef(null)
   const ambientRef  = useRef(null)
@@ -60,9 +63,10 @@ export default function useThree(containerRef) {
   const roomMeta  = useStore((s) => s.roomMeta)
   const selection = useStore((s) => s.selection)
   const lighting  = useStore((s) => s.lighting)
-  const select        = useStore((s) => s.select)
-  const clearSelection = useStore((s) => s.clearSelection)
-  const pushToast     = useStore((s) => s.pushToast)
+  const select          = useStore((s) => s.select)
+  const clearSelection  = useStore((s) => s.clearSelection)
+  const toggleDoorOpen  = useStore((s) => s.toggleDoorOpen)
+  const pushToast       = useStore((s) => s.pushToast)
 
   // ── mount / unmount ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -123,6 +127,7 @@ export default function useThree(containerRef) {
     const tick = () => {
       stateRef.current.raf = requestAnimationFrame(tick)
       stateRef.current.onFrame?.()
+      tickDoorAnims(doorAnims.current)
       controls.update()
       renderer.render(scene, camera)
     }
@@ -138,11 +143,12 @@ export default function useThree(containerRef) {
 
     const detachPicking = attachPicking(
       renderer, camera,
-      [wallMeshes.current, furnMeshes.current, roomMeshes.current],
-      { onSelect: select, onClear: clearSelection },
+      [wallMeshes.current, furnMeshes.current, roomMeshes.current, doorMeshes.current],
+      { onSelect: select, onClear: clearSelection, onToggleDoor: toggleDoorOpen },
     )
 
     stateRef.current = { scene, camera, renderer, controls, ro, raf: 0, detachPicking, onFrame: null }
+    // doorAnims is read directly by the tick closure; no slot needed on stateRef.
     tick()
 
     return () => {
@@ -155,6 +161,7 @@ export default function useThree(containerRef) {
       disposeAll(s.scene, wallMeshes.current)
       disposeAll(s.scene, furnMeshes.current)
       disposeAll(s.scene, roomMeshes.current)
+      disposeAll(s.scene, doorMeshes.current)
       for (const [, light] of lightMap.current) {
         if (light.isSpotLight && light.target?.parent) s.scene.remove(light.target)
         s.scene.remove(light)
@@ -166,12 +173,18 @@ export default function useThree(containerRef) {
       }
       stateRef.current = null
     }
-  }, [containerRef, select, clearSelection])   // lighting not in deps — initial values only
+  }, [containerRef, select, clearSelection, toggleDoorOpen])   // lighting not in deps — initial values only
 
   // ── walls ────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!stateRef.current) return
     reconcileWalls(stateRef.current.scene, walls, openings, wallMeshes.current)
+  }, [walls, openings])
+
+  // ── doors ─────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!stateRef.current) return
+    reconcileDoors(stateRef.current.scene, walls, openings, doorMeshes.current, doorAnims.current)
   }, [walls, openings])
 
   // ── furniture + lights ───────────────────────────────────────────────────────

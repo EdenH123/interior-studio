@@ -85,7 +85,7 @@ interior-studio/
 │   │   │   ├── HudOverlay.jsx      # bottom-of-canvas chips: zoom %, cursor in meters, context-sensitive hint
 │   │   │   ├── DrawPreview.jsx     # the dashed-blue preview wall + start/end dots + live dimension label
 │   │   │   ├── Underlay.jsx        # Konva.Image with drag-when-unlocked + selection
-│   │   │   ├── UnderlayProps.jsx   # PropertiesPanel editor for the underlay (opacity, calibrate, remove)
+│   │   │   ├── UnderlayProps.jsx   # PropertiesPanel editor for the underlay (opacity, calibrate, remove, AI trace)
 │   │   │   ├── WallProps.jsx       # PropertiesPanel editor for a selected wall — editable Length (m) input
 │   │   │   ├── RotationHandle.jsx  # blue circle on a stick — click-drag to rotate selected furniture
 │   │   │   ├── CalibrationOverlay.jsx  # invisible capture rect + cyan calibration markers (top of stage)
@@ -97,10 +97,11 @@ interior-studio/
 │   │       ├── sceneReconcilers.js  # reconcileWalls (CSG cuts + painted overlay fallback) + reconcileRooms + Group-safe disposeAll; re-exports reconcileFurniture
 │   │       ├── wallCSG.js           # three-bvh-csg helper: builds wall BoxGeometry minus opening boxes; throws on failure
 │   │       ├── reconcileFurniture.js  # Group-wrapped furniture: box fallback ↔ loaded GLB upgrade in-place
+│   │       ├── reconcileDoors.js    # reconcileDoors + tickDoorAnims — hinged door panel Groups; click toggles open/closed with 300ms smoothstep animation
 │   │       ├── furnitureModelCache.js # pure-JS module: cache + getModelStatus + isModelLoaded + onceModelLoaded (no three import; safe to use from PropertiesPanel)
 │   │       ├── furnitureModels.js     # three-side helpers: GLTFLoader, cloneLoadedModel (deep clone materials), fitToBox; re-exports cache getters
 │   │       ├── selectionHighlight.js # applySelectionHighlight (traverse-based) + setObjectEmissive
-│   │       ├── picking.js       # attachPicking — raycaster (recursive) + parent walk + click-vs-drag guard
+│   │       ├── picking.js       # attachPicking — raycaster (recursive) + parent walk + click-vs-drag guard; kind='door' dispatches onToggleDoor instead of onSelect
 │   │       ├── walkthroughCollision.js  # pure 2D ray-segment math for wall collision: raySegmentIntersect + rayHitsWalls (no THREE import)
 │   │       └── walkthroughCollision.test.js
 │   ├── hooks/
@@ -121,7 +122,7 @@ interior-studio/
 │   │   └── slices/              # one file per state concern
 │   │       ├── wallsSlice.js
 │   │       ├── furnitureSlice.js
-│   │       ├── openingsSlice.js # doors + windows on walls — addOpening/updateOpening/removeOpening with placement guards + overlap refusal
+│   │       ├── openingsSlice.js # doors + windows on walls — addOpening/updateOpening/removeOpening/toggleDoorOpen; door items have open:false default
 │   │       ├── roomsSlice.js
 │   │       ├── underlaySlice.js
 │   │       ├── viewSlice.js     # show3d + drawStart
@@ -135,7 +136,8 @@ interior-studio/
 │   ├── services/
 │   │   ├── claudeApi.js         # browser-side fetch + SSE streaming for Anthropic Messages API (dangerous-direct-browser-access header)
 │   │   ├── aiPrompts.js         # buildSystemPrompt(state) — role + data model + slimmed project snapshot (underlay bytes stripped); extractJsonBlock helper; contract spec for apply-ready JSON
-│   │   └── aiApply.js           # validateProposedProject(raw) + diffProject(current, proposed) + diffIsEmpty / totalChangeCount
+│   │   ├── aiApply.js           # validateProposedProject(raw) + diffProject(current, proposed) + diffIsEmpty / totalChangeCount
+│   │   └── traceFloorPlan.js    # Claude vision call to trace wall segments from underlay image; parseDataUrl + transformWalls (img-px → Konva world); returns proposal { walls, furniture:[], openings:[], roomMeta:{} }
 │   └── utils/
 │       └── projectIO.js         # versioned .studio.json envelope build/validate, downloadBlob/DataUrl helpers, readJsonFile, timestampForFilename
 ├── vite.config.js               # react + tailwindcss plugins
@@ -389,6 +391,14 @@ interior-studio/
   - **Lighting 2D glyph**: `Furniture.jsx` renders `LightGlyph` (circle + 8 radiating spokes + soft halo) instead of the plain footprint rect for `lighting:*` items. `Sidebar.jsx` `TileGlyph` shows the same sun icon for lighting catalog tiles. Label text changes to show only the subtype (e.g. "ceiling-lamp" not "lighting:ceiling-lamp").
   - **Component smoke tests**: 4 new test files — `Toolbar.test.jsx` (6 tests: core buttons, 3D label, Walk visibility), `Sidebar.test.jsx` (6 tests: all 12+4 furniture + 2 openings), `PropertiesPanel.test.jsx` (6 tests: empty/wall/furniture/lighting/opening/multi-select routing), `AiPanel.test.jsx` (3 tests: no-key shows settings input, with-key shows chat textarea + Send button).
   - Tests: +21 new; 276 total passing.
+
+- [x] 3D door panels + AI floor-plan tracing (2026-05-20)
+  - **3D door swing animation**: `openingsSlice.js` gains `open: false` default on new doors and `toggleDoorOpen(id)` action. `reconcileDoors.js` creates a Three.js `Group` per door opening — hinge at left edge of the opening in wall-local X (converted to world space), door panel `Mesh` at +width/2 as a child offset. Closing angle = wall yaw; open angle = wall yaw + π/2. `tickDoorAnims(doorAnims)` runs in the RAF tick and drives 300 ms smoothstep interpolation. `picking.js` extended with `onToggleDoor` callback — clicking a door mesh calls `toggleDoorOpen(id)` instead of `onSelect`. `useThree.js` wires `doorMeshes` + `doorAnims` refs, passes them to `reconcileDoors` and `attachPicking`.
+  - **Door material**: warm wood color (`#c8a97e`, roughness 0.8) for the door panel — visually distinct from walls.
+  - **AI floor-plan tracing**: `traceFloorPlan.js` sends a vision message (base64 image + text prompt) to `claude-opus-4-7` via the existing `streamClaude` generator. Claude returns a `\`\`\`json` block with wall segments in image-pixel coordinates; `transformWalls(rawWalls, underlay)` converts to Konva world coords (`konvaX = underlay.x + imgPx * underlay.scale`). Returns `{ walls, furniture:[], openings:[], roomMeta:{} }` for `validateProposedProject`.
+  - **Underlay UI**: `UnderlayProps.jsx` becomes a connected component (imports `useStore`, `useApiKey`, `traceFloorPlan`, `validateProposedProject`, `diffProject`). Adds a violet "AI: Trace floor plan" button with loading state; on success calls `setAiProposal` + `toggleAiPanel`. Shows a hint when no API key is set.
+  - **Tests**: `openingsSlice.test.js` +6 tests (toggleDoorOpen toggles, ignores unknowns, ignores windows, new doors default open:false). `traceFloorPlan.test.js` — 13 tests across `parseDataUrl` (valid/jpeg/invalid URLs), `transformWalls` (coord math, id generation, identity, empty), `traceFloorPlan` (vision message format, coord transform, empty result shape, missing JSON block, missing walls array).
+  - Tests: +19 new; 295 total passing.
 
 ### 🚧 In Progress
 - (nothing active)
