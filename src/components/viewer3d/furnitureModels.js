@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { cache } from './furnitureModelCache'
+import { cache, notifyCacheChange } from './furnitureModelCache'
 
 // Three-dependent half of the furniture-model pipeline. Lives in its own
 // module so the cache + status getters (`furnitureModelCache.js`) can be
@@ -19,6 +19,7 @@ export function loadFurnitureModel(url) {
   if (!url || cache.has(url)) return
   const entry = { state: 'loading', listeners: new Set() }
   cache.set(url, entry)
+  notifyCacheChange()
   getLoader().load(
     url,
     (gltf) => {
@@ -26,6 +27,7 @@ export function loadFurnitureModel(url) {
       entry.scene = gltf.scene
       for (const fn of entry.listeners) fn(gltf.scene)
       entry.listeners.clear()
+      notifyCacheChange()
     },
     undefined,
     (err) => {
@@ -33,6 +35,7 @@ export function loadFurnitureModel(url) {
       entry.error = err
       for (const fn of entry.listeners) fn(null, err)
       entry.listeners.clear()
+      notifyCacheChange()
     },
   )
 }
