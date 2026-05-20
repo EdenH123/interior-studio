@@ -29,6 +29,7 @@ export const createOpeningsSlice = (set, get) => ({
       id: nanoid(6), type, wallId,
       position: positionT,
       width: spec.width, height: spec.height, sillHeight: spec.sillHeight,
+      ...(type === 'door' ? { open: false } : {}),
     }
     const wallLen = wallLengthPx(wall)
     if (candidate.width * PIXELS_PER_METER >= wallLen) {
@@ -79,6 +80,15 @@ export const createOpeningsSlice = (set, get) => ({
     })
     return accepted
   },
+
+  toggleDoorOpen: (id) =>
+    set((s) => {
+      const idx = s.openings.findIndex((o) => o.id === id && o.type === 'door')
+      if (idx === -1) return s
+      const openings = s.openings.slice()
+      openings[idx] = { ...openings[idx], open: !openings[idx].open }
+      return { openings }
+    }),
 
   removeOpening: (id) =>
     set((s) => ({
