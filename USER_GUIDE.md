@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-20_  <!-- doors and windows on walls -->
+_Last updated: 2026-05-20_  <!-- multi-select + layers panel -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -16,7 +16,7 @@ entirely in your browser.
 The screen has four areas:
 
 - **Top bar** — the app name and the **3D** toggle button.
-- **Left panel** — the furniture catalog.
+- **Left panel** — the furniture catalog and layers panel.
 - **Center** — the 2D canvas where you draw and arrange things.
 - **Right panel** — properties of whatever is currently selected.
 
@@ -175,6 +175,29 @@ Once selected:
   to remove the room).
 - **`Esc`** clears the selection.
 
+### Selecting multiple items
+
+You can select more than one item at a time in three ways:
+
+- **Shift+click** an item to add it to the current selection. Shift+click
+  an already-selected item to remove it without clearing the rest.
+- **Drag on empty canvas** — when no wall chain is in progress, dragging
+  on the background draws a blue marquee rectangle. Release the mouse to
+  select everything whose centre (furniture, openings) or both endpoints
+  (walls) fall inside the rectangle.
+- **Ctrl/Cmd+A** — selects every visible item at once (walls, furniture,
+  openings, underlay — only on layers that are currently shown).
+
+With multiple items selected, the right panel shows a count breakdown
+by type (e.g. "2 walls, 1 furniture"). If all selected items are
+furniture, a shared **Rotation** control appears; rotating it applies to
+every piece relative to its own centre. **`Del`** / **`Backspace`**
+removes all selected items at once.
+
+Dragging any one selected furniture piece moves **all** selected
+furniture by the same offset (walls and openings are not drag-moved in
+multi-select).
+
 ### Editing a wall's length
 
 Once a wall is selected, the right panel shows a **Length (m)** input.
@@ -322,6 +345,34 @@ limits or when you already have a lot of other state), a red toast
 warns you that the image won't survive a reload. The rest of your
 design (walls, furniture, room metadata) still saves normally; only
 the underlay is at risk.
+
+## Layers panel
+
+At the bottom of the left sidebar (below the furniture catalog), a
+collapsible **Layers** panel lets you show or hide each class of content
+on the canvas.
+
+Click the **Layers** heading to expand or collapse the panel. Inside,
+six rows each have an eye icon that you can click to toggle:
+
+| Layer | What it controls |
+|---|---|
+| **Walls** | All wall segments |
+| **Furniture** | All placed furniture items |
+| **Openings** | Doors and windows |
+| **Rooms** | Detected room fills and labels |
+| **Underlay** | The uploaded floor-plan image |
+| **Grid** | The background dot grid |
+
+Hidden items don't render and can't be clicked. If the item currently
+selected becomes hidden, the selection is **not** cleared automatically
+— re-show the layer to interact with it again.
+
+Layer visibility is **saved automatically** and survives a page refresh
+(like walls and furniture). It is **not** part of the undo/redo history —
+toggling a layer on and off doesn't consume an undo step.
+
+**Ctrl/Cmd+A** only selects items on layers that are currently visible.
 
 ## 3D viewer
 
@@ -532,9 +583,10 @@ your cursor position in metres.
 | Key | What it does |
 |---|---|
 | `Esc` | End the current wall chain / clear selection |
-| `Del` or `Backspace` | Delete the selected item |
+| `Del` or `Backspace` | Delete the selected item(s) |
 | `R` | Rotate selected furniture clockwise 15° |
 | `Shift+R` | Rotate selected furniture counter-clockwise 15° |
+| `Ctrl/Cmd+A` | Select all visible items |
 | `Ctrl/Cmd+Z` | Undo last change |
 | `Ctrl/Cmd+Shift+Z` | Redo |
 | `Space` (hold) + drag | Pan the canvas |
@@ -542,7 +594,9 @@ your cursor position in metres.
 | Middle-mouse drag | Pan the canvas |
 | Left-click (empty canvas) | Start / extend a wall chain |
 | Left-click (item) | Select item |
-| Left-click + drag (item) | Move item |
+| `Shift`+click (item) | Add/remove item from multi-selection |
+| Drag on empty canvas | Draw marquee rectangle to select items inside |
+| Left-click + drag (item) | Move item (moves all selected furniture if multiple are selected) |
 | Right-click (item) | Delete item |
 | Right-click (empty canvas, while drawing) | Cancel the chain |
 | 3D view: left-drag | Orbit camera |
@@ -561,8 +615,8 @@ First-time download. After the first click, switching between 2D-only
 and split views is instant.
 
 **Can I undo a mistake?**
-Not yet. Undo/redo is on the roadmap. For now: delete the offending
-item and redraw.
+Yes — press **Ctrl/Cmd+Z** to undo (up to 50 steps). **Ctrl/Cmd+Shift+Z**
+redoes. The **↶** / **↷** buttons in the top bar do the same thing.
 
 **Can I export to a real CAD file or to PDF?**
 Not yet. Export to PNG / PDF / `.studio.json` round-trip is planned.
