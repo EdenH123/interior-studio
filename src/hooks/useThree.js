@@ -122,6 +122,7 @@ export default function useThree(containerRef) {
 
     const tick = () => {
       stateRef.current.raf = requestAnimationFrame(tick)
+      stateRef.current.onFrame?.()
       controls.update()
       renderer.render(scene, camera)
     }
@@ -141,7 +142,7 @@ export default function useThree(containerRef) {
       { onSelect: select, onClear: clearSelection },
     )
 
-    stateRef.current = { scene, camera, renderer, controls, ro, raf: 0, detachPicking }
+    stateRef.current = { scene, camera, renderer, controls, ro, raf: 0, detachPicking, onFrame: null }
     tick()
 
     return () => {
@@ -222,4 +223,6 @@ export default function useThree(containerRef) {
     }
     prevActiveLightsRef.current = activeCount
   }, [furniture, pushToast])
+
+  return stateRef
 }
