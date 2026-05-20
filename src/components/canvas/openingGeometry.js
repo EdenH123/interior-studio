@@ -94,6 +94,33 @@ export function wallSegmentsForRendering(wall, openings) {
   return segments
 }
 
+// Given a nearestWallSnap result and the item's depth (metres), compute
+// the 2D world center {x, y} and Konva rotation (degrees CW) for a
+// wall-mounted item so it sits flush against the wall on the side the
+// drop point is on. `worldPoint` is the raw cursor position.
+export function wallMountedPlacement(snap, depthMetres, worldPoint) {
+  const wall = snap.wall
+  const dx = wall.x2 - wall.x1
+  const dy = wall.y2 - wall.y1
+  const len = Math.hypot(dx, dy) || 1
+  const ux = dx / len, uy = dy / len
+  // Left-hand normal of the wall direction.
+  const nx = -uy, ny = ux
+  // Pick the normal side that the drop point sits on.
+  const dot = (worldPoint.x - snap.point.x) * nx + (worldPoint.y - snap.point.y) * ny
+  const normX = dot >= 0 ? nx : -nx
+  const normY = dot >= 0 ? ny : -ny
+  // Center = projection + normal × (depth/2 in pixels).
+  const halfDepthPx = depthMetres * PIXELS_PER_METER / 2
+  const x = snap.point.x + normX * halfDepthPx
+  const y = snap.point.y + normY * halfDepthPx
+  // Rotation: Konva CW degrees. Formula maps normal direction to the angle
+  // where the item's local −Y axis (its "front") faces away from the wall.
+  //   norm (0,−1) → 0°, (1,0) → 90°, (0,1) → 180°, (−1,0) → 270°
+  const rotation = ((Math.atan2(normX, -normY) * 180 / Math.PI) + 360) % 360
+  return { x, y, rotation }
+}
+
 // World-space placement info for one opening on its wall — used by 2D
 // rendering and by drag-along-wall logic.
 export function openingPlacement(opening, wall) {

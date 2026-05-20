@@ -40,10 +40,10 @@ describe('Sidebar', () => {
     }
   })
 
-  it('shows 13 furniture items', () => {
+  it('shows 31 non-lighting furniture items', () => {
     render(<Sidebar />)
     const furnitureItems = FURNITURE.filter((f) => !f.type.startsWith('lighting:'))
-    expect(furnitureItems).toHaveLength(13)
+    expect(furnitureItems).toHaveLength(31)
   })
 
   it('shows 4 lighting items', () => {

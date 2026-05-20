@@ -19,10 +19,24 @@ export default function DragGhost({ ghost, scale }) {
 function FurnitureGhost({ ghost, scale }) {
   const spec = getFurnitureSpec(ghost.type)
   if (!spec) return null
+
+  // Wall-mounted item with no wall in snap range — signal invalid drop.
+  if (ghost.wallSnap === false) {
+    const r = 9 / scale
+    const sw = 1.5 / scale
+    return (
+      <Group x={ghost.x} y={ghost.y} listening={false}>
+        <Circle radius={r} stroke="#ef4444" strokeWidth={sw} fillEnabled={false} />
+        <Line points={[-r * 0.6, -r * 0.6, r * 0.6, r * 0.6]} stroke="#ef4444" strokeWidth={sw} />
+        <Line points={[-r * 0.6, r * 0.6, r * 0.6, -r * 0.6]} stroke="#ef4444" strokeWidth={sw} />
+      </Group>
+    )
+  }
+
   const w = spec.width * PIXELS_PER_METER
   const d = spec.depth * PIXELS_PER_METER
   return (
-    <Group x={ghost.x} y={ghost.y} listening={false}>
+    <Group x={ghost.x} y={ghost.y} rotation={ghost.rotation ?? 0} listening={false}>
       <Rect
         x={-w / 2} y={-d / 2} width={w} height={d}
         fill={spec.color} opacity={0.45}

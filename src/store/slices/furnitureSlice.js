@@ -8,7 +8,9 @@ import { getFurnitureSpec } from '../../components/canvas/furnitureCatalog'
 //   • removeFurniture clears the selection if it matched
 export const createFurnitureSlice = (set) => ({
   furniture: [],
-  addFurniture: (type, x, y) => {
+  // `opts.rotation` — initial rotation in degrees (default 0); used by the
+  // wall-mount drop handler to orient the item perpendicular to its wall.
+  addFurniture: (type, x, y, opts = {}) => {
     const spec = getFurnitureSpec(type)
     if (!spec) return null
     const id = nanoid(6)
@@ -21,6 +23,11 @@ export const createFurnitureSlice = (set) => ({
       distance: spec.distance,
       castShadow: spec.castShadow,
       on: spec.on,
+    } : {}
+    // Wall-mounted items carry wallMounted + mountHeight (editable in props).
+    const wallMountFields = spec.wallMounted ? {
+      wallMounted: true,
+      mountHeight: spec.mountHeight ?? 0,
     } : {}
     set((s) => {
       const activeLevel = s.activeLevel ?? null
@@ -36,13 +43,14 @@ export const createFurnitureSlice = (set) => ({
         furniture: [
           ...s.furniture,
           {
-            id, type, x, y, rotation: 0,
+            id, type, x, y, rotation: opts.rotation ?? 0,
             width: spec.width, depth: spec.depth, height: spec.height,
             color: spec.color,
             model: spec.model ?? null,
             levelId: activeLevel,
             ...lightFields,
             ...stairFields,
+            ...wallMountFields,
           },
         ],
         selection: { items: [{ kind: 'furniture', id }] },
