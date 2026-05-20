@@ -1,18 +1,24 @@
 import useStore from '../store/useStore'
-import { SNAP_RADIUS_SCREEN, snapTo90, findNearestSnapPoint } from '../components/canvas/constants'
+import {
+  SNAP_RADIUS_SCREEN, snapTo90, findNearestSnapPoint, snapParallelWallLength,
+} from '../components/canvas/constants'
 
 // Owns the click-to-draw-walls flow. Returns a handler for the Stage's
 // onMouseDown that:
-//   - bails when calibration is active (its capture rect already swallows
-//     clicks; this is belt-and-braces for background clicks)
-//   - bails when the click landed on a shape (shapes drive their own
-//     selection; the stage handler only runs the wall flow for background
-//     clicks)
+//   - bails when calibration is active
+//   - bails when the click landed on a shape AND no wall chain is active
+//     (when drawing IS active, shape clicks are allowed so a closing click
+//     on a wall endpoint shape is not silently dropped — Issue 2 fix)
 //   - sets `drawStart` on the first click (snapping to an existing wall
 //     endpoint/midpoint if cursor is within range)
-//   - on the second click, commits a wall, then either advances the chain
-//     (setting `drawStart` to the new endpoint) or ends it (on a
-//     zero-length click — same point twice)
+//   - on the second click, commits a wall using a three-tier snap:
+//       1. raw cursor endpoint/midpoint snap (existing behaviour)
+//       2. endpoint snap on the direction-locked position — catches
+//          "close rectangle" clicks where the cursor isn't precisely on
+//          the endpoint but the snapped direction points right at it (Issue 1)
+//       3. parallel-wall length snap — snaps the length to match a parallel
+//          existing wall of similar length (Issue 1)
+//     then either advances the chain or ends it on a zero-length commit
 export default function useDrawWalls(stageRef, viewScale, spaceDown) {
   const walls = useStore((s) => s.walls)
   const calibration = useStore((s) => s.calibration)
@@ -26,16 +32,29 @@ export default function useDrawWalls(stageRef, viewScale, spaceDown) {
     if (evt.button === 1 || (evt.button === 0 && spaceDown)) return
     if (evt.button !== 0) return
     if (calibration) return
-    if (e.target !== stageRef.current) return
+    // Allow shape clicks when a wall chain is in progress — the closing click
+    // often lands on a wall shape near the snap endpoint.
+    if (e.target !== stageRef.current && !drawStart) return
     clearSelection()
     const p = stageRef.current.getRelativePointerPosition()
     if (!p) return
-    const snap = findNearestSnapPoint(p, walls, SNAP_RADIUS_SCREEN / viewScale)
+    const threshold = SNAP_RADIUS_SCREEN / viewScale
+    const snap = findNearestSnapPoint(p, walls, threshold)
     if (!drawStart) {
       setDrawStart(snap ?? p)
       return
     }
-    const end = snap ?? snapTo90(drawStart, p)
+    let end
+    if (snap) {
+      end = snap
+    } else {
+      const dirSnapped = snapTo90(drawStart, p)
+      // Try endpoint snap from the direction-locked position — catches
+      // near-miss rectangle closes where the raw cursor misses the threshold.
+      const closeEndpoint = findNearestSnapPoint(dirSnapped, walls, threshold)
+      end = (closeEndpoint?.kind === 'endpoint' ? closeEndpoint : null)
+            ?? snapParallelWallLength(drawStart, dirSnapped, walls, threshold)
+    }
     if (Math.hypot(end.x - drawStart.x, end.y - drawStart.y) > 1) {
       addWall(drawStart.x, drawStart.y, end.x, end.y)
       setDrawStart(end)
