@@ -350,14 +350,14 @@ interior-studio/
 - [ ] Component smoke tests — Toolbar renders, Sidebar shows all 12 catalog items, PropertiesPanel routes correctly per selection kind, AiPanel toggles between settings/chat. Will need Konva canvas stubs in `src/test/setup.js`.
 - [ ] Integration tests — wall-drawing two-click flow, furniture drop flow, calibration end-to-end, AI proposal apply→undo round-trip.
 - [ ] `imageDownscale.js` tests — needs `HTMLCanvasElement.getContext` mocked in jsdom; skipped this session because canvas mocking is a separate setup task.
-- [ ] GLB material override — today the furniture material picker only retints the box fallback. To retint a loaded GLB, walk its tree and clone+tint each material. (Noted: the existing `furnitureColorFor` is applied to boxes; GLBs keep their authored baked colors.)
+- [ ] GLB material override — today the furniture material picker only retints the box fallback. To retint a loaded GLB, walk its tree and clone+tint each material. (`furnitureColorFor` is applied to box meshes; GLBs keep their authored baked colors.)
+- [ ] Reactive `Model` status in PropertiesPanel — wire `onCacheChange` (added in session 19) via `useEffect` in `FurnitureProps.jsx` so the `GLB loading… / GLB loaded / GLB failed` row updates live when a load transitions while the panel is open. Today the status is read at render-time only.
+- [ ] Replace procedural GLBs with real curated CC0 models — session 19 ships in-house procedural geometry (box-primitive shapes assembled into recognizable furniture). When network access and curation time allow, swap in higher-fidelity CC0 models from Poly Pizza, KhronosGroup samples, or Sketchfab's CC0 filter. The pipeline (`furnitureModels.js` + `fitToBox`) accepts any GLB whose bounding box is centred horizontally with bottom at y=0; just drop replacements into `src/assets/furniture/` and keep the same filenames.
 - [ ] AI prompt caching — the system prompt's role + data-model doc is static across turns; only the project snapshot changes. Splitting these via Anthropic's `cache_control` blocks would cut tokens on multi-turn chats.
 - [ ] AI markdown rendering — the chat transcript shows plain whitespace-preserved text today; rendering headings + lists + code blocks would make responses more scannable.
 - [ ] PDF export with a printed scale bar — PNG round-trip is in place; PDF is a separate code path (paged, vector-friendly).
 - [ ] Underlay selection from 3D (today 3D picking only finds walls / furniture / rooms; underlay is a 2D-only concept)
-- [ ] GLB material override — today the furniture material picker only retints the box fallback. To retint a loaded GLB, walk its tree and clone+tint each material.
 - [ ] Persistence + import schema migration plan — `version: 1` today (both `persist` and `.studio.json`). When shapes change, bump version in `useStore.persist` AND in `utils/projectIO.js`, and add migration logic in both spots.
-- [ ] Reactive `Model` status in PropertiesPanel — today the status row is read at render-time, so a load completing while the panel is open won't auto-refresh. Add a tick counter to the cache or a Zustand-backed load-version flag once real models exist.
 
 ## Key Data Structures
 ```javascript
