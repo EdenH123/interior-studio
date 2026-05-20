@@ -16,7 +16,10 @@ export const createUnderlaySlice = (set) => ({
     set((s) => ({
       underlay: null,
       calibration: null,
-      selection: s.selection?.kind === 'underlay' ? null : s.selection,
+      selection: (() => {
+        const items = (s.selection?.items ?? []).filter((i) => i.kind !== 'underlay')
+        return items.length ? { items } : null
+      })(),
     })),
 
   calibration: null,

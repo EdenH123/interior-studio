@@ -8,14 +8,14 @@ describe('uiSlice', () => {
     store = create((set, get) => createUiSlice(set, get))
   })
 
-  describe('selection', () => {
+  describe('selection — multi-item shape', () => {
     it('starts null', () => {
       expect(store.getState().selection).toBeNull()
     })
 
-    it('select(kind, id) stores both; clearSelection nulls it', () => {
+    it('select(kind, id) creates a single-item selection; clearSelection nulls it', () => {
       store.getState().select('wall', 'w1')
-      expect(store.getState().selection).toEqual({ kind: 'wall', id: 'w1' })
+      expect(store.getState().selection).toEqual({ items: [{ kind: 'wall', id: 'w1' }] })
       store.getState().clearSelection()
       expect(store.getState().selection).toBeNull()
     })
@@ -23,6 +23,44 @@ describe('uiSlice', () => {
     it('select with missing kind or id is a clear', () => {
       store.getState().select('wall', 'w1')
       store.getState().select(null, 'w1')
+      expect(store.getState().selection).toBeNull()
+    })
+
+    it('addToSelection adds a new item', () => {
+      store.getState().select('wall', 'w1')
+      store.getState().addToSelection('furniture', 'f1')
+      expect(store.getState().selection).toEqual({
+        items: [{ kind: 'wall', id: 'w1' }, { kind: 'furniture', id: 'f1' }],
+      })
+    })
+
+    it('addToSelection on an already-selected item removes it (toggle)', () => {
+      store.getState().select('wall', 'w1')
+      store.getState().addToSelection('furniture', 'f1')
+      store.getState().addToSelection('wall', 'w1')
+      expect(store.getState().selection).toEqual({ items: [{ kind: 'furniture', id: 'f1' }] })
+    })
+
+    it('addToSelection that removes the last item nulls selection', () => {
+      store.getState().select('wall', 'w1')
+      store.getState().addToSelection('wall', 'w1')
+      expect(store.getState().selection).toBeNull()
+    })
+
+    it('setSelectionItems replaces the whole selection', () => {
+      store.getState().select('wall', 'w1')
+      store.getState().setSelectionItems([
+        { kind: 'furniture', id: 'f1' },
+        { kind: 'furniture', id: 'f2' },
+      ])
+      expect(store.getState().selection).toEqual({
+        items: [{ kind: 'furniture', id: 'f1' }, { kind: 'furniture', id: 'f2' }],
+      })
+    })
+
+    it('setSelectionItems with empty array nulls selection', () => {
+      store.getState().select('wall', 'w1')
+      store.getState().setSelectionItems([])
       expect(store.getState().selection).toBeNull()
     })
   })

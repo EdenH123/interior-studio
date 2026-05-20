@@ -7,6 +7,9 @@ import useCanvasKeyboard from '../hooks/useCanvasKeyboard'
 import useDrawWalls from '../hooks/useDrawWalls'
 import useFurnitureDrop from '../hooks/useFurnitureDrop'
 import useOpeningDrop from '../hooks/useOpeningDrop'
+import useMarquee from '../hooks/useMarquee'
+import useFurnitureMultiDrag from '../hooks/useFurnitureMultiDrag'
+import { isSelected, getSingleItem } from '../store/selectionHelpers'
 import Grid from './canvas/Grid'
 import Wall from './canvas/Wall'
 import Opening from './canvas/Opening'
@@ -26,7 +29,6 @@ import { detectRooms } from './canvas/roomDetection'
 import { DEFAULT_ROOM_FILL, getFloorMaterial, materialOverlayFill } from './canvas/floorMaterials'
 import { SNAP_RADIUS_SCREEN, WORLD_HALF, snapTo90, findNearestSnapPoint } from './canvas/constants'
 import HudOverlay from './canvas/HudOverlay'
-import { FURNITURE_DRAG_MIME } from './Sidebar'
 
 const UNDERLAY_ID = 'underlay'
 
@@ -37,6 +39,7 @@ export default function CanvasArea() {
   const walls = useStore((s) => s.walls)
   const furniture = useStore((s) => s.furniture)
   const openings = useStore((s) => s.openings)
+  const layers = useStore((s) => s.layers)
   const updateOpening = useStore((s) => s.updateOpening)
   const removeOpening = useStore((s) => s.removeOpening)
   const pushToast = useStore((s) => s.pushToast)
@@ -54,31 +57,31 @@ export default function CanvasArea() {
   const updateFurniture = useStore((s) => s.updateFurniture)
   const removeFurniture = useStore((s) => s.removeFurniture)
   const select = useStore((s) => s.select)
+  const addToSelection = useStore((s) => s.addToSelection)
   const drawStart = useStore((s) => s.drawStart)
   const setDrawStart = useStore((s) => s.setDrawStart)
 
   const { view, recenterIfUnset, handleWheel, handleStageDragEnd } = useViewport()
   const spaceDown = useCanvasKeyboard()
   const handleStageMouseDown = useDrawWalls(stageRef, view.scale, spaceDown)
-  // The sidebar fires two distinct MIME types; each hook's handlers
-  // self-check the MIME so combining them is safe.
   const dragHandlers = combineDragHandlers(
     useFurnitureDrop(containerRef, view),
     useOpeningDrop(containerRef, view),
   )
+  const { onDragStart: onFurnDragStart, onDragEnd: onFurnDragEnd } = useFurnitureMultiDrag()
+  const { marquee, onMouseDown: onMarqueeDown, onMouseMove: onMarqueeMove, onMouseUp: onMarqueeUp }
+    = useMarquee({ stageRef, spaceDown, setDrawStart })
   const [cursorWorld, setCursorWorld] = useState(null)
 
   useEffect(() => recenterIfUnset(size.width, size.height), [size.width, size.height, recenterIfUnset])
 
   const rooms = useMemo(() => detectRooms(walls), [walls])
-  const selectedFurniture = selection?.kind === 'furniture'
-    ? furniture.find((f) => f.id === selection.id) ?? null
+  // Rotation handle only for a single selected furniture item.
+  const singleSel = getSingleItem(selection)
+  const selectedFurniture = layers.furniture && singleSel?.kind === 'furniture'
+    ? furniture.find((f) => f.id === singleSel.id) ?? null
     : null
 
-  // Snap target: nearest existing wall endpoint or midpoint within a
-  // zoom-aware radius. Overrides 90° snap on the second click and lets
-  // first-clicks lock to existing endpoints (chained drawing without
-  // chained-drawing-mode).
   const snapTarget = cursorWorld
     ? findNearestSnapPoint(cursorWorld, walls, SNAP_RADIUS_SCREEN / view.scale)
     : null
@@ -101,62 +104,65 @@ export default function CanvasArea() {
           draggable={spaceDown}
           onDragEnd={handleStageDragEnd}
           onWheel={handleWheel(stageRef)}
-          onMouseDown={handleStageMouseDown}
-          onMouseMove={() => setCursorWorld(stageRef.current.getRelativePointerPosition())}
+          onMouseDown={(e) => { handleStageMouseDown(e); onMarqueeDown(e) }}
+          onMouseMove={(e) => { setCursorWorld(stageRef.current?.getRelativePointerPosition()); onMarqueeMove(e) }}
+          onMouseUp={onMarqueeUp}
           onContextMenu={(e) => { e.evt.preventDefault(); if (e.target === stageRef.current) setDrawStart(null) }}
         >
           <Layer>
-            {/* Background paint — covers the visible world at any reasonable
-                zoom so PNG export includes the dark backdrop instead of
-                transparent pixels. Matches the container's CSS bg-gray-950. */}
             <Rect x={-WORLD_HALF * 2} y={-WORLD_HALF * 2}
               width={WORLD_HALF * 4} height={WORLD_HALF * 4}
               fill="#030712" listening={false} />
-            <Underlay
+            {layers.underlay && <Underlay
               underlay={underlay}
-              selected={selection?.kind === 'underlay'}
+              selected={isSelected(selection, 'underlay', UNDERLAY_ID)}
               onSelect={() => select('underlay', UNDERLAY_ID)}
               onMove={(pos) => updateUnderlay(pos)}
-            />
+            />}
           </Layer>
-          <Layer listening={false}><Grid /></Layer>
+          <Layer listening={false}>{layers.grid && <Grid />}</Layer>
           <Layer>
-            {rooms.map((room) => {
+            {layers.rooms && rooms.map((room) => {
               const meta = roomMeta[room.id]
               const material = meta?.floorMaterial ? getFloorMaterial(meta.floorMaterial) : null
               const fill = material ? materialOverlayFill(material.color) : DEFAULT_ROOM_FILL
               return (
                 <Room key={room.id} room={room}
-                  selected={selection?.kind === 'room' && selection.id === room.id}
+                  selected={isSelected(selection, 'room', room.id)}
                   fill={fill} listening={drawStart === null} scale={view.scale}
                   name={meta?.name ?? ''}
-                  onSelect={(id) => select('room', id)} />
+                  onSelect={(id) => select('room', id)}
+                  onShiftSelect={(id) => addToSelection('room', id)} />
               )
             })}
-            {walls.map((w) => (
+            {layers.walls && walls.map((w) => (
               <Wall key={w.id} wall={w}
-                segments={wallSegmentsForRendering(w, openings)}
-                selected={selection?.kind === 'wall' && selection.id === w.id}
+                segments={wallSegmentsForRendering(w, layers.openings ? openings : [])}
+                selected={isSelected(selection, 'wall', w.id)}
                 onClick={(id) => select('wall', id)}
+                onShiftSelect={(id) => addToSelection('wall', id)}
                 onContextMenu={removeWall} />
             ))}
-            {openings.map((o) => {
+            {layers.openings && openings.map((o) => {
               const wall = walls.find((w) => w.id === o.wallId)
               if (!wall) return null
               return (
                 <Opening key={o.id} opening={o} wall={wall} view={view}
-                  selected={selection?.kind === 'opening' && selection.id === o.id}
+                  selected={isSelected(selection, 'opening', o.id)}
                   onSelect={(id) => select('opening', id)}
+                  onShiftSelect={(id) => addToSelection('opening', id)}
                   onUpdate={updateOpening}
-                  onUpdateRejected={() => pushToast('Opening can\'t go there — it would overlap or exceed the wall.', 'warn')}
+                  onUpdateRejected={() => pushToast("Opening can't go there — it would overlap or exceed the wall.", 'warn')}
                   onContextMenu={removeOpening} />
               )
             })}
-            {furniture.map((f) => (
+            {layers.furniture && furniture.map((f) => (
               <Furniture key={f.id} item={f} scale={view.scale}
-                selected={selection?.kind === 'furniture' && selection.id === f.id}
+                selected={isSelected(selection, 'furniture', f.id)}
                 onSelect={(id) => select('furniture', id)}
-                onDragEnd={(id, pos) => updateFurniture(id, pos)}
+                onShiftSelect={(id) => addToSelection('furniture', id)}
+                onDragStart={onFurnDragStart}
+                onDragEnd={onFurnDragEnd}
                 onContextMenu={removeFurniture} />
             ))}
             {selectedFurniture && (
@@ -167,6 +173,16 @@ export default function CanvasArea() {
             {aiProposal && <DiffOverlay diff={aiProposal.diff} scale={view.scale} />}
             {drawStart && previewEnd && <DrawPreview start={drawStart} end={previewEnd} scale={view.scale} />}
             {snapTarget && !calibration && <SnapIndicator point={snapTarget} scale={view.scale} />}
+            {marquee && (
+              <Rect
+                x={Math.min(marquee.x1, marquee.x2)} y={Math.min(marquee.y1, marquee.y2)}
+                width={Math.abs(marquee.x2 - marquee.x1)} height={Math.abs(marquee.y2 - marquee.y1)}
+                stroke="#3b82f6" strokeWidth={1 / view.scale}
+                fill="rgba(59,130,246,0.07)"
+                dash={[4 / view.scale, 4 / view.scale]}
+                listening={false}
+              />
+            )}
             <CalibrationOverlay calibration={calibration} scale={view.scale} onPlace={setCalibrationPoint} />
           </Layer>
         </Stage>
@@ -190,4 +206,3 @@ function combineDragHandlers(...bags) {
     return acc
   }, {})
 }
-

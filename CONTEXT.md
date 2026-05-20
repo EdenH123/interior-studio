@@ -321,6 +321,15 @@ interior-studio/
   - Cleanup: `disposeAll(scene, roomMeshes.current)` runs in the unmount path alongside walls + furniture.
   - Viewer3D chunk gained ~7 kB gzip (earcut module pulled in by ShapeGeometry).
 
+- [x] Multi-select on 2D canvas + layers panel (2026-05-20)
+  - Selection model changed to `{ items: [{kind, id}, ...] } | null`. `select(kind, id)` still works (wraps to single-item array). Helpers in `src/store/selectionHelpers.js`: `selectionItems`, `isSelected`, `getSingleItem`, `commonKind`.
+  - Shift+click adds/removes individual items. Drag-rectangle marquee on empty canvas selects all items inside the rect. Cmd/Ctrl+A selects all visible items (`selectAll` cross-slice action).
+  - Delete/Backspace removes all selected items. R/Shift+R rotates all selected furniture. Multi-furniture drag moves all selected furniture by the same delta (`useFurnitureMultiDrag` hook).
+  - PropertiesPanel shows "N items selected" with shared rotation + material editor for all-furniture selections (`MultiSelectProps.jsx`).
+  - HudOverlay updated for multi-select hint.
+  - `layersSlice.js` adds toggle visibility for Walls/Furniture/Openings/Rooms/Underlay/Grid. Persisted; not in undo history. `LayersPanel.jsx` collapsible panel at bottom of Sidebar with Eye/EyeOff icons (lucide-react). Hidden layers skip rendering and clicking.
+  - 3D `selectionHighlight.js` updated for multi-item selection (highlights all selected objects).
+  - Tests: +25 new tests; 180 total passing.
 - [x] Doors and windows on walls — placeable as a new "Openings" sidebar group above furniture categories. Catalog (`openingsCatalog.js`) defines door (0.9 × 2.1 m) and window (1.2 × 1.4 m, sill 0.9 m) defaults. New MIME `application/x-interior-studio-opening` keeps furniture + opening drag flows independent — the canvas now combines both drop hooks via a `combineDragHandlers(...bags)` helper. `useOpeningDrop.js` projects the cursor onto the nearest wall within 28 screen px (zoom-aware) and stores `{kind, wallId, position}` on `dragGhost`; `DragGhost.jsx` branches on `ghost.kind` and renders a blue snap preview on the target wall (or a red X when no wall is in range). Data model: `openings: [{ id, type: 'door'|'window', wallId, position (0–1), width, height, sillHeight }]` — its own slice (`openingsSlice.js`) with `addOpening` / `updateOpening` / `removeOpening`. Placement guards: width-shorter-than-wall refused, position clamped so the footprint stays inside the wall, overlap with existing openings refused (toast in both cases). 2D rendering: `wallSegmentsForRendering(wall, openings)` splits each wall into solid segments around its openings; `Opening.jsx` renders a door as jambs + perpendicular panel + quarter-circle swing arc, and a window as jambs + two parallel pane lines, both rotated to the wall angle. `dragBoundFunc` projects the cursor back onto the parent wall and clamps to footprint limits — drag-along-wall feels free but stays valid. 3D rendering: `wallCSG.js` uses three-bvh-csg's `Brush` + `Evaluator` + `SUBTRACTION` to cut hole boxes (oversized in Z) out of the wall box geometry; failures throw and the reconciler falls back to plain `BoxGeometry` with a translucent painted-rectangle overlay (`syncOverlay`) where the holes would be (warns to console). Wall geometry is fingerprinted by length + opening list so we only rebuild geometry when something actually changed. Cascade: `removeWall` filters openings on that wall and clears any selection pointing at a removed opening, in the same `set()`. Persist + zundo: `openings` joins `HISTORY_SLICE` and `persist.partialize`; `loadProject` + `applyAiProposal` include it. AI: prompts describe the opening schema and ask Claude to round-trip openings in the same JSON block as walls/furniture/roomMeta; `validateProposedProject` checks wallId references, type, position 0–1, finite width/height/sillHeight; `diffProject` treats openings like walls/furniture with an `openingEqual` field comparator. Tests: new `openingsSlice.test.js` (placement guards, clamping, overlap refusal, update reclamping, selection auto-selection, removeWall cascade), `openingGeometry.test.js` (project/snap/clamp/overlap/segments/placement), plus extensions to `aiApply.test.js` (openings validate + diff) and `projectIO.test.js` (round-trip + coercion). `uiSlice.test.js` updated for the extended `dragGhost` shape (`kind`/`wallId`/`position`). Total: 155 tests, all green.
 
 ### 🚧 In Progress
@@ -361,8 +370,13 @@ interior-studio/
 // width / height / sillHeight are meters. sillHeight is 0 for doors.
 { id, type: 'door' | 'window', wallId, position, width, height, sillHeight }
 
-// Selection (current shape in useStore.js)
-{ kind: 'wall' | 'furniture' | 'room' | 'opening' | 'underlay', id } | null
+// Selection (current shape in useStore.js) — multi-item
+// selectionHelpers.js: selectionItems(sel), isSelected(sel, kind, id),
+// getSingleItem(sel), commonKind(sel)
+{ items: [{ kind: 'wall' | 'furniture' | 'room' | 'opening' | 'underlay', id }, ...] } | null
+
+// Layers (persisted, not in undo history)
+{ walls: bool, furniture: bool, openings: bool, rooms: bool, underlay: bool, grid: bool }
 
 // Room (derived from walls each render; not stored)
 // `id` is a fingerprint hash of the polygon's vertex set — stable across
@@ -599,6 +613,10 @@ interior-studio/
   `toDataURL` now captures the dark backdrop instead of transparent
   pixels. Don't change the colour without checking whether the
   container's CSS still matches.
+- **Multi-item selection helpers**: never access `selection.kind` or `selection.id` directly — use `src/store/selectionHelpers.js`. `getSingleItem(sel)` for single-select code paths (PropertiesPanel routing, rotation handle); `isSelected(sel, kind, id)` for per-shape `selected` prop; `selectionItems(sel)` for bulk ops (delete, rotate, marquee).
+- **Marquee flow**: `useMarquee` hook injects `onMouseDown/Move/Up` into the Stage alongside `useDrawWalls`. On mousedown it records the anchor; if the drag exceeds 5px screen pixels it cancels the accidental `drawStart` (`setDrawStart(null)`) and shows the dashed blue rect. On mouseup it calls `setSelectionItems([...])` with all items whose representative points fall inside the rect. Only active when `drawStart === null` at mousedown time.
+- **Multi-furniture drag**: `useFurnitureMultiDrag` hook captures all selected furniture positions at drag-start via `useStore.getState()` (no stale closures). On drag-end it computes the delta from the dragged item's start→end and applies it to every other selected furniture item in one pass.
+- **Layers are persisted but not undoable**: `layers` is in `persist.partialize` but NOT in `HISTORY_SLICE`. Layer visibility is a session preference (like `show3d`), not a design decision the user should undo.
 - **Toasts are single-slot**: the store holds one `toast | null`,
   replaced (not queued) by `pushToast`. Good enough for our current
   message volume; if multiple concurrent messages become a problem,
@@ -674,6 +692,8 @@ interior-studio/
 - Wall hit-stroke padding is still `16` in `Wall.jsx`; the `konva-canvas` skill text reads as `WALL_THICKNESS + 12 = 22`. Selection blue & wall thickness now match the skill, this is the last calibration gap — defer until someone reports walls feeling hard to right-click.
 - Editing in 3D is read-only — all writes go through the 2D side. (Documented in `SPEC.md` Flow 3 and CLAUDE.md three-scene rules.)
 - Persistence is unversioned-against-shape-changes: if a future session adds fields to a `Wall` or `Furniture`, the migration must be written explicitly (`persist` `migrate` callback + bump `version`).
+- **Multi-drag is furniture-only** (2026-05-20): marquee + multi-select allows moving multiple furniture items together, but walls and openings in the selection don't move with them. `useFurnitureMultiDrag` only iterates `kind === 'furniture'` items. Fix needs a shared multi-drag handler that operates on the full `selection.items` list per kind (translate wall endpoints, re-clamp opening positions on their walls).
+- **Hiding a layer doesn't deselect items in that layer** (2026-05-20): when a layer's visibility is toggled off via the Layers panel, items of that kind remain in `selection.items` even though they're no longer rendered or clickable. The Properties panel then shows controls for an invisible item, which is confusing. Fix: in `layersSlice.toggleLayer`, when visibility flips to `false`, filter the matching kind out of `selection.items` in the same `set()` call (mapping layer key → selection `kind`: `walls`→`wall`, `furniture`→`furniture`, `openings`→`opening`, `underlay`→`underlay`; `rooms` and `grid` have no selection equivalent).
 
 ## How to Start Each Session
 Paste this file, then say what you want to work on next.

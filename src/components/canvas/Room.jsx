@@ -4,7 +4,7 @@ import { Group, Line, Text } from 'react-konva'
 // floor material (or a default tint when none is set). `listening` toggles
 // click selection — the parent passes `false` while the user is mid-draw so
 // rooms don't swallow chain-extending clicks.
-export default function Room({ room, selected, fill, listening, scale, onSelect, name }) {
+export default function Room({ room, selected, fill, listening, scale, onSelect, onShiftSelect, name }) {
   const points = room.verts.flatMap((v) => [v.x, v.y])
   return (
     <Group>
@@ -18,7 +18,8 @@ export default function Room({ room, selected, fill, listening, scale, onSelect,
         onMouseDown={(e) => {
           if (e.evt.button === 0) {
             e.cancelBubble = true
-            onSelect?.(room.id)
+            if (e.evt.shiftKey) onShiftSelect?.(room.id)
+            else onSelect?.(room.id)
           }
         }}
       />

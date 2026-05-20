@@ -1,5 +1,5 @@
 // Toggles the 2D selection's emissive-blue highlight on the matching 3D
-// object. Walks every kept mesh-map; the entry whose kind+id matches the
+// object. Walks every kept mesh-map; any entry whose kind+id appears in the
 // current selection gets emissive set on every descendant material; every
 // other entry gets it cleared.
 //
@@ -12,13 +12,17 @@ const SELECTION_EMISSIVE = 0x3b82f6
 const SELECTION_INTENSITY = 0.55
 
 export function applySelectionHighlight(wallMeshes, furnMeshes, roomMeshes, selection) {
+  const items = selection?.items ?? []
+  const isItemSelected = (kind, id) =>
+    items.some((i) => i.kind === kind && i.id === id)
+
   for (const [map, kind] of [
     [wallMeshes, 'wall'],
     [furnMeshes, 'furniture'],
     [roomMeshes, 'room'],
   ]) {
     for (const [id, obj] of map) {
-      const on = selection?.kind === kind && selection.id === id
+      const on = isItemSelected(kind, id)
       // Stamped so async GLB upgrades (reconcileFurniture.populateLoadedModel)
       // can re-apply the highlight to a freshly-swapped child without needing
       // access to the live selection.

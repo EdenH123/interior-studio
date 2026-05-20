@@ -8,6 +8,7 @@ import { createRoomsSlice } from './slices/roomsSlice'
 import { createUnderlaySlice } from './slices/underlaySlice'
 import { createViewSlice } from './slices/viewSlice'
 import { createUiSlice } from './slices/uiSlice'
+import { createLayersSlice } from './slices/layersSlice'
 
 // Tiny debounce — used by zundo's handleSet so a continuous flow (rotation
 // drag, name typing) collapses into one history entry per pause instead
@@ -57,6 +58,7 @@ const useStore = create(persist(
     ...createUnderlaySlice(set, get),
     ...createViewSlice(set, get),
     ...createUiSlice(set, get),
+    ...createLayersSlice(set, get),
 
     // Cross-slice action: hydrate the project from an imported file. Clears
     // transient state so the user lands on a clean view. `show3d` is left
@@ -75,11 +77,24 @@ const useStore = create(persist(
       }),
 
     // Cross-slice selector. Lives on the composer so callers don't need to
-    // know which slice owns selection vs furniture.
+    // know which slice owns selection vs furniture. Returns the furniture item
+    // only when exactly one furniture item is selected.
     getSelectedFurniture: () => {
-      const sel = get().selection
-      if (sel?.kind !== 'furniture') return null
-      return get().furniture.find((f) => f.id === sel.id) ?? null
+      const items = get().selection?.items ?? []
+      if (items.length !== 1 || items[0].kind !== 'furniture') return null
+      return get().furniture.find((f) => f.id === items[0].id) ?? null
+    },
+
+    // Select all visible items across layers. Walls, furniture, openings,
+    // and underlay (if present) based on the current layer visibility flags.
+    selectAll: () => {
+      const { layers, walls, furniture, openings, underlay } = get()
+      const items = []
+      if (layers.walls) walls.forEach((w) => items.push({ kind: 'wall', id: w.id }))
+      if (layers.furniture) furniture.forEach((f) => items.push({ kind: 'furniture', id: f.id }))
+      if (layers.openings) openings.forEach((o) => items.push({ kind: 'opening', id: o.id }))
+      if (layers.underlay && underlay) items.push({ kind: 'underlay', id: 'underlay' })
+      set({ selection: items.length ? { items } : null })
     },
 
     // Commit the current AI proposal in one `set` call so it lands as a
@@ -116,14 +131,15 @@ const useStore = create(persist(
   {
     name: 'interior-studio',
     version: 1,
-    // Only persist project data. Transient UI state (selection, mid-draw,
-    // view-mode toggle, drag-ghost, toast) is excluded by omission.
+    // Only persist project data + layer visibility. Transient UI state
+    // (selection, mid-draw, view-mode toggle, drag-ghost, toast) is excluded.
     partialize: (state) => ({
       walls: state.walls,
       furniture: state.furniture,
       openings: state.openings,
       roomMeta: state.roomMeta,
       underlay: state.underlay,
+      layers: state.layers,
     }),
   },
 ))

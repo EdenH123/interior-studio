@@ -38,7 +38,7 @@ describe('furnitureSlice', () => {
 
   it('addFurniture sets selection to the new piece', () => {
     const id = store.getState().addFurniture('chair', 50, 50)
-    expect(store.getState().selection).toEqual({ kind: 'furniture', id })
+    expect(store.getState().selection).toEqual({ items: [{ kind: 'furniture', id }] })
   })
 
   it('updateFurniture merges patches onto the targeted piece', () => {

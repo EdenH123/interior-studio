@@ -76,7 +76,7 @@ describe('wallsSlice cross-slice: selection clearing', () => {
   it('clears selection when the selected wall is removed', () => {
     store.getState().addWall(0, 0, 100, 0)
     const id = store.getState().walls[0].id
-    store.getState()._setSelection({ kind: 'wall', id })
+    store.getState()._setSelection({ items: [{ kind: 'wall', id }] })
     store.getState().removeWall(id)
     expect(store.getState().selection).toBeNull()
   })
@@ -85,8 +85,8 @@ describe('wallsSlice cross-slice: selection clearing', () => {
     store.getState().addWall(0, 0, 100, 0)
     store.getState().addWall(0, 0, 50, 50)
     const [a, b] = store.getState().walls
-    store.getState()._setSelection({ kind: 'wall', id: b.id })
+    store.getState()._setSelection({ items: [{ kind: 'wall', id: b.id }] })
     store.getState().removeWall(a.id)
-    expect(store.getState().selection).toEqual({ kind: 'wall', id: b.id })
+    expect(store.getState().selection).toEqual({ items: [{ kind: 'wall', id: b.id }] })
   })
 })

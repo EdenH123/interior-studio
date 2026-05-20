@@ -1,11 +1,13 @@
 import { useMemo } from 'react'
 import useStore from '../store/useStore'
+import { getSingleItem, selectionItems, commonKind } from '../store/selectionHelpers'
 import { detectRooms, polygonAreaM2 } from './canvas/roomDetection'
 import { FLOOR_MATERIALS } from './canvas/floorMaterials'
 import UnderlayProps from './canvas/UnderlayProps'
 import WallProps from './canvas/WallProps'
 import FurnitureProps from './canvas/FurnitureProps'
 import OpeningProps from './canvas/OpeningProps'
+import MultiSelectProps from './canvas/MultiSelectProps'
 import Swatch from './canvas/Swatch'
 
 // Thin router: looks at `selection` and renders the matching per-kind
@@ -30,23 +32,35 @@ export default function PropertiesPanel() {
   const startCalibration = useStore((s) => s.startCalibration)
   const calibration = useStore((s) => s.calibration)
 
-  const rooms = useMemo(() => (selection?.kind === 'room' ? detectRooms(walls) : []), [walls, selection])
+  const items = selectionItems(selection)
+  const single = getSingleItem(selection)
+  const rooms = useMemo(
+    () => (single?.kind === 'room' ? detectRooms(walls) : []),
+    [walls, single],
+  )
 
   let body = <Empty />
-  if (selection?.kind === 'wall') {
-    const w = walls.find((x) => x.id === selection.id)
+  if (items.length > 1) {
+    body = <MultiSelectProps
+      items={items}
+      kind={commonKind(selection)}
+      furniture={furniture}
+      updateFurniture={updateFurniture}
+    />
+  } else if (single?.kind === 'wall') {
+    const w = walls.find((x) => x.id === single.id)
     if (w) body = <WallProps key={w.id} wall={w} onUpdate={updateWall} />
-  } else if (selection?.kind === 'furniture') {
-    const f = furniture.find((x) => x.id === selection.id)
+  } else if (single?.kind === 'furniture') {
+    const f = furniture.find((x) => x.id === single.id)
     if (f) body = <FurnitureProps item={f} onUpdate={updateFurniture} />
-  } else if (selection?.kind === 'room') {
-    const r = rooms.find((x) => x.id === selection.id)
+  } else if (single?.kind === 'room') {
+    const r = rooms.find((x) => x.id === single.id)
     if (r) body = <RoomProps room={r} meta={roomMeta[r.id] ?? {}} onUpdate={updateRoomMeta} />
-  } else if (selection?.kind === 'opening') {
-    const o = openings.find((x) => x.id === selection.id)
+  } else if (single?.kind === 'opening') {
+    const o = openings.find((x) => x.id === single.id)
     const wall = o ? walls.find((w) => w.id === o.wallId) : null
     if (o && wall) body = <OpeningProps opening={o} wall={wall} onUpdate={updateOpening} pushToast={pushToast} />
-  } else if (selection?.kind === 'underlay' && underlay) {
+  } else if (single?.kind === 'underlay' && underlay) {
     body = <UnderlayProps underlay={underlay} updateUnderlay={updateUnderlay}
       clearUnderlay={clearUnderlay} startCalibration={startCalibration}
       calibrating={!!calibration} />

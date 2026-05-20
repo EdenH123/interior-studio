@@ -2,14 +2,35 @@ import { nanoid } from 'nanoid/non-secure'
 
 // Transient UI state — none of this is persisted. Three concerns share the
 // slice because they're all "ephemeral feedback" surfaces:
-//   • selection — what's currently focused (wall / furniture / room /
-//     underlay), shared across canvas, properties panel, and 3D highlight
+//   • selection — multi-item selection ({ items: [{kind, id}, ...] } | null)
 //   • dragGhost — the sidebar→canvas drag preview
 //   • toast    — single-slot transient notification
 export const createUiSlice = (set) => ({
+  // Multi-item selection. Shape: { items: [{ kind, id }, ...] } | null
   selection: null,
-  select: (kind, id) => set({ selection: kind && id ? { kind, id } : null }),
+
+  // Replace entire selection with one item (normal click).
+  // Passing null/falsy kind or id clears the selection.
+  select: (kind, id) =>
+    set({ selection: kind && id ? { items: [{ kind, id }] } : null }),
+
   clearSelection: () => set({ selection: null }),
+
+  // Toggle one item in/out of the selection (Shift+click).
+  addToSelection: (kind, id) =>
+    set((s) => {
+      const items = s.selection?.items ?? []
+      const idx = items.findIndex((i) => i.kind === kind && i.id === id)
+      if (idx >= 0) {
+        const next = items.filter((_, i) => i !== idx)
+        return { selection: next.length ? { items: next } : null }
+      }
+      return { selection: { items: [...items, { kind, id }] } }
+    }),
+
+  // Replace selection with an arbitrary list (marquee, select-all).
+  setSelectionItems: (items) =>
+    set({ selection: items.length ? { items } : null }),
 
   // dragGhost is the transient sidebar→canvas drag preview. `kind` tells
   // the canvas which drop path to take (grid-snap for furniture, wall-snap
