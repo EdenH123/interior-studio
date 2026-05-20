@@ -33,7 +33,7 @@ describe('useStore composer', () => {
       })
 
       const s = useStore.getState()
-      expect(s.walls).toEqual([{ id: 'a', x1: 0, y1: 0, x2: 200, y2: 0 }])
+      expect(s.walls).toMatchObject([{ id: 'a', x1: 0, y1: 0, x2: 200, y2: 0 }])
       expect(s.roomMeta).toEqual({ foo: { name: 'Living' } })
       expect(s.selection).toBeNull()
       expect(s.drawStart).toBeNull()

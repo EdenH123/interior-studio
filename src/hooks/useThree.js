@@ -12,6 +12,7 @@ import { detectRooms } from '../components/canvas/roomDetection'
 import { getFloorMaterial } from '../components/canvas/floorMaterials'
 import { kelvinToRgb } from '../utils/colorTemp'
 import { isLightingType } from '../components/viewer3d/reconcileFurniture'
+import { computeLevelOffsets } from '../store/slices/levelsSlice'
 
 const CAMERA_FOV = 60
 const FLOOR_SIZE = 100
@@ -57,12 +58,16 @@ export default function useThree(containerRef) {
   const sunRef      = useRef(null)
   const ambientRef  = useRef(null)
 
-  const walls     = useStore((s) => s.walls)
-  const openings  = useStore((s) => s.openings)
-  const furniture = useStore((s) => s.furniture)
-  const roomMeta  = useStore((s) => s.roomMeta)
-  const selection = useStore((s) => s.selection)
-  const lighting  = useStore((s) => s.lighting)
+  const walls       = useStore((s) => s.walls)
+  const openings    = useStore((s) => s.openings)
+  const furniture   = useStore((s) => s.furniture)
+  const roomMeta    = useStore((s) => s.roomMeta)
+  const selection   = useStore((s) => s.selection)
+  const lighting    = useStore((s) => s.lighting)
+  const levels      = useStore((s) => s.levels)
+  const activeLevel = useStore((s) => s.activeLevel)
+  const solo3d      = useStore((s) => s.solo3d)
+  const xrayCeiling = useStore((s) => s.xrayCeiling)
   const select          = useStore((s) => s.select)
   const clearSelection  = useStore((s) => s.clearSelection)
   const toggleDoorOpen  = useStore((s) => s.toggleDoorOpen)
@@ -180,34 +185,50 @@ export default function useThree(containerRef) {
   // ── walls ────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!stateRef.current) return
-    reconcileWalls(stateRef.current.scene, walls, openings, wallMeshes.current)
-  }, [walls, openings])
+    const levelOffsets = computeLevelOffsets(levels)
+    reconcileWalls(stateRef.current.scene, walls, openings, wallMeshes.current, {
+      levelOffsets, activeLevelId: activeLevel, solo: solo3d, xray: xrayCeiling,
+    })
+  }, [walls, openings, levels, activeLevel, solo3d, xrayCeiling])
 
   // ── doors ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!stateRef.current) return
-    reconcileDoors(stateRef.current.scene, walls, openings, doorMeshes.current, doorAnims.current)
-  }, [walls, openings])
+    const levelOffsets = computeLevelOffsets(levels)
+    reconcileDoors(stateRef.current.scene, walls, openings, doorMeshes.current, doorAnims.current, {
+      levelOffsets, activeLevelId: activeLevel, solo: solo3d,
+    })
+  }, [walls, openings, levels, activeLevel, solo3d])
 
   // ── furniture + lights ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!stateRef.current) return
+    const levelOffsets = computeLevelOffsets(levels)
     reconcileFurniture(
       stateRef.current.scene, furniture, furnMeshes.current,
       lightMap.current, lighting.lightsOn,
+      { levelOffsets, activeLevelId: activeLevel, solo: solo3d },
     )
-  }, [furniture, lighting.lightsOn])
+  }, [furniture, lighting.lightsOn, levels, activeLevel, solo3d])
 
   // ── rooms ────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!stateRef.current) return
-    const rooms = detectRooms(walls)
-    reconcileRooms(stateRef.current.scene, rooms, roomMeshes.current, (id) => {
-      const matId = roomMeta[id]?.floorMaterial
+    const levelOffsets = computeLevelOffsets(levels)
+    // Detect rooms per-level; prefix ids with levelId so each level's rooms
+    // are keyed independently in the mesh map.
+    const allRooms = levels.flatMap((lv) => {
+      const lvWalls = walls.filter((w) => (w.levelId ?? activeLevel) === lv.id)
+      return detectRooms(lvWalls).map((r) => ({ ...r, id: `${lv.id}:${r.id}`, levelId: lv.id }))
+    })
+    reconcileRooms(stateRef.current.scene, allRooms, roomMeshes.current, (id) => {
+      // Strip the levelId prefix to look up roomMeta (keyed by raw fingerprint).
+      const fp = id.includes(':') ? id.split(':').slice(1).join(':') : id
+      const matId = roomMeta[fp]?.floorMaterial
       const mat = matId ? getFloorMaterial(matId) : null
       return mat?.color ?? DEFAULT_FLOOR_COLOR
-    })
-  }, [walls, roomMeta])
+    }, levelOffsets, { solo: solo3d, activeLevelId: activeLevel })
+  }, [walls, roomMeta, levels, activeLevel, solo3d])
 
   // ── selection highlight ──────────────────────────────────────────────────────
   useEffect(() => {

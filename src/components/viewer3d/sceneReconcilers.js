@@ -15,7 +15,8 @@ const WALL_HEIGHT = 2.4
 // `meshMap` is a Map<wallId, THREE.Mesh> owned by the caller (the hook).
 // Walls with openings on them get CSG-cut geometry; the holes are painted
 // as a translucent rectangle fallback when CSG fails (with a warn).
-export function reconcileWalls(scene, walls, openings, meshMap) {
+// opts: { levelOffsets?: Map<id,metres>, activeLevelId?: string, solo?: bool, xray?: bool }
+export function reconcileWalls(scene, walls, openings, meshMap, opts = {}) {
   const present = new Set()
   // Fingerprint each opening so we can skip rebuilds when nothing changed.
   const openingsByWall = new Map()
@@ -60,8 +61,25 @@ export function reconcileWalls(scene, walls, openings, meshMap) {
         mesh.userData.color = color
       }
     }
-    mesh.position.set((a.x + b.x) / 2, WALL_HEIGHT / 2, (a.z + b.z) / 2)
+
+    const yOffset = opts.levelOffsets?.get(w.levelId) ?? 0
+    mesh.position.set((a.x + b.x) / 2, yOffset + WALL_HEIGHT / 2, (a.z + b.z) / 2)
     mesh.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x)
+
+    // Solo / x-ray visibility — reset first so toggling off restores defaults.
+    mesh.visible = true
+    mesh.material.transparent = false
+    mesh.material.opacity = 1
+    const isActiveLevel = !w.levelId || w.levelId === opts.activeLevelId
+    if (opts.solo) {
+      mesh.visible = isActiveLevel
+    } else if (opts.xray && !isActiveLevel) {
+      const activeOffset = opts.levelOffsets?.get(opts.activeLevelId) ?? 0
+      if (yOffset > activeOffset) {
+        mesh.material.transparent = true
+        mesh.material.opacity = 0.3
+      }
+    }
 
     syncOverlay(mesh, length, thickness, own)
   }
@@ -150,11 +168,14 @@ function syncOverlay(wallMesh, length, thickness, openings) {
 // material color is updated on later renders.
 const FLOOR_OFFSET_Y = 0.01
 
-export function reconcileRooms(scene, rooms, meshMap, colorForId) {
+// levelOffsets: Map<levelId, Y_base_metres> from computeLevelOffsets.
+// opts: { solo?: bool, activeLevelId?: string }
+export function reconcileRooms(scene, rooms, meshMap, colorForId, levelOffsets, opts = {}) {
   const present = new Set()
   for (const r of rooms) {
     present.add(r.id)
     const color = colorForId(r.id)
+    const yOffset = levelOffsets?.get(r.levelId) ?? 0
 
     let mesh = meshMap.get(r.id)
     if (!mesh) {
@@ -174,7 +195,6 @@ export function reconcileRooms(scene, rooms, meshMap, colorForId) {
       // Konva→Three coord rule (Konva-y → Three-z). Face normal points down
       // after this rotation, which is why the material is DoubleSide.
       mesh.rotation.x = Math.PI / 2
-      mesh.position.y = FLOOR_OFFSET_Y
       mesh.userData.kind = 'room'
       mesh.userData.id = r.id
       mesh.userData.color = color
@@ -185,6 +205,9 @@ export function reconcileRooms(scene, rooms, meshMap, colorForId) {
       mesh.material.color.set(color)
       mesh.userData.color = color
     }
+    // Always update Y — handles level height changes without a full rebuild.
+    mesh.position.y = yOffset + FLOOR_OFFSET_Y
+    mesh.visible = !opts.solo || !r.levelId || r.levelId === opts.activeLevelId
   }
   removeMissing(scene, meshMap, present)
 }

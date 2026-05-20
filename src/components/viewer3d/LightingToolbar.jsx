@@ -7,7 +7,7 @@ function formatTime(t) {
 }
 
 // Overlay toolbar in the top-right of the 3D pane.
-// Controls three lighting-slice values: master toggle, time of day, ambient fill.
+// Controls lighting + level-view toggles (Solo and X-ray).
 export default function LightingToolbar() {
   const lightsOn         = useStore((s) => s.lighting.lightsOn)
   const timeOfDay        = useStore((s) => s.lighting.timeOfDay)
@@ -15,9 +15,39 @@ export default function LightingToolbar() {
   const setLightsOn      = useStore((s) => s.setLightsOn)
   const setTimeOfDay     = useStore((s) => s.setTimeOfDay)
   const setAmbientStrength = useStore((s) => s.setAmbientStrength)
+  const solo3d      = useStore((s) => s.solo3d)
+  const xrayCeiling = useStore((s) => s.xrayCeiling)
+  const setSolo3d      = useStore((s) => s.setSolo3d)
+  const setXrayCeiling = useStore((s) => s.setXrayCeiling)
 
   return (
     <div className="pointer-events-auto absolute top-2 right-2 w-44 bg-gray-900/90 border border-gray-700 rounded p-2.5 space-y-2.5 text-[11px] text-gray-300 font-mono select-none">
+
+      {/* Level view toggles */}
+      <div className="flex items-center justify-between gap-1">
+        <button
+          onClick={() => setSolo3d(!solo3d)}
+          className={`flex-1 py-0.5 rounded text-[10px] font-semibold border transition-colors ${
+            solo3d
+              ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
+              : 'bg-gray-800 border-gray-600 text-gray-500'
+          }`}
+          title="Show only active level"
+        >
+          Solo
+        </button>
+        <button
+          onClick={() => setXrayCeiling(!xrayCeiling)}
+          className={`flex-1 py-0.5 rounded text-[10px] font-semibold border transition-colors ${
+            xrayCeiling
+              ? 'bg-purple-500/20 border-purple-500/50 text-purple-300'
+              : 'bg-gray-800 border-gray-600 text-gray-500'
+          }`}
+          title="Make upper levels 30% transparent"
+        >
+          X-Ray
+        </button>
+      </div>
 
       {/* Master lights toggle */}
       <div className="flex items-center justify-between">

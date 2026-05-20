@@ -6,6 +6,7 @@ import {
 import { setObjectEmissive } from './selectionHighlight'
 import { furnitureColorFor } from '../canvas/furnitureMaterials'
 import { kelvinToRgb } from '../../utils/colorTemp'
+import { buildStairsGeometry } from './stairsGeometry'
 
 const WALL_HEIGHT = 2.4  // metres — matches sceneReconcilers
 const MAX_LIGHTS  = 8    // hard cap on active Three.js lights for performance
@@ -36,11 +37,12 @@ function lightSourceY(type, yOffset, height) {
 
 // `lightMap`  — Map<furnitureId, THREE.Light> owned by useThree.
 // `lightsOn`  — global master switch from the lighting slice.
+// `opts`      — { levelOffsets?: Map<id,metres>, activeLevelId?: string, solo?: bool }
 //
 // Furniture meshes are wrapped in a `THREE.Group` so we can swap the visual
 // (BoxGeometry fallback ↔ loaded GLB) without recreating the addressable
 // scene object that picking and selection-highlight reference.
-export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map(), lightsOn = true) {
+export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map(), lightsOn = true, opts = {}) {
   const present = new Set()
 
   // Count currently-on lighting items to enforce the cap.
@@ -68,6 +70,7 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       group = new THREE.Group()
       group.userData.kind = 'furniture'
       group.userData.id = f.id
+      group.userData.type = f.type
       group.userData.dims = { width: f.width, depth: f.depth, height: f.height }
       group.userData.color = color
       group.userData.tintColor = tintColor
@@ -93,8 +96,10 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
         }
       }
     }
-    group.position.set(pos.x, yOff, pos.z)
+    const floorY = opts.levelOffsets?.get(f.levelId) ?? 0
+    group.position.set(pos.x, floorY + yOff, pos.z)
     group.rotation.y = konvaRotationToThreeY(f.rotation)
+    group.visible = !opts.solo || !f.levelId || f.levelId === opts.activeLevelId
 
     // ── Three.js light (lighting items only) ────────────────────────────────
     if (isLightingType(f.type)) {
@@ -167,11 +172,16 @@ function buildSpotLight(scene) {
 function populateBoxFallback(group) {
   clearChildren(group)
   const { width, depth, height } = group.userData.dims
+  const isStairs = group.userData.type === 'stairs'
+  const geo = isStairs
+    ? buildStairsGeometry(width, depth, height)
+    : new THREE.BoxGeometry(width, height, depth)
   const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(width, height, depth),
+    geo,
     new THREE.MeshStandardMaterial({ color: new THREE.Color(group.userData.color ?? '#888') }),
   )
-  mesh.position.y = height / 2
+  // Stairs geometry spans y=[0..height]; boxes are centred so lift by height/2.
+  if (!isStairs) mesh.position.y = height / 2
   mesh.castShadow    = true
   mesh.receiveShadow = true
   group.add(mesh)

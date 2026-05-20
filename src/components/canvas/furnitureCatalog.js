@@ -57,9 +57,17 @@ export const FURNITURE = [
     model: glb('pendant.glb'),
     lightType: 'spot', intensity: 1.2, colorTemp: 3000, distance: 5, castShadow: true, on: true,
   },
+
+  // Architecture — structural elements placed like furniture but rendered with
+  // bespoke Three.js geometry (stairs use buildStairsGeometry, not a box).
+  {
+    type: 'stairs', label: 'Stairs', category: 'Architecture',
+    width: 0.9, depth: 3.0, height: 2.7, color: '#8b7355', model: null,
+    stairType: true,
+  },
 ]
 
-export const CATEGORIES = ['Seating', 'Tables', 'Bedroom', 'Storage', 'Decor', 'Lighting']
+export const CATEGORIES = ['Architecture', 'Seating', 'Tables', 'Bedroom', 'Storage', 'Decor', 'Lighting']
 
 const BY_TYPE = Object.fromEntries(FURNITURE.map((f) => [f.type, f]))
 

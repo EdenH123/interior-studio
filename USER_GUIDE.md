@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-20_  <!-- 3D door panels + AI trace -->
+_Last updated: 2026-05-20_  <!-- multi-level buildings + stairs -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -704,6 +704,55 @@ What's **not** saved (resets every session):
 
 If you want a truly clean slate, clear the site's storage in your
 browser's developer tools (we don't yet expose a "reset" button).
+
+## Working with multiple levels
+
+Interior Studio supports multi-storey buildings. By default every project
+starts with a single **Ground Floor**. The **Levels** panel in the left
+sidebar (just above the Layers panel) lets you add more.
+
+### Managing levels
+
+- **Add a floor** — click the **+** button in the Levels panel header.
+  A new floor is added above the highest existing level with a default
+  ceiling height of 2.7 m.
+- **Activate a floor** — click any level row to make it active (highlighted
+  in blue). All 2D drawing and placement goes to the active level. The
+  canvas shows only items on the active level.
+- **Rename a floor** — double-click the level's name, type the new name,
+  press **Enter** (or click elsewhere).
+- **Change ceiling height** — edit the number in the **m** column. The
+  height is the floor-to-ceiling distance for that level; the 3D viewer
+  stacks each level directly above the one below.
+- **Remove a floor** — click the **×** button on the right of the row.
+  You can't delete the last remaining level. Removing the active level
+  automatically switches to the nearest remaining one.
+
+### Stairs
+
+Drag **Stairs** from the **Architecture** category in the sidebar onto
+the canvas. Stairs are placed like furniture and display as a stepped
+block in both 2D and 3D. They are automatically linked to the active
+level (`fromLevel`) and the next level up (`toLevel`).
+
+### 3D multi-level view
+
+When the 3D viewer is open, all levels are stacked at their correct
+heights. Two toggles in the 3D toolbar (top-right) control what you see:
+
+- **Solo** — show only the active level (everything else is hidden). Use
+  this to inspect a single floor without clutter from other levels.
+- **X-Ray** — levels *above* the active level become 30% transparent,
+  letting you see the active floor through the ceilings above. Levels
+  below remain fully opaque.
+
+Both toggles are session preferences and are not saved with the project.
+
+### Saving and loading multi-level projects
+
+Multi-level projects save and load normally (`.studio.json` version 2).
+Projects created before multi-level was introduced load without any extra
+steps — all existing items are automatically assigned to the Ground Floor.
 
 ## Pan and zoom (2D)
 

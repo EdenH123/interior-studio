@@ -60,9 +60,10 @@ interior-studio/
 │   │   ├── AiPanel.jsx          # AI chat panel — replaces PropertiesPanel when toggled on; hosts proposal preview
 │   │   ├── AiSettings.jsx       # API-key input + dev-mode security warning, extracted from AiPanel
 │   │   ├── AiProposalCard.jsx   # apply/discard preview card shown when Claude returns a valid project-schema JSON block
+│   │   ├── LevelsPanel.jsx      # collapsible sidebar panel: list levels, click to activate, double-click to rename, inline height input, add/remove
 │   │   ├── canvas/              # 2D canvas primitives
 │   │   │   ├── constants.js     # PIXELS_PER_METER, snapTo90, formatMeters, zoom limits
-│   │   │   ├── furnitureCatalog.js  # 12 items × 5 categories; dimensions in meters
+│   │   │   ├── furnitureCatalog.js  # 13 items × 6 categories (Architecture added with Stairs); dimensions in meters
 │   │   │   ├── openingsCatalog.js   # door + window catalog + OPENING_DRAG_MIME constant
 │   │   │   ├── openingGeometry.js   # pure helpers: project/snap onto wall, clamp position, overlap test, wallSegmentsForRendering
 │   │   │   ├── Opening.jsx          # 2D opening: jambs + door swing arc / window double-line; drag-along-wall via projected dragBoundFunc
@@ -103,7 +104,8 @@ interior-studio/
 │   │       ├── selectionHighlight.js # applySelectionHighlight (traverse-based) + setObjectEmissive
 │   │       ├── picking.js       # attachPicking — raycaster (recursive) + parent walk + click-vs-drag guard; kind='door' dispatches onToggleDoor instead of onSelect
 │   │       ├── walkthroughCollision.js  # pure 2D ray-segment math for wall collision: raySegmentIntersect + rayHitsWalls (no THREE import)
-│   │       └── walkthroughCollision.test.js
+│   │       ├── walkthroughCollision.test.js
+│   │       └── stairsGeometry.js    # pure BufferGeometry builder: buildStairsGeometry(w,d,h,numSteps=12) — stepped staircase, all 6 faces per step, indexed geometry
 │   ├── hooks/
 │   │   ├── useElementSize.js    # ResizeObserver hook for fluid stage sizing
 │   │   ├── useViewport.js       # scale/pan state, wheel-zoom-around-cursor, drag-pan, client→world helper
@@ -128,7 +130,9 @@ interior-studio/
 │   │       ├── viewSlice.js     # show3d + drawStart
 │   │       ├── uiSlice.js       # selection + dragGhost (now carries kind/wallId/position) + toast
 │   │       ├── lightingSlice.js # lightsOn + timeOfDay + ambientStrength — persisted, not in undo
-│   │       └── walkthroughSlice.js  # walkthrough bool — NOT persisted, NOT in undo history
+│   │       ├── walkthroughSlice.js  # walkthrough bool — NOT persisted, NOT in undo history
+│   │       ├── levelsSlice.js       # building levels: { id, name, height, order }; GROUND_FLOOR_ID='L00000'; computeLevelOffsets(); solo3d + xrayCeiling flags
+│   │       └── levelsSlice.test.js  # 19 tests: computeLevelOffsets + all 9 actions
 │   ├── App.jsx                  # root layout: Toolbar + Sidebar + Canvas + (PropertiesPanel ↔ AiPanel) + Toast
 │   ├── index.css                # Tailwind import + full-height reset
 │   ├── test/
@@ -420,6 +424,19 @@ interior-studio/
   - **CREDITS.md** updated with full CC0 attribution for `chair.glb` (including note that Poly Pizza was inaccessible from the network environment) and updated triangle-count / size table for all 11 procedural models.
   - All GLBs well under 500 kB; build green, 295/295 tests pass.
 
+- [x] Multi-level building system — full implementation (2026-05-20)
+  - **Data model**: `levelsSlice.js` — `levels: [{ id, name, height, order }]` + `activeLevel` + `solo3d` + `xrayCeiling`. Fixed Ground Floor id `GROUND_FLOOR_ID = 'L00000'`. Actions: `addLevel` / `removeLevel` / `renameLevel` / `setLevelHeight` (min 0.1 m) / `setActiveLevel` / `setSolo3d` / `setXrayCeiling`. `computeLevelOffsets(levels)` → `Map<levelId, Y_base_metres>`.
+  - **Item tagging**: every wall, furniture item, and opening now carries `levelId` set to `s.activeLevel` at creation time (from the set-callback's state, not a captured closure). Openings inherit `wall.levelId ?? activeLevel`.
+  - **Stairs**: `furnitureCatalog.js` gains a new `'Architecture'` category (listed first) with one item: `'stairs'` (0.9 × 3.0 m, `stairType: true`). `addFurniture` detects `spec.stairType` and adds `fromLevel` + `toLevel` to the piece. `stairsGeometry.js` — pure `BufferGeometry` builder (`buildStairsGeometry(w, d, h, numSteps=12)`) — 12 stepped columns, 6 faces per step, indexed. `reconcileFurniture.js` detects `group.userData.type === 'stairs'` in `populateBoxFallback` and uses `buildStairsGeometry`; geometry spans y=0..height so no `mesh.position.y = height/2` offset.
+  - **2D canvas**: `CanvasArea.jsx` filters `walls`, `furniture`, `openings` by `activeLevel` before passing to canvas components and `detectRooms`. Only the active level is visible in 2D.
+  - **3D viewer**: all reconcilers accept `opts = { levelOffsets, activeLevelId, solo, xray }`. Walls: `mesh.position.y = yOffset + WALL_HEIGHT/2` where `yOffset = levelOffsets.get(w.levelId) ?? 0`; solo hides non-active-level meshes; xray makes levels above active 30% transparent. Furniture: `group.position.set(pos.x, floorY + yOff, pos.z)`; solo sets `group.visible`. Doors: `group.position.y = yOffset`; solo sets `group.visible`. Rooms: detected per-level in `useThree.js` (flat-map over levels), ids prefixed `${levelId}:${fingerprint}`, positioned at `yOffset + FLOOR_OFFSET_Y`; solo hides non-active rooms.
+  - **LevelsPanel.jsx**: collapsible sidebar panel above `LayersPanel`. Click to activate (blue), double-click to rename, height input per row, "+" adds level, "×" removes (hidden when only 1).
+  - **LightingToolbar.jsx**: two new toggle buttons — Solo (blue) and X-Ray (purple) — above the existing Lights toggle.
+  - **Persist migration**: `useStore.persist.version` bumped 1 → 2. `migrate(state, version)` function assigns `levelId: GROUND_FLOOR_ID` to all existing items in v1 saves and adds the default levels array. `loadProject` also migrates: items without `levelId` get `firstLevelId`; missing `levels` defaults to Ground Floor only.
+  - **projectIO.js**: `VERSION` bumped to 2. `buildExportData` includes `levels` + `activeLevel`. `validateImport` accepts both v1 and v2 files (v1 returns `levels: undefined` which `loadProject` handles via migration).
+  - **`selectAll`**: filters items to `activeLevel` before selecting (Cmd+A only selects on the current floor).
+  - **Tests**: `levelsSlice.test.js` (19 tests: computeLevelOffsets stacking/sorting/empty, all 9 actions). `flows.test.jsx` +9 migration tests: default ground floor on load, levelId assignment for items, preservation of explicit levelId, new walls/furniture inherit activeLevel, buildExportData includes levels, validateImport accepts v1 + v2 files. Total: 360 tests, all green.
+
 ### 🚧 In Progress
 - (nothing active)
 
@@ -431,24 +448,32 @@ interior-studio/
 - [ ] AI markdown rendering — the chat transcript shows plain whitespace-preserved text today; rendering headings + lists + code blocks would make responses more scannable.
 - [ ] PDF export with a printed scale bar — PNG round-trip is in place; PDF is a separate code path (paged, vector-friendly).
 - [ ] Underlay selection from 3D (today 3D picking only finds walls / furniture / rooms; underlay is a 2D-only concept)
-- [ ] Persistence + import schema migration plan — `version: 1` today (both `persist` and `.studio.json`). When shapes change, bump version in `useStore.persist` AND in `utils/projectIO.js`, and add migration logic in both spots.
+- [ ] Stair hole cutting — the floor above a staircase should have an opening cut through it. Currently stairs render correctly in 3D but the ceiling above them is solid.
 
 ## Key Data Structures
 ```javascript
-// Wall (current shape in useStore.js)
-// material is an id from wallMaterials.js or null/undefined → default gray.
-{ id, x1, y1, x2, y2, material?: 'painted-white' | 'brick' | 'concrete' | 'wood-panel' | 'wallpaper' | null }
+// Level
+{ id: string, name: string, height: number /* metres */, order: number }
+// GROUND_FLOOR_ID = 'L00000' — fixed; used by persist migration.
 
-// Furniture item — `material` is an optional override; null/undefined → catalog color
-{ id, type, x, y, rotation, width, depth, height, color, model: string | null,
-  material?: 'light-wood' | 'dark-wood' | 'white' | 'black' | 'linen' | 'navy' | 'forest' | null }
+// Wall — levelId added in session 28; items without it treated as ground floor.
+{ id, x1, y1, x2, y2, levelId: string, material?: string | null }
 
-// Furniture item (current shape in useStore.js)
+// Furniture item — levelId + optional stair fields added in session 28.
 // x, y are world pixels (centroid); width/depth/height are meters;
 // rotation is degrees (0–359). color is the footprint tint from the catalog.
-// model is the snapshot of the catalog's `model` field at add time — a
-// .glb URL or null; null means BoxGeometry-fallback in 3D.
-{ id, type, x, y, rotation, width, depth, height, color, model: string | null }
+// model is snapshotted from catalog at add-time (.glb URL or null).
+// Stairs additionally carry: fromLevel, toLevel.
+{ id, type, x, y, rotation, width, depth, height, color, model: string | null,
+  levelId: string, material?: string | null,
+  // lighting items only:
+  lightType?, intensity?, colorTemp?, distance?, castShadow?, on?,
+  // stairs only:
+  fromLevel?, toLevel? }
+
+// Opening — levelId inherited from parent wall at creation.
+{ id, type: 'door'|'window', wallId, position, width, height, sillHeight,
+  levelId: string, open?: boolean /* doors only */ }
 
 // Opening (door or window on a wall — current shape in useStore.js)
 // position is normalised 0..1 along the parent wall (0 = wall start).

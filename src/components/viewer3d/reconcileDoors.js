@@ -11,7 +11,8 @@ const DOOR_ANIM_MS = 300
 // Rotating the group around its Y-axis swings the door open/closed.
 //
 // `doorAnims` is a live Map<id, anim> that tickDoorAnims reads every frame.
-export function reconcileDoors(scene, walls, openings, meshMap, doorAnims) {
+// opts: { levelOffsets?: Map<id,metres>, activeLevelId?: string, solo?: bool }
+export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts = {}) {
   const present = new Set()
 
   for (const o of openings) {
@@ -41,6 +42,7 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims) {
     const closedAngle = wallYaw
     const openAngle = wallYaw + Math.PI / 2
     const targetAngle = o.open ? openAngle : closedAngle
+    const yOffset = opts.levelOffsets?.get(wall.levelId) ?? 0
 
     let group = meshMap.get(o.id)
     if (!group) {
@@ -74,7 +76,8 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims) {
       }
     }
 
-    group.position.set(hingeWX, 0, hingeWZ)
+    group.position.set(hingeWX, yOffset, hingeWZ)
+    group.visible = !opts.solo || !wall.levelId || wall.levelId === opts.activeLevelId
   }
 
   for (const [id, group] of meshMap) {

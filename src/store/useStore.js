@@ -11,6 +11,7 @@ import { createUiSlice } from './slices/uiSlice'
 import { createLayersSlice } from './slices/layersSlice'
 import { createLightingSlice } from './slices/lightingSlice'
 import { createWalkthroughSlice } from './slices/walkthroughSlice'
+import { createLevelsSlice, GROUND_FLOOR_ID, DEFAULT_LEVEL_HEIGHT } from './slices/levelsSlice'
 
 // Tiny debounce — used by zundo's handleSet so a continuous flow (rotation
 // drag, name typing) collapses into one history entry per pause instead
@@ -63,21 +64,37 @@ const useStore = create(persist(
     ...createLayersSlice(set, get),
     ...createLightingSlice(set, get),
     ...createWalkthroughSlice(set, get),
+    ...createLevelsSlice(set, get),
 
     // Cross-slice action: hydrate the project from an imported file. Clears
     // transient state so the user lands on a clean view. `show3d` is left
     // alone — window arrangement is a session preference, not project data.
+    // Old project files (pre-levels) have no levelId on items; we assign the
+    // ground floor id so they're visible on level 0 without data loss.
     loadProject: (data) =>
-      set({
-        walls: Array.isArray(data?.walls) ? data.walls : [],
-        furniture: Array.isArray(data?.furniture) ? data.furniture : [],
-        openings: Array.isArray(data?.openings) ? data.openings : [],
-        roomMeta: data?.roomMeta && typeof data.roomMeta === 'object' ? data.roomMeta : {},
-        underlay: data?.underlay && typeof data.underlay === 'object' ? data.underlay : null,
-        selection: null,
-        drawStart: null,
-        calibration: null,
-        dragGhost: null,
+      set((s) => {
+        const levels = Array.isArray(data?.levels) && data.levels.length > 0
+          ? data.levels
+          : [{ id: GROUND_FLOOR_ID, name: 'Ground Floor', height: DEFAULT_LEVEL_HEIGHT, order: 0 }]
+        const firstLevelId = [...levels].sort((a, b) => a.order - b.order)[0].id
+        const activeLevel = data?.activeLevel ?? firstLevelId
+        const migrateItems = (arr) =>
+          (Array.isArray(arr) ? arr : []).map((item) =>
+            item.levelId ? item : { ...item, levelId: firstLevelId },
+          )
+        return {
+          walls: migrateItems(data?.walls),
+          furniture: migrateItems(data?.furniture),
+          openings: migrateItems(data?.openings),
+          roomMeta: data?.roomMeta && typeof data.roomMeta === 'object' ? data.roomMeta : {},
+          underlay: data?.underlay && typeof data.underlay === 'object' ? data.underlay : null,
+          levels,
+          activeLevel,
+          selection: null,
+          drawStart: null,
+          calibration: null,
+          dragGhost: null,
+        }
       }),
 
     // Cross-slice selector. Lives on the composer so callers don't need to
@@ -89,14 +106,14 @@ const useStore = create(persist(
       return get().furniture.find((f) => f.id === items[0].id) ?? null
     },
 
-    // Select all visible items across layers. Walls, furniture, openings,
-    // and underlay (if present) based on the current layer visibility flags.
+    // Select all visible items on the active level across layers.
     selectAll: () => {
-      const { layers, walls, furniture, openings, underlay } = get()
+      const { layers, walls, furniture, openings, underlay, activeLevel } = get()
+      const onLevel = (item) => !item.levelId || item.levelId === activeLevel
       const items = []
-      if (layers.walls) walls.forEach((w) => items.push({ kind: 'wall', id: w.id }))
-      if (layers.furniture) furniture.forEach((f) => items.push({ kind: 'furniture', id: f.id }))
-      if (layers.openings) openings.forEach((o) => items.push({ kind: 'opening', id: o.id }))
+      if (layers.walls) walls.filter(onLevel).forEach((w) => items.push({ kind: 'wall', id: w.id }))
+      if (layers.furniture) furniture.filter(onLevel).forEach((f) => items.push({ kind: 'furniture', id: f.id }))
+      if (layers.openings) openings.filter(onLevel).forEach((o) => items.push({ kind: 'opening', id: o.id }))
       if (layers.underlay && underlay) items.push({ kind: 'underlay', id: 'underlay' })
       set({ selection: items.length ? { items } : null })
     },
@@ -134,9 +151,28 @@ const useStore = create(persist(
   }),
   {
     name: 'interior-studio',
-    version: 1,
+    version: 2,
+    // v1 → v2: levelId added to all items; levels + activeLevel added to root.
+    migrate: (state, version) => {
+      if (version < 2) {
+        const migrateItems = (arr) =>
+          (Array.isArray(arr) ? arr : []).map((item) =>
+            item.levelId ? item : { ...item, levelId: GROUND_FLOOR_ID },
+          )
+        return {
+          ...state,
+          walls:     migrateItems(state.walls),
+          furniture: migrateItems(state.furniture),
+          openings:  migrateItems(state.openings),
+          levels: [{ id: GROUND_FLOOR_ID, name: 'Ground Floor', height: DEFAULT_LEVEL_HEIGHT, order: 0 }],
+          activeLevel: GROUND_FLOOR_ID,
+        }
+      }
+      return state
+    },
     // Only persist project data + layer visibility. Transient UI state
     // (selection, mid-draw, view-mode toggle, drag-ghost, toast) is excluded.
+    // solo3d/xrayCeiling are session preferences — not persisted.
     partialize: (state) => ({
       walls: state.walls,
       furniture: state.furniture,
@@ -145,6 +181,8 @@ const useStore = create(persist(
       underlay: state.underlay,
       layers: state.layers,
       lighting: state.lighting,
+      levels: state.levels,
+      activeLevel: state.activeLevel,
     }),
   },
 ))

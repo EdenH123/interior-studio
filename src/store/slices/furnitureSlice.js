@@ -22,19 +22,32 @@ export const createFurnitureSlice = (set) => ({
       castShadow: spec.castShadow,
       on: spec.on,
     } : {}
-    set((s) => ({
-      furniture: [
-        ...s.furniture,
-        {
-          id, type, x, y, rotation: 0,
-          width: spec.width, depth: spec.depth, height: spec.height,
-          color: spec.color,
-          model: spec.model ?? null,
-          ...lightFields,
-        },
-      ],
-      selection: { items: [{ kind: 'furniture', id }] },
-    }))
+    set((s) => {
+      const activeLevel = s.activeLevel ?? null
+      // Stairs connect the active level to the one directly above it.
+      let stairFields = {}
+      if (spec.stairType) {
+        const sorted = [...(s.levels ?? [])].sort((a, b) => a.order - b.order)
+        const idx = sorted.findIndex((l) => l.id === activeLevel)
+        const nextLevel = idx >= 0 && idx + 1 < sorted.length ? sorted[idx + 1] : null
+        stairFields = { fromLevel: activeLevel, toLevel: nextLevel?.id ?? null }
+      }
+      return {
+        furniture: [
+          ...s.furniture,
+          {
+            id, type, x, y, rotation: 0,
+            width: spec.width, depth: spec.depth, height: spec.height,
+            color: spec.color,
+            model: spec.model ?? null,
+            levelId: activeLevel,
+            ...lightFields,
+            ...stairFields,
+          },
+        ],
+        selection: { items: [{ kind: 'furniture', id }] },
+      }
+    })
     return id
   },
   updateFurniture: (id, patch) =>
