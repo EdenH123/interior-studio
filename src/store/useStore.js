@@ -9,6 +9,7 @@ import { createUnderlaySlice } from './slices/underlaySlice'
 import { createViewSlice } from './slices/viewSlice'
 import { createUiSlice } from './slices/uiSlice'
 import { createLayersSlice } from './slices/layersSlice'
+import { createLightingSlice } from './slices/lightingSlice'
 
 // Tiny debounce — used by zundo's handleSet so a continuous flow (rotation
 // drag, name typing) collapses into one history entry per pause instead
@@ -59,6 +60,7 @@ const useStore = create(persist(
     ...createViewSlice(set, get),
     ...createUiSlice(set, get),
     ...createLayersSlice(set, get),
+    ...createLightingSlice(set, get),
 
     // Cross-slice action: hydrate the project from an imported file. Clears
     // transient state so the user lands on a clean view. `show3d` is left
@@ -140,6 +142,7 @@ const useStore = create(persist(
       roomMeta: state.roomMeta,
       underlay: state.underlay,
       layers: state.layers,
+      lighting: state.lighting,
     }),
   },
 ))

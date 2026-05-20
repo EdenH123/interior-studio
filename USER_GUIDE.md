@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-21_  <!-- real color palette (BM, SW, wood finishes) -->
+_Last updated: 2026-05-20_  <!-- lighting system: placed lights + 3D toolbar -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -453,6 +453,44 @@ Selection is synchronised between the 2D and 3D views:
 > **Heads-up:** the first time you click **3D** in a fresh session, the
 > 3D engine downloads in the background. You'll see "loading 3D…" for
 > a moment, then the view appears.
+
+## Lighting and time of day
+
+### Placing lights
+
+The **Lighting** category at the bottom of the left panel has four lamp types:
+
+| Type | Description |
+|---|---|
+| **Ceiling lamp** | Warm omnidirectional PointLight, 8 m radius, mounts at ceiling height |
+| **Floor lamp** | Warm omnidirectional PointLight, 5 m radius, floor-standing |
+| **Table lamp** | Extra-warm omnidirectional PointLight, 3 m radius, floor-standing |
+| **Pendant** | Warm downward SpotLight, 30° cone, 5 m radius, mounts at ceiling height |
+
+Drag a tile onto the 2D canvas just like regular furniture. When you switch to 3D the lamp mesh and its light both appear at the correct height. Lights cast shadows by default.
+
+### Lighting toolbar (3D pane)
+
+When the 3D pane is open, a small **Lighting** panel appears in its top-right corner with three controls:
+
+- **Lights ON / OFF** — master switch that silences all placed lights at once (their meshes remain visible).
+- **Time of day** slider (00:00–24:00) — moves the sun across the sky from east to west. Colour changes from warm orange at dawn and dusk (~2500 K) to cool white at noon (~6500 K). The sun disappears below the horizon at night, leaving only ambient and placed lights.
+- **Ambient %** slider (0–100 %) — controls the fill-light intensity so you can darken the whole scene for a dramatic night look or brighten it for a neutral review.
+
+### Editing a placed light (Properties panel)
+
+Click a lamp on the 2D canvas to select it. The right panel shows:
+
+- **Power** — toggle the individual lamp on or off.
+- **Intensity** (0–3) — brightness of the light itself (not the 3D mesh).
+- **Color temp** (2000–6500 K) — warm orange candlelight at 2000 K, cool daylight white at 6500 K. A small swatch shows the approximate hue.
+- **Radius (m)** (1–15 m) — how far the light falls off; larger radius illuminates a bigger area at lower intensity.
+- **Shadow** — toggle per-lamp shadow casting. Shadows are expensive; turn them off on distant lamps if performance feels slow.
+
+### Performance notes
+
+- Up to **8 active lights** (on = true, master lights = on) are rendered in full. If you place more than 8, the extra ones are silenced and a warning toast appears. Turn some off via the Power toggle to re-enable others.
+- Shadow resolution is 512 × 512 per placed light. The directional sun uses 2048 × 2048.
 
 ## AI design assistant
 

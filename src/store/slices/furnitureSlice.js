@@ -12,6 +12,16 @@ export const createFurnitureSlice = (set) => ({
     const spec = getFurnitureSpec(type)
     if (!spec) return null
     const id = nanoid(6)
+    // Snapshot light-specific fields so changes to the catalog don't mutate
+    // already-placed items. Non-lighting types leave these fields undefined.
+    const lightFields = spec.lightType != null ? {
+      lightType: spec.lightType,
+      intensity: spec.intensity,
+      colorTemp: spec.colorTemp,
+      distance: spec.distance,
+      castShadow: spec.castShadow,
+      on: spec.on,
+    } : {}
     set((s) => ({
       furniture: [
         ...s.furniture,
@@ -20,6 +30,7 @@ export const createFurnitureSlice = (set) => ({
           width: spec.width, depth: spec.depth, height: spec.height,
           color: spec.color,
           model: spec.model ?? null,
+          ...lightFields,
         },
       ],
       selection: { items: [{ kind: 'furniture', id }] },
