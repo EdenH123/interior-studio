@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-20_  <!-- multi-select + layers panel -->
+_Last updated: 2026-05-20_  <!-- real GLB furniture models -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -381,10 +381,14 @@ plan next to the 2D canvas. The two views stay synced — as you change
 the 2D side, the 3D side updates instantly.
 
 - Walls show up as boxes that are 2.4 m tall.
-- Furniture shows up as colored blocks sized to its real dimensions.
-  (When real 3D models ship for furniture in a future release, those
-  will replace the blocks automatically; the right panel's **Model**
-  row tells you whether a piece is using a model or the box fallback.)
+- Furniture shows up as low-poly 3D models sized to the catalog
+  dimensions — sofas with backrests and arms, chairs with legs, tables
+  with leg sets, a bed with headboard, shelving with shelves, and so on.
+  The first time you open 3D after placing furniture a small **loading
+  models…** spinner appears in the bottom-right corner until all models
+  have loaded. After that first load the models are cached for the
+  session. The right panel's **Model** row shows `GLB loaded` when the
+  3D model is active or `Box fallback` if a model failed to load.
 - Each detected room shows up as a coloured **floor piece** matching
   its floor material (Wood, Tile, Carpet, etc.). Rooms with no material
   set yet use a neutral gray. Beyond the room boundaries, the dark
