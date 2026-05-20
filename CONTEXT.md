@@ -692,6 +692,8 @@ interior-studio/
 - Wall hit-stroke padding is still `16` in `Wall.jsx`; the `konva-canvas` skill text reads as `WALL_THICKNESS + 12 = 22`. Selection blue & wall thickness now match the skill, this is the last calibration gap — defer until someone reports walls feeling hard to right-click.
 - Editing in 3D is read-only — all writes go through the 2D side. (Documented in `SPEC.md` Flow 3 and CLAUDE.md three-scene rules.)
 - Persistence is unversioned-against-shape-changes: if a future session adds fields to a `Wall` or `Furniture`, the migration must be written explicitly (`persist` `migrate` callback + bump `version`).
+- **Multi-drag is furniture-only** (2026-05-20): marquee + multi-select allows moving multiple furniture items together, but walls and openings in the selection don't move with them. `useFurnitureMultiDrag` only iterates `kind === 'furniture'` items. Fix needs a shared multi-drag handler that operates on the full `selection.items` list per kind (translate wall endpoints, re-clamp opening positions on their walls).
+- **Hiding a layer doesn't deselect items in that layer** (2026-05-20): when a layer's visibility is toggled off via the Layers panel, items of that kind remain in `selection.items` even though they're no longer rendered or clickable. The Properties panel then shows controls for an invisible item, which is confusing. Fix: in `layersSlice.toggleLayer`, when visibility flips to `false`, filter the matching kind out of `selection.items` in the same `set()` call (mapping layer key → selection `kind`: `walls`→`wall`, `furniture`→`furniture`, `openings`→`opening`, `underlay`→`underlay`; `rooms` and `grid` have no selection equivalent).
 
 ## How to Start Each Session
 Paste this file, then say what you want to work on next.
