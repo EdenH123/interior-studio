@@ -407,6 +407,12 @@ interior-studio/
   - `resetStore()` pattern extended to reset `layers` (not cleared by `loadProject` — now documented).
   - Tests: 326 total (up from 295), all green.
 
+- [x] Bug hunt and UX fixes — session 27 (2026-05-20)
+  - **Issue 2 fixed — wall vs endpoint click conflict**: `useDrawWalls.js` now allows shape clicks during an active wall chain (`if (e.target !== stageRef.current && !drawStart) return`). Previously the closing click of a rectangle was silently dropped if it landed on a Wall shape near the target endpoint. The guard now only bails when `drawStart` is null (no chain active), so selection clicks on shapes still work normally when not drawing.
+  - **Issue 1 fixed — wall closing snap improvements**: Three-tier snap system in `useDrawWalls.js`: (1) raw cursor endpoint/midpoint snap (existing); (2) endpoint snap applied to the direction-snapped position — catches "close rectangle" clicks where the raw cursor was a few pixels outside snap radius but the direction-locked point is on the target; (3) new `snapParallelWallLength` function in `constants.js` — snaps wall length to match a parallel existing wall of similar length (within snap-radius threshold). Rectangle close is now much more forgiving.
+  - **Issue 3 fixed — walkthrough mouselook**: `useThree.js` RAF tick now skips `controls.update()` (OrbitControls) when `stateRef.current.onFrame` is set (walkthrough active). OrbitControls' damping was interfering with PointerLockControls' mouselook rotation. The fix is a one-liner: `if (!stateRef.current.onFrame) controls.update()`.
+  - **Tests**: `constants.test.js` +5 (snapParallelWallLength: returns unchanged when no parallel wall, snaps to parallel wall within threshold, rejects delta > threshold, ignores perpendicular walls, handles zero-length draw). `flows.test.jsx` +3 (useDrawWalls shape-click guard: ignores shape click when no chain, commits wall on shape click when chain active, background clicks start chain normally). Tests: 334 total, all green.
+
 - [x] Upgraded furniture GLBs — real SheenChair + v2 procedural generator (2026-05-20)
   - **chair.glb**: processed from the CC0 `SheenChair.glb` asset from three.js/KhronosGroup. Pipeline: download (4.4 MB) → strip all textures + `TEXCOORD_*` vertex attributes → reset material to pure white PBR → `@gltf-transform` `dedup + prune + quantize(position:10, normal:8)` → 501 kB (~150 kB gzip). `scripts/process-sheenchair.mjs` is the reproducible script.
   - **11 procedural models (v2)**: `scripts/generate-furniture-glbs.mjs` completely rewritten. New helpers: `cyl(cx,cz,y1,y2,r,segs,smooth)` (8-segment smooth-normal cylinder, 32 tris each), `fourLegs()`, `merge()` for arbitrary part combination. Models range 60–384 triangles (vs 12–96 in v1). sofa/armchair: individual cushions + cylinder feet; dining-table: round legs (10-seg); desk: left pedestal + 3 drawers + handles; bed: pillows + panelled headboard + corner posts; bookshelf: book bundles per shelf; lamp: 7-layer frusto-cone shade; wardrobe: cylinder handles + centre divider.
@@ -550,12 +556,17 @@ interior-studio/
   furniture item ever changes, bump `version` in `useStore.js` and add a
   `migrate` function — otherwise existing localStorage entries will
   hydrate into a broken store.
-- **Snap precedence**: when a snap target is within range, it wins over
-  the 90° projection. This applies to both the first click (sets
-  `drawStart`) and the second click (commits the wall). The snap is
-  recomputed in the click handler from the click's own pointer position,
-  not from a cached `cursorWorld`, so a slow mousemove can't desync the
-  click from what the indicator was showing.
+- **Snap precedence (three tiers, second click only)**: (1) raw cursor
+  endpoint/midpoint snap — wins if anything is within `SNAP_RADIUS_SCREEN / scale`;
+  (2) endpoint snap from the 90°-snapped position — a secondary pass that catches
+  "close rectangle" clicks where the cursor was a pixel or two outside the raw
+  threshold but the direction-locked point lands on the endpoint; (3)
+  `snapParallelWallLength` — when neither snap fires, checks for a parallel wall
+  whose length is within the same threshold of the current cursor distance, and
+  snaps the new wall's length to match. First click (sets `drawStart`) still uses
+  only the raw snap. The snap is recomputed in the click handler from the click's
+  own pointer position, not from a cached `cursorWorld`, so a slow mousemove can't
+  desync the click from what the indicator was showing.
 - **Wall-chain lifecycle**: after a successful commit, `drawStart` is set
   to the new endpoint, not cleared. The chain continues until the user
   clicks the same point again (zero-length commit short-circuits), hits
@@ -783,7 +794,7 @@ interior-studio/
 - **Component tests use a Zustand selector mock pattern**: `vi.mock('../store/useStore', () => ({ default: vi.fn() }))` then `vi.mocked(useStore).mockImplementation((sel) => sel(mockState))` in `beforeEach`. Sub-editors are stubbed with `vi.mock('./canvas/FurnitureProps', () => ({ default: () => <div>FurnitureProps</div> }))` so PropertiesPanel smoke tests focus on routing, not sub-component internals.
 - **Walkthrough uses an `onFrame` slot on `stateRef`**: `useThree` now returns `stateRef` (the stable ref holding `{ scene, camera, renderer, controls, … }`). `useWalkthrough` sets `stateRef.current.onFrame` to its per-frame physics callback when active; the RAF tick calls it before `controls.update()`. When inactive, the slot is null and the tick is a no-op. This avoids a second RAF loop and lets the walkthrough hook co-exist cleanly with the Three.js render loop.
 - **Walkthrough is NOT persisted and NOT in undo history**: it's a viewport mode, like `show3d`. The app always boots in orbit mode. `walkthroughSlice` keys are intentionally excluded from both `HISTORY_SLICE` and `persist.partialize`.
-- **PointerLockControls and OrbitControls coexist by disabling orbit while locked**: when walkthrough is active, `orbit.enabled = false`; on cleanup, it's restored. OrbitControls' `update()` returns early when disabled, so it won't fight with PLC for camera control.
+- **PointerLockControls and OrbitControls coexist — orbit update skipped during walkthrough**: when walkthrough is active, `orbit.enabled = false`; on cleanup, it's restored. The RAF tick also skips `controls.update()` entirely when `stateRef.current.onFrame` is set — even with `enabled = false`, OrbitControls' damping was interfering with PLC mouselook when `update()` was called every frame. Skipping `update()` is safe because damping has no effect when the camera is PLC-controlled.
 - **Wall collision in walkthrough is XZ-only**: `walkthroughCollision.js` works entirely in the XZ plane (no Y component). Walls are treated as infinitely tall 2D line segments. The sliding fallback tries X-only then Z-only movement so the player glides along walls instead of sticking.
 - **Shadows are always on** (once enabled): `renderer.shadowMap.enabled = true` is set once at mount and never toggled. Per-item `castShadow` on placed lights is controlled per-item from `LightingProps`. Turning off a light (intensity→0) doesn't toggle `castShadow` — Three.js ignores inactive lights' shadow maps automatically.
 - **Debugging discipline** (`.claude/skills/debugging-discipline/`): no work

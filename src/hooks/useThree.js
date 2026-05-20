@@ -128,7 +128,9 @@ export default function useThree(containerRef) {
       stateRef.current.raf = requestAnimationFrame(tick)
       stateRef.current.onFrame?.()
       tickDoorAnims(doorAnims.current)
-      controls.update()
+      // Skip OrbitControls.update during walkthrough — damping would fight
+      // PointerLockControls and prevent mouselook from working.
+      if (!stateRef.current.onFrame) controls.update()
       renderer.render(scene, camera)
     }
 

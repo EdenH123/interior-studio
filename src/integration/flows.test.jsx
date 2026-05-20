@@ -11,6 +11,7 @@ import { buildExportData, validateImport } from '../utils/projectIO'
 import useFurnitureDrop from '../hooks/useFurnitureDrop'
 import { FURNITURE_DRAG_MIME } from '../components/Sidebar'
 import PropertiesPanel from '../components/PropertiesPanel'
+import useDrawWalls from '../hooks/useDrawWalls'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -428,7 +429,61 @@ describe('Save/Open JSON round-trip', () => {
   })
 })
 
-// ─── 9. PropertiesPanel routing with real store ───────────────────────────────
+// ─── 9. useDrawWalls — shape-click guard (Issue 2 fix) ───────────────────────
+
+describe('useDrawWalls shape-click guard', () => {
+  // Build a lightweight fake Konva stage ref + synthetic Konva event helper.
+  function makeStage(pointerPos = { x: 100, y: 100 }) {
+    const stage = { getRelativePointerPosition: () => pointerPos }
+    return { current: stage }
+  }
+
+  function makeEvent(target, button = 0) {
+    return { evt: { button }, target }
+  }
+
+  beforeEach(resetStore)
+
+  it('ignores a shape click when no draw chain is active', () => {
+    const stageRef = makeStage({ x: 50, y: 50 })
+    const shapeTarget = {}  // not the stage — simulates clicking a Wall shape
+
+    const { result } = renderHook(() => useDrawWalls(stageRef, 1, false))
+    act(() => result.current(makeEvent(shapeTarget)))
+
+    // drawStart should stay null; no wall committed
+    expect(useStore.getState().drawStart).toBeNull()
+    expect(useStore.getState().walls).toHaveLength(0)
+  })
+
+  it('commits a wall when a shape is clicked while a draw chain is active', () => {
+    const stageRef = makeStage({ x: 200, y: 0 })
+    const shapeTarget = {}  // simulates clicking a Wall shape at the snap point
+
+    // Start the chain first (background click at origin)
+    act(() => useStore.getState().setDrawStart({ x: 0, y: 0 }))
+    expect(useStore.getState().drawStart).not.toBeNull()
+
+    const { result } = renderHook(() => useDrawWalls(stageRef, 1, false))
+    act(() => result.current(makeEvent(shapeTarget)))
+
+    // Wall should be committed; drawStart advances to the new endpoint
+    const { walls } = useStore.getState()
+    expect(walls).toHaveLength(1)
+    expect(walls[0]).toMatchObject({ x1: 0, y1: 0, x2: 200, y2: 0 })
+  })
+
+  it('background clicks still start the chain normally', () => {
+    const stageRef = makeStage({ x: 50, y: 50 })
+    const { result } = renderHook(() => useDrawWalls(stageRef, 1, false))
+    act(() => result.current(makeEvent(stageRef.current)))
+
+    expect(useStore.getState().drawStart).toEqual({ x: 50, y: 50 })
+    expect(useStore.getState().walls).toHaveLength(0)
+  })
+})
+
+// ─── 10. PropertiesPanel routing with real store ──────────────────────────────
 
 describe('PropertiesPanel routes to the correct editor (real store)', () => {
   beforeEach(resetStore)
