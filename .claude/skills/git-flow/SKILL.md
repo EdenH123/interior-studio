@@ -110,8 +110,15 @@ Confirm `git status` is clean after push.
 
 ## PR flow (new feature sessions)
 
+GitHub interactions go through whichever interface the current session
+has: in a local terminal that's the `gh` CLI; in the remote/cloud
+execution environment it's the `mcp__github__*` MCP tools. Both
+sequences land the same end state. Pick whichever is available and
+don't mix them within a session.
+
+### 1. Branch + commit (both interfaces, same shell)
+
 ```bash
-# 1. Branch + commit
 BRANCH="session-N-<short-kebab-name>"   # e.g. session-14-openings
 git checkout -b "$BRANCH"
 git add -A
@@ -122,8 +129,11 @@ Session N: <one-line summary>
 EOF
 )"
 git push -u origin "$BRANCH"
+```
 
-# 2. PR with the same shape as the commit, expanded
+### 2a. PR + auto-merge via `gh` (local sessions)
+
+```bash
 gh pr create --title "Session N: <one-line summary>" --body "$(cat <<'EOF'
 ## What this session built
 
@@ -139,23 +149,49 @@ gh pr create --title "Session N: <one-line summary>" --body "$(cat <<'EOF'
 2. ...
 EOF
 )"
-
-# 3. Auto-merge — squashes the session into one commit on main
 gh pr merge --auto --squash --delete-branch
+```
 
-# 4. Local cleanup once the merge lands
+### 2b. PR + auto-merge via MCP (remote/cloud sessions)
+
+Use the same body shape — only the call surface changes:
+
+- `mcp__github__create_pull_request` with `owner`, `repo`,
+  `head` (the branch name), `base: "main"`, `title`, and `body`.
+  Capture the returned PR `number` for the next call.
+- `mcp__github__enable_pr_auto_merge` with `owner`, `repo`,
+  `pullNumber`, and `mergeMethod: "SQUASH"`.
+
+If `enable_pr_auto_merge` errors with *"Auto-merge is not enabled
+for this repository"*, the repo's **Settings → General → Pull
+Requests → Allow auto-merge** checkbox is off. Surface the message
+verbatim and stop — don't fall back to a direct
+`merge_pull_request` call, since that bypasses any future required
+checks and is a different decision the user should make explicitly.
+
+If the repo *has* auto-merge enabled but the PR has zero required
+checks and is `mergeable_state: clean`, GitHub still queues the
+auto-merge; it just fires almost immediately. That's the same end
+state as `gh pr merge --auto`, so don't second-guess it.
+
+### 3. Local cleanup once the merge lands (both interfaces)
+
+```bash
 git checkout main
 git pull --ff-only origin main
 git branch -d "$BRANCH"   # -d, not -D — refuses to drop unmerged work
 ```
 
-`--delete-branch` removes the remote branch on merge; the explicit
-`git branch -d` removes the local copy. Use `-d` (lowercase): it errors
-if the branch hasn't been merged, which is the correct safety net.
+Use `-d` (lowercase): it errors if the branch hasn't been merged,
+which is the correct safety net. The remote branch is deleted by the
+auto-merge step (`--delete-branch` for `gh`; GitHub's default behaviour
+for auto-merged PRs via MCP when **Settings → General → Pull Requests
+→ Automatically delete head branches** is enabled).
 
-If `gh pr merge --auto` fails (e.g. branch protection requires reviews,
-required checks aren't configured), surface the PR URL and stop. The
-user can merge manually; don't second-guess CI requirements.
+If the PR can't be auto-merged (branch protection requires reviews,
+required checks fail or are missing, repo-level auto-merge disabled),
+surface the PR URL and stop. The user can merge manually next session;
+don't second-guess CI requirements.
 
 ## Commit message shape
 
