@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { formatMeters, PIXELS_PER_METER } from './constants'
-import { WALL_MATERIALS } from './wallMaterials'
-import Swatch from './Swatch'
+import { WALL_MATERIALS, resolveWallMaterialId } from './wallMaterials'
+import MaterialPicker from './MaterialPicker'
 
 // Properties-panel editor for a selected wall. The length is editable as
 // meters; committing the edit recomputes the second endpoint along the
@@ -58,15 +58,12 @@ export default function WallProps({ wall, onUpdate }) {
       </p>
       <div className="mt-3">
         <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Material</div>
-        <div className="grid grid-cols-3 gap-1.5">
-          <Swatch label="Default" color={null} active={!wall.material}
-            onClick={() => onUpdate(wall.id, { material: null })} />
-          {WALL_MATERIALS.map((m) => (
-            <Swatch key={m.id} label={m.label} color={m.color}
-              active={wall.material === m.id}
-              onClick={() => onUpdate(wall.id, { material: m.id })} />
-          ))}
-        </div>
+        <MaterialPicker
+          materials={WALL_MATERIALS}
+          currentId={wall.material}
+          resolveId={resolveWallMaterialId}
+          onChange={(id) => onUpdate(wall.id, { material: id })}
+        />
       </div>
       <div className="mt-3">
         <Row label="From" value={`${formatMeters(wall.x1)}, ${formatMeters(wall.y1)}`} />

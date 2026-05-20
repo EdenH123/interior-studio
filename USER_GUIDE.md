@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-20_  <!-- real GLB furniture models -->
+_Last updated: 2026-05-21_  <!-- real color palette (BM, SW, wood finishes) -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -132,11 +132,25 @@ drop target), the preview clears and nothing is placed.
 
 ### Choosing a furniture material
 
-Select a piece, then pick a swatch from the **Material** row in the
-right panel: **Default** (the catalog's stock colour for that piece),
-**Light Wood**, **Dark Wood**, **White**, **Black**, **Linen**, **Navy**,
-**Forest**. The change applies in both the 2D footprint and the 3D box
-fallback. Loaded 3D models keep their own materials — the override is
+Select a piece, then use the **Material** picker in the right panel.
+The picker is grouped by category:
+
+- **Default** — restores the catalog's stock colour for that piece
+- **Wood Finish** — 15 real wood tones (Walnut, Honey Oak, Cherry,
+  Mahogany, Maple, Teak, Ebony, Driftwood, etc.)
+- **Paint** — a curated subset of Benjamin Moore + Sherwin-Williams
+  colours that look good on painted furniture (whites, neutrals,
+  navy, hunter green, charcoal, etc.)
+- **Fabric** — eight upholstery tones (Ivory, Cream Linen, Sage,
+  Mustard, Rust, Deep Navy, Warm Gray, Charcoal)
+
+Hover any swatch to see the full name and (for paints) the
+manufacturer code. A search box appears at the top when a category
+has more than 10 entries — type any part of a name or paint code
+("hale", "SW 7036", "walnut") to filter.
+
+The change applies in both the 2D footprint and the 3D box fallback.
+Loaded 3D models keep their own authored materials — the override is
 for the box stand-ins.
 
 ### Rotating furniture
@@ -214,14 +228,29 @@ silently and the displayed value snaps back.
 
 ### Wall materials
 
-Below the length input, the right panel has a **Material** picker with
-six swatches: **Default**, **Painted White**, **Brick**, **Concrete**,
-**Wood Panel**, **Wallpaper**. Click a swatch to apply that material;
-the wall changes colour in both the 2D plan and the 3D viewer. **Default**
-restores the neutral gray every wall starts with.
+Below the length input, the right panel has a **Material** picker
+grouped by category:
 
+- **Default** — neutral gray (what walls start as)
+- **Benjamin Moore** — ~30 popular colours (Hale Navy, Revere Pewter,
+  White Dove, Chantilly Lace, Hawthorne Yellow, Caliente, etc.)
+- **Sherwin-Williams** — ~30 popular colours (Agreeable Gray,
+  Alabaster, Naval, Evergreen Fog, Urbane Bronze, Tricorn Black, etc.)
+- **Other** — Wood Panel
+
+Hover any swatch to see the full name and manufacturer code (e.g.
+"Hale Navy · HC-154", "Agreeable Gray · SW 7029"). A search box at
+the top filters by name or code — type "navy", "HC-154", or "SW 7029"
+to narrow the list.
+
+The wall changes colour in both the 2D plan and the 3D viewer.
 Materials are per-wall — different walls in the same room can use
 different finishes. They save with your design and survive a refresh.
+
+If you open a project created before this release, walls that used
+the old material names (`painted-white`, `brick`, `concrete`,
+`wallpaper`) are automatically remapped to the closest paint colour
+on load.
 
 Only one thing is selected at a time. Clicking on empty canvas clears
 the selection (and starts a new wall — see below).
@@ -245,8 +274,11 @@ to select it. The right panel shows the room's editor:
 
 - **Name** — type any name (e.g. "Living room", "Kitchen 2"). The name
   appears on the canvas at the room's centre.
-- **Floor material** — pick from Default, Wood, Tile, Carpet, Marble, or
-  Concrete. The room's floor tint changes to match.
+- **Floor material** — pick from a grouped catalog: 15 **Wood
+  Finish** options (Walnut, Honey Oak, Cherry, Mahogany, Maple, Teak,
+  Ebony, etc.) and four **Other Materials** (Tile, Marble, Concrete,
+  Carpet). Hover for the full name; the search box filters by name.
+  The room's floor tint changes to match in both 2D and 3D.
 - **Area** and **Vertices** — read-only stats about the room.
 
 Room names and materials are saved automatically and survive page
