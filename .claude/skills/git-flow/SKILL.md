@@ -174,7 +174,13 @@ checks and is `mergeable_state: clean`, GitHub still queues the
 auto-merge; it just fires almost immediately. That's the same end
 state as `gh pr merge --auto`, so don't second-guess it.
 
-### 3. Local cleanup once the merge lands (both interfaces)
+### 3. Cleanup once the merge lands
+
+After the merge succeeds, two branches still exist: the local feature
+branch and its remote counterpart. Both should be removed so the next
+session doesn't accumulate orphans.
+
+**Local branch** (always do this, both interfaces):
 
 ```bash
 git checkout main
@@ -183,10 +189,33 @@ git branch -d "$BRANCH"   # -d, not -D — refuses to drop unmerged work
 ```
 
 Use `-d` (lowercase): it errors if the branch hasn't been merged,
-which is the correct safety net. The remote branch is deleted by the
-auto-merge step (`--delete-branch` for `gh`; GitHub's default behaviour
-for auto-merged PRs via MCP when **Settings → General → Pull Requests
-→ Automatically delete head branches** is enabled).
+which is the correct safety net. After a squash-merge, `-d` may warn
+*"deleting branch X that has been merged to refs/remotes/origin/X, but
+not yet merged to HEAD"* — that's fine, the upstream check passed.
+
+**Remote branch** — three cases, listed best to worst:
+
+1. **`gh` was used** with `--delete-branch` on `pr merge`: the remote
+   branch is already gone. Skip this step.
+2. **Repo has "Automatically delete head branches" on**
+   (Settings → General → Pull Requests): GitHub deletes it on merge
+   regardless of which interface created the PR. Skip this step.
+3. **Neither of the above** (e.g. MCP merge in a repo without the
+   auto-delete setting): the remote branch survives. Try in order:
+   - `git push origin --delete "$BRANCH"` — works in local sessions.
+     **Will return HTTP 403** in the remote/cloud execution
+     environment because the proxied git endpoint disallows ref
+     deletion.
+   - The MCP surface has **no `delete_branch` tool**. If the push
+     failed, surface the branch name in the end-of-session summary so
+     the user can delete it in the GitHub UI, and recommend they flip
+     **Settings → General → Pull Requests → Automatically delete
+     head branches** on so the next session doesn't have the same
+     problem.
+
+Don't treat a surviving remote branch as a hard failure — the merge
+landed, that's what matters. Just don't let it go un-mentioned in the
+chat summary.
 
 If the PR can't be auto-merged (branch protection requires reviews,
 required checks fail or are missing, repo-level auto-merge disabled),
