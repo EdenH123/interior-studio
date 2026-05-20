@@ -3,6 +3,7 @@ import { KONVA_TO_THREE, konvaToFloor } from './threeMath'
 import { WALL_THICKNESS } from '../canvas/constants'
 import { wallColorFor } from '../canvas/wallMaterials'
 import { buildWallWithHoles } from './wallCSG'
+import { holesFp } from './stairFloorHoles'
 
 // reconcileFurniture lives in its own module because the GLB upgrade
 // pipeline + Group-wrapped scene objects are substantial enough that they
@@ -170,21 +171,19 @@ const FLOOR_OFFSET_Y = 0.01
 
 // levelOffsets: Map<levelId, Y_base_metres> from computeLevelOffsets.
 // opts: { solo?: bool, activeLevelId?: string }
+// Rooms may carry an optional `stairHoles` array — each element is an array
+// of {x,y} corners (in shape-space metres) for a stair footprint to cut out.
 export function reconcileRooms(scene, rooms, meshMap, colorForId, levelOffsets, opts = {}) {
   const present = new Set()
   for (const r of rooms) {
     present.add(r.id)
     const color = colorForId(r.id)
     const yOffset = levelOffsets?.get(r.levelId) ?? 0
+    const fp = holesFp(r.stairHoles)
 
     let mesh = meshMap.get(r.id)
     if (!mesh) {
-      const shape = new THREE.Shape()
-      shape.moveTo(r.verts[0].x * KONVA_TO_THREE, r.verts[0].y * KONVA_TO_THREE)
-      for (let i = 1; i < r.verts.length; i++) {
-        shape.lineTo(r.verts[i].x * KONVA_TO_THREE, r.verts[i].y * KONVA_TO_THREE)
-      }
-      const geo = new THREE.ShapeGeometry(shape)
+      const geo = new THREE.ShapeGeometry(buildRoomShape(r))
       const mat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(color),
         side: THREE.DoubleSide,
@@ -198,18 +197,46 @@ export function reconcileRooms(scene, rooms, meshMap, colorForId, levelOffsets, 
       mesh.userData.kind = 'room'
       mesh.userData.id = r.id
       mesh.userData.color = color
+      mesh.userData.holesFp = fp
       mesh.receiveShadow = true
       scene.add(mesh)
       meshMap.set(r.id, mesh)
-    } else if (mesh.userData.color !== color) {
-      mesh.material.color.set(color)
-      mesh.userData.color = color
+    } else {
+      if (mesh.userData.holesFp !== fp) {
+        mesh.geometry.dispose()
+        mesh.geometry = new THREE.ShapeGeometry(buildRoomShape(r))
+        mesh.userData.holesFp = fp
+      }
+      if (mesh.userData.color !== color) {
+        mesh.material.color.set(color)
+        mesh.userData.color = color
+      }
     }
     // Always update Y — handles level height changes without a full rebuild.
     mesh.position.y = yOffset + FLOOR_OFFSET_Y
     mesh.visible = !opts.solo || !r.levelId || r.levelId === opts.activeLevelId
   }
   removeMissing(scene, meshMap, present)
+}
+
+// Builds a THREE.Shape for the room polygon, with optional stair holes cut out.
+// Hole corners are in shape-space metres (same coordinate system as the shape).
+function buildRoomShape(r) {
+  const shape = new THREE.Shape()
+  shape.moveTo(r.verts[0].x * KONVA_TO_THREE, r.verts[0].y * KONVA_TO_THREE)
+  for (let i = 1; i < r.verts.length; i++) {
+    shape.lineTo(r.verts[i].x * KONVA_TO_THREE, r.verts[i].y * KONVA_TO_THREE)
+  }
+  if (r.stairHoles?.length) {
+    for (const corners of r.stairHoles) {
+      const hole = new THREE.Path()
+      hole.moveTo(corners[0].x, corners[0].y)
+      for (let i = 1; i < corners.length; i++) hole.lineTo(corners[i].x, corners[i].y)
+      hole.closePath()
+      shape.holes.push(hole)
+    }
+  }
+  return shape
 }
 
 function removeMissing(scene, meshMap, present) {

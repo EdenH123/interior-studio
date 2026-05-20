@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-20_  <!-- multi-level buildings + stairs -->
+_Last updated: 2026-05-20_  <!-- multi-level buildings, stairs, stair floor holes -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -734,6 +734,13 @@ Drag **Stairs** from the **Architecture** category in the sidebar onto
 the canvas. Stairs are placed like furniture and display as a stepped
 block in both 2D and 3D. They are automatically linked to the active
 level (`fromLevel`) and the next level up (`toLevel`).
+
+When a stair item is placed on level N, the 3D viewer automatically cuts
+a matching opening (the stair's footprint) out of the floor mesh of level
+N+1 — the level the stairs arrive at. The hole updates live as you move,
+resize, or rotate the stair piece. If the stair's center falls outside
+any detected room on the upper level the floor there is solid — move the
+stairs so their center is clearly inside a room polygon.
 
 ### 3D multi-level view
 

@@ -105,7 +105,8 @@ interior-studio/
 │   │       ├── picking.js       # attachPicking — raycaster (recursive) + parent walk + click-vs-drag guard; kind='door' dispatches onToggleDoor instead of onSelect
 │   │       ├── walkthroughCollision.js  # pure 2D ray-segment math for wall collision: raySegmentIntersect + rayHitsWalls (no THREE import)
 │   │       ├── walkthroughCollision.test.js
-│   │       └── stairsGeometry.js    # pure BufferGeometry builder: buildStairsGeometry(w,d,h,numSteps=12) — stepped staircase, all 6 faces per step, indexed geometry
+│   │       ├── stairsGeometry.js    # pure BufferGeometry builder: buildStairsGeometry(w,d,h,numSteps=12) — stepped staircase, all 6 faces per step, indexed geometry
+│       └── stairFloorHoles.js   # stairHoleCorners (CW-rotation footprint), holesFp (fingerprint), computeStairHolesForRooms (PIP assignment)
 │   ├── hooks/
 │   │   ├── useElementSize.js    # ResizeObserver hook for fluid stage sizing
 │   │   ├── useViewport.js       # scale/pan state, wheel-zoom-around-cursor, drag-pan, client→world helper
@@ -437,6 +438,13 @@ interior-studio/
   - **`selectAll`**: filters items to `activeLevel` before selecting (Cmd+A only selects on the current floor).
   - **Tests**: `levelsSlice.test.js` (19 tests: computeLevelOffsets stacking/sorting/empty, all 9 actions). `flows.test.jsx` +9 migration tests: default ground floor on load, levelId assignment for items, preservation of explicit levelId, new walls/furniture inherit activeLevel, buildExportData includes levels, validateImport accepts v1 + v2 files. Total: 360 tests, all green.
 
+- [x] Stair floor-hole cutting (session 28.1, 2026-05-20)
+  - **`stairFloorHoles.js`** (new) — three pure utilities: `stairHoleCorners(stair)` computes the stair's rotated footprint as four shape-space corners using the CW-rotation formula for Konva's Y-down coordinate system; `holesFp(holes)` produces a stable string fingerprint for geometry-rebuild detection; `computeStairHolesForRooms(rooms, stairs)` ray-casting point-in-polygon test assigns each stair's hole to the room whose polygon contains the stair's center.
+  - **`sceneReconcilers.js`** — `reconcileRooms` now accepts `r.stairHoles`; stores a `holesFp` fingerprint in `mesh.userData`; rebuilds geometry when fingerprint changes. Extracted `buildRoomShape(r)` helper that creates a `THREE.Shape` with optional `THREE.Path` holes (native Three.js — no CSG needed for flat geometry). Import `holesFp` from `stairFloorHoles`.
+  - **`useThree.js`** — rooms effect now filters `furniture` for stairs with `toLevel === lv.id`, calls `computeStairHolesForRooms`, and augments room objects with `stairHoles`. Added `furniture` to the rooms effect dependency array so holes update live on stair move/resize/rotate.
+  - **`stairFloorHoles.test.js`** (new) — 13 tests covering all three exported functions: corner positions at rotation=0, center invariant, 90° CW swap of width/depth extents, center-after-rotation, `holesFp` stability + order-independence, `computeStairHolesForRooms` inside/outside/multi-room/empty cases.
+  - Total: 373 tests, all green. Build green.
+
 ### 🚧 In Progress
 - (nothing active)
 
@@ -448,7 +456,6 @@ interior-studio/
 - [ ] AI markdown rendering — the chat transcript shows plain whitespace-preserved text today; rendering headings + lists + code blocks would make responses more scannable.
 - [ ] PDF export with a printed scale bar — PNG round-trip is in place; PDF is a separate code path (paged, vector-friendly).
 - [ ] Underlay selection from 3D (today 3D picking only finds walls / furniture / rooms; underlay is a 2D-only concept)
-- [ ] Stair hole cutting — the floor above a staircase should have an opening cut through it. Currently stairs render correctly in 3D but the ceiling above them is solid.
 
 ## Key Data Structures
 ```javascript
