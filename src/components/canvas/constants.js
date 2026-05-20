@@ -46,3 +46,32 @@ export function findNearestSnapPoint(cursor, walls, worldThreshold) {
   }
   return best
 }
+
+// When drawing a wall from `drawStart` along the direction of `dirPoint`,
+// snaps the wall's length to match the nearest parallel existing wall whose
+// length is within `threshold` world units of the current cursor distance.
+// Returns `dirPoint` unchanged if no match is found.
+// Used as a closing-rectangle heuristic: the 4th wall snaps to the 2nd wall's length.
+export function snapParallelWallLength(drawStart, dirPoint, walls, threshold) {
+  const dx = dirPoint.x - drawStart.x
+  const dy = dirPoint.y - drawStart.y
+  const currentLen = Math.hypot(dx, dy)
+  if (currentLen < 1) return dirPoint
+  const ux = dx / currentLen
+  const uy = dy / currentLen
+  let bestLen = null
+  let bestDelta = threshold
+  for (const w of walls) {
+    const wx = w.x2 - w.x1
+    const wy = w.y2 - w.y1
+    const wLen = Math.hypot(wx, wy)
+    if (wLen < 1) continue
+    const wux = wx / wLen
+    const wuy = wy / wLen
+    if (Math.abs(ux * wux + uy * wuy) < 0.99) continue   // not parallel
+    const delta = Math.abs(currentLen - wLen)
+    if (delta < bestDelta) { bestDelta = delta; bestLen = wLen }
+  }
+  if (bestLen === null) return dirPoint
+  return { x: drawStart.x + ux * bestLen, y: drawStart.y + uy * bestLen }
+}

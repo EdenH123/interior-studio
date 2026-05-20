@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   PIXELS_PER_METER, GRID_SIZE, WORLD_HALF, WALL_THICKNESS,
   SNAP_RADIUS_SCREEN, snapTo90, formatMeters, findNearestSnapPoint,
+  snapParallelWallLength,
 } from './constants'
 
 describe('constants', () => {
@@ -94,5 +95,50 @@ describe('findNearestSnapPoint', () => {
     expect(findNearestSnapPoint({ x: 20, y: 0 }, walls, 5)).toBeNull()
     const p = findNearestSnapPoint({ x: 20, y: 0 }, walls, 25)
     expect(p).not.toBeNull()
+  })
+})
+
+describe('snapParallelWallLength', () => {
+  const drawStart = { x: 0, y: 200 }
+
+  it('returns dirPoint unchanged when no parallel wall is within threshold', () => {
+    const walls = [{ id: 'w1', x1: 0, y1: 0, x2: 300, y2: 0 }]  // horizontal, not parallel to vertical draw
+    const dirPoint = { x: 0, y: 0 }  // drawing upward, length 200
+    const result = snapParallelWallLength(drawStart, dirPoint, walls, 14)
+    expect(result).toEqual(dirPoint)
+  })
+
+  it('snaps length to a parallel wall when cursor is within threshold', () => {
+    // Drawing upward from (0,200); parallel vertical wall has length 200
+    // but cursor is at length 195 — within threshold 14 of 200
+    const walls = [{ id: 'w2', x1: 300, y1: 0, x2: 300, y2: 200 }]  // vertical, length 200
+    const dirPoint = { x: 0, y: 5 }  // drawStart=(0,200) → (0,5): length = 195
+    const result = snapParallelWallLength(drawStart, dirPoint, walls, 14)
+    // Should snap to length 200: end at (0, 0)
+    expect(result.x).toBeCloseTo(0, 5)
+    expect(result.y).toBeCloseTo(0, 5)
+    const len = Math.hypot(result.x - drawStart.x, result.y - drawStart.y)
+    expect(len).toBeCloseTo(200, 5)
+  })
+
+  it('does not snap when the delta exceeds threshold', () => {
+    const walls = [{ id: 'w2', x1: 300, y1: 0, x2: 300, y2: 200 }]
+    const dirPoint = { x: 0, y: 30 }  // length = 170, delta=30 > threshold=14
+    const result = snapParallelWallLength(drawStart, dirPoint, walls, 14)
+    expect(result).toEqual(dirPoint)
+  })
+
+  it('ignores perpendicular walls', () => {
+    const walls = [{ id: 'w3', x1: 0, y1: 0, x2: 300, y2: 0 }]  // horizontal
+    const dirPoint = { x: 0, y: 3 }  // drawing upward, length 197
+    const result = snapParallelWallLength(drawStart, dirPoint, walls, 14)
+    expect(result).toEqual(dirPoint)  // no snap — no parallel walls
+  })
+
+  it('returns dirPoint unchanged for a zero-length draw', () => {
+    const walls = [{ id: 'w2', x1: 300, y1: 0, x2: 300, y2: 200 }]
+    const dirPoint = { x: 0, y: 200 }  // same as drawStart → length 0
+    const result = snapParallelWallLength(drawStart, dirPoint, walls, 14)
+    expect(result).toEqual(dirPoint)
   })
 })
