@@ -13,6 +13,7 @@ import { getFloorMaterial } from '../components/canvas/floorMaterials'
 import { kelvinToRgb } from '../utils/colorTemp'
 import { isLightingType } from '../components/viewer3d/reconcileFurniture'
 import { computeLevelOffsets } from '../store/slices/levelsSlice'
+import { computeStairHolesForRooms } from '../components/viewer3d/stairFloorHoles'
 
 const CAMERA_FOV = 60
 const FLOOR_SIZE = 100
@@ -216,10 +217,17 @@ export default function useThree(containerRef) {
     if (!stateRef.current) return
     const levelOffsets = computeLevelOffsets(levels)
     // Detect rooms per-level; prefix ids with levelId so each level's rooms
-    // are keyed independently in the mesh map.
+    // are keyed independently in the mesh map. Stair holes are cut into the
+    // floor of the level the stairs arrive at (stair.toLevel === lv.id).
     const allRooms = levels.flatMap((lv) => {
       const lvWalls = walls.filter((w) => (w.levelId ?? activeLevel) === lv.id)
-      return detectRooms(lvWalls).map((r) => ({ ...r, id: `${lv.id}:${r.id}`, levelId: lv.id }))
+      const lvRooms = detectRooms(lvWalls).map((r) => ({ ...r, id: `${lv.id}:${r.id}`, levelId: lv.id }))
+      const lvStairs = furniture.filter((f) => f.type === 'stairs' && f.toLevel === lv.id)
+      if (lvStairs.length > 0) {
+        const holesMap = computeStairHolesForRooms(lvRooms, lvStairs)
+        return lvRooms.map((r) => ({ ...r, stairHoles: holesMap.get(r.id) ?? [] }))
+      }
+      return lvRooms
     })
     reconcileRooms(stateRef.current.scene, allRooms, roomMeshes.current, (id) => {
       // Strip the levelId prefix to look up roomMeta (keyed by raw fingerprint).
@@ -228,7 +236,7 @@ export default function useThree(containerRef) {
       const mat = matId ? getFloorMaterial(matId) : null
       return mat?.color ?? DEFAULT_FLOOR_COLOR
     }, levelOffsets, { solo: solo3d, activeLevelId: activeLevel })
-  }, [walls, roomMeta, levels, activeLevel, solo3d])
+  }, [walls, roomMeta, furniture, levels, activeLevel, solo3d])
 
   // ── selection highlight ──────────────────────────────────────────────────────
   useEffect(() => {
