@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-20_  <!-- walkthrough (first-person) mode -->
+_Last updated: 2026-05-20_  <!-- 3D door panels + AI trace -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -79,7 +79,15 @@ a **Door** tile and a **Window** tile.
 2. The opening appears on the wall with its default size (door 0.9 × 2.1
    m, window 1.2 × 1.4 m with a 0.9 m sill).
 3. The wall stays whole visually but renders as two segments around the
-   gap. In 3D the hole is actually carved out of the wall geometry.
+   gap. In 3D the hole is actually carved out of the wall geometry and a
+   hinged door panel fills the opening.
+
+### Opening and closing doors in 3D
+
+In the 3D view, each door has a physical panel with its hinge on the
+left edge. **Click the door panel** to toggle it open or closed. A
+smooth 300 ms animation swings it 90° away from the wall into the room.
+Click again to close it. The open/closed state is saved with the project.
 
 ### Moving an opening
 
@@ -362,6 +370,27 @@ fine details on the image. The setting saves with the underlay.
 Select the underlay and click **Remove** in the right panel. The image
 disappears immediately. To re-upload, click **Upload underlay** in the
 top bar.
+
+### AI: Trace floor plan
+
+If you have an Anthropic API key saved in the AI panel, the underlay
+properties panel shows an **AI: Trace floor plan** button. Clicking it
+sends the uploaded image to Claude's vision API, which detects wall
+segments and returns a proposal you can review in the AI panel.
+
+1. Make sure the underlay is **calibrated** first — the trace uses the
+   image's scale and origin to map Claude's pixel coordinates into your
+   floor plan world.
+2. Click **AI: Trace floor plan**. A "Tracing…" indicator appears while
+   Claude processes the image (typically 5–20 seconds).
+3. When done, the AI panel opens with a proposal showing the detected
+   walls. Review the diff, then click **Apply** to commit them to the
+   canvas, or **Discard** to cancel.
+4. After applying, use **Ctrl/Cmd+Z** to undo if the result isn't right.
+
+The trace finds wall centerlines only — furniture, text labels, and
+dimension lines are ignored. Openings (doors, windows) are not traced
+automatically; drop them manually after the walls are placed.
 
 ### Auto-save and underlays
 

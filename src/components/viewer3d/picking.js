@@ -14,7 +14,7 @@ const CLICK_VS_DRAG_PX = 4
 // `meshMaps` is the live array of Maps the hook owns (wall, furniture,
 // room mesh maps). We snapshot values at click time, not subscription time,
 // so newly-added meshes become click targets immediately.
-export function attachPicking(renderer, camera, meshMaps, { onSelect, onClear }) {
+export function attachPicking(renderer, camera, meshMaps, { onSelect, onClear, onToggleDoor }) {
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
   let pressX = 0
@@ -41,7 +41,10 @@ export function attachPicking(renderer, camera, meshMaps, { onSelect, onClear })
     while (node && !node.userData?.kind) node = node.parent
     const kind = node?.userData?.kind
     const id = node?.userData?.id
-    if (kind && id) onSelect(kind, id)
+    if (kind && id) {
+      if (kind === 'door' && onToggleDoor) onToggleDoor(id)
+      else onSelect(kind, id)
+    }
   }
 
   renderer.domElement.addEventListener('pointerdown', onPointerDown)
