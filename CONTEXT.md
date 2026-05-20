@@ -400,6 +400,13 @@ interior-studio/
   - **Tests**: `openingsSlice.test.js` +6 tests (toggleDoorOpen toggles, ignores unknowns, ignores windows, new doors default open:false). `traceFloorPlan.test.js` — 13 tests across `parseDataUrl` (valid/jpeg/invalid URLs), `transformWalls` (coord math, id generation, identity, empty), `traceFloorPlan` (vision message format, coord transform, empty result shape, missing JSON block, missing walls array).
   - Tests: +19 new; 295 total passing.
 
+- [x] Integration test suite — 31 new tests across 9 flows (2026-05-20)
+  - `src/integration/flows.test.jsx` (25 tests) — store + hook + component integration flows:
+    wall drawing chain + cascading removal, furniture drop via `useFurnitureDrop.onDrop` (renderHook + real drag event), multi-select add/toggle/delete + layer-aware selectAll, calibration scale math, AI proposal apply → single-step undo, layer toggle, `loadProject` full restore + transient-state clear, JSON round-trip (`buildExportData` + `validateImport` + `loadProject`), `PropertiesPanel` routing with real store (wall/furniture/empty states).
+  - `src/components/canvas/imageDownscale.test.js` (6 tests) — canvas mock setup: small image passes through unchanged, landscape image downscaled to maxPx, custom maxPx respected, error on bad image; constants `DEFAULT_MAX_PX`, `QUOTA_WARN_BYTES`.
+  - `resetStore()` pattern extended to reset `layers` (not cleared by `loadProject` — now documented).
+  - Tests: 326 total (up from 295), all green.
+
 - [x] Upgraded furniture GLBs — real SheenChair + v2 procedural generator (2026-05-20)
   - **chair.glb**: processed from the CC0 `SheenChair.glb` asset from three.js/KhronosGroup. Pipeline: download (4.4 MB) → strip all textures + `TEXCOORD_*` vertex attributes → reset material to pure white PBR → `@gltf-transform` `dedup + prune + quantize(position:10, normal:8)` → 501 kB (~150 kB gzip). `scripts/process-sheenchair.mjs` is the reproducible script.
   - **11 procedural models (v2)**: `scripts/generate-furniture-glbs.mjs` completely rewritten. New helpers: `cyl(cx,cz,y1,y2,r,segs,smooth)` (8-segment smooth-normal cylinder, 32 tris each), `fourLegs()`, `merge()` for arbitrary part combination. Models range 60–384 triangles (vs 12–96 in v1). sofa/armchair: individual cushions + cylinder feet; dining-table: round legs (10-seg); desk: left pedestal + 3 drawers + handles; bed: pillows + panelled headboard + corner posts; bookshelf: book bundles per shelf; lamp: 7-layer frusto-cone shade; wardrobe: cylinder handles + centre divider.
@@ -411,8 +418,6 @@ interior-studio/
 - (nothing active)
 
 ### 📋 Up Next
-- [ ] Integration tests — wall-drawing two-click flow, furniture drop flow, calibration end-to-end, AI proposal apply→undo round-trip.
-- [ ] `imageDownscale.js` tests — needs `HTMLCanvasElement.getContext` mocked in jsdom; skipped this session because canvas mocking is a separate setup task.
 - [ ] Further GLB quality: Poly Pizza and other real-model sources were inaccessible this session. When network access allows, swap additional items (sofa, bed, etc.) for real CC0 geometry beyond SheenChair.
 - [ ] Lighting: LightingProps material/color picker (add a warm color preset row alongside the Kelvin slider).
 - [ ] AI prompt caching — split static system prompt from dynamic project snapshot via Anthropic `cache_control` blocks.
