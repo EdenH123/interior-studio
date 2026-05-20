@@ -1,7 +1,8 @@
+import { useState, useEffect } from 'react'
 import { formatMeters } from './constants'
 import { getFurnitureSpec } from './furnitureCatalog'
 import { FURNITURE_MATERIALS, resolveFurnitureMaterialId } from './furnitureMaterials'
-import { getModelStatus } from '../viewer3d/furnitureModelCache'
+import { getModelStatus, onCacheChange } from '../viewer3d/furnitureModelCache'
 import MaterialPicker from './MaterialPicker'
 
 // Properties-panel editor for a selected furniture item. Read-only stats
@@ -12,6 +13,9 @@ import MaterialPicker from './MaterialPicker'
 // restores `item.color`, picking a swatch sets `item.material` to that id.
 export default function FurnitureProps({ item, onUpdate }) {
   const spec = getFurnitureSpec(item.type)
+  // Re-render when any model load state transitions so the Model row updates live.
+  const [, bump] = useState(0)
+  useEffect(() => onCacheChange(() => bump((v) => v + 1)), [])
   return (
     <div>
       <h3 className="text-gray-200 text-xs uppercase tracking-widest mb-2">{spec?.label ?? item.type}</h3>
@@ -35,7 +39,7 @@ export default function FurnitureProps({ item, onUpdate }) {
       </div>
 
       <p className="text-[10px] text-gray-500 mt-3 leading-snug">
-        Drag on canvas to move · drag the blue handle (or R / Shift+R) to rotate · Del to remove. Material override colors the 2D footprint and the box-fallback 3D mesh.
+        Drag on canvas to move · drag the blue handle (or R / Shift+R) to rotate · Del to remove. Material override colors the 2D footprint and all 3D meshes (box fallback and loaded GLB).
       </p>
     </div>
   )
