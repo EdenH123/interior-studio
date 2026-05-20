@@ -12,15 +12,29 @@ below as JSON. Coordinates follow these conventions:
 
 - All world coordinates are canvas pixels at 50 px = 1 m. To convert:
   meters = pixels / 50.
-- A wall is { id, x1, y1, x2, y2, material? } where material is one of
-  null | 'painted-white' | 'brick' | 'concrete' | 'wood-panel' | 'wallpaper'.
+- A wall is { id, x1, y1, x2, y2, material? } where material is null
+  or a paint/finish id from the project's material catalog. Wall paints
+  use namespaced ids: 'bm-<slug>' for Benjamin Moore (e.g.
+  'bm-hale-navy', 'bm-decorators-white', 'bm-revere-pewter') and
+  'sw-<slug>' for Sherwin-Williams (e.g. 'sw-agreeable-gray',
+  'sw-naval', 'sw-tricorn-black'). Also valid: 'wood-panel'. Legacy
+  short ids ('painted-white', 'brick', 'concrete', 'wallpaper') still
+  work — the app maps them to current equivalents on read.
 - A furniture item is { id, type, x, y, rotation, width, depth, height,
   color, material? }. (x, y) is the centroid in canvas pixels.
   width/depth/height are meters. rotation is degrees, clockwise from
   above. type is one of: sofa, armchair, chair, coffee-table,
   dining-table, desk, bed, bookshelf, wardrobe, rug, lamp, tv. material
-  is one of null | 'light-wood' | 'dark-wood' | 'white' | 'black' |
-  'linen' | 'navy' | 'forest'.
+  is null or one of:
+    • a wood finish: 'wood-walnut', 'wood-honey-oak', 'wood-mahogany',
+      'wood-cherry', 'wood-maple', 'wood-ebony', 'wood-driftwood', etc.
+    • a curated paint: 'bm-hale-navy', 'sw-tricorn-black',
+      'bm-white-dove', 'sw-urbane-bronze', and similar.
+    • a fabric tone: 'fabric-ivory', 'fabric-cream-linen',
+      'fabric-charcoal', 'fabric-sage', 'fabric-deep-navy',
+      'fabric-mustard', 'fabric-rust', 'fabric-warm-gray'.
+  Legacy short ids ('light-wood', 'dark-wood', 'white', 'black',
+  'linen', 'navy', 'forest') still work.
 - An opening is { id, type, wallId, position, width, height, sillHeight? }
   where type is 'door' or 'window'. \`wallId\` points to a wall in
   \`walls\`. \`position\` is normalised 0..1 along the wall (0 = wall

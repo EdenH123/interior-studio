@@ -1,8 +1,8 @@
 import { formatMeters } from './constants'
 import { getFurnitureSpec } from './furnitureCatalog'
-import { FURNITURE_MATERIALS } from './furnitureMaterials'
+import { FURNITURE_MATERIALS, resolveFurnitureMaterialId } from './furnitureMaterials'
 import { getModelStatus } from '../viewer3d/furnitureModelCache'
-import Swatch from './Swatch'
+import MaterialPicker from './MaterialPicker'
 
 // Properties-panel editor for a selected furniture item. Read-only stats
 // for dimensions + position + rotation, plus a material override picker
@@ -26,15 +26,12 @@ export default function FurnitureProps({ item, onUpdate }) {
 
       <div className="mt-3">
         <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Material</div>
-        <div className="grid grid-cols-3 gap-1.5">
-          <Swatch label="Default" color={null} active={!item.material}
-            onClick={() => onUpdate(item.id, { material: null })} />
-          {FURNITURE_MATERIALS.map((m) => (
-            <Swatch key={m.id} label={m.label} color={m.color}
-              active={item.material === m.id}
-              onClick={() => onUpdate(item.id, { material: m.id })} />
-          ))}
-        </div>
+        <MaterialPicker
+          materials={FURNITURE_MATERIALS}
+          currentId={item.material}
+          resolveId={resolveFurnitureMaterialId}
+          onChange={(id) => onUpdate(item.id, { material: id })}
+        />
       </div>
 
       <p className="text-[10px] text-gray-500 mt-3 leading-snug">
