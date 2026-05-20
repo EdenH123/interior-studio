@@ -366,9 +366,9 @@ describe('Persistence round-trip', () => {
     useStore.getState().loadProject(project)
 
     const s = useStore.getState()
-    expect(s.walls).toEqual(project.walls)
-    expect(s.furniture).toEqual(project.furniture)
-    expect(s.openings).toEqual(project.openings)
+    expect(s.walls).toMatchObject(project.walls)
+    expect(s.furniture).toMatchObject(project.furniture)
+    expect(s.openings).toMatchObject(project.openings)
     expect(s.roomMeta).toEqual(project.roomMeta)
     // Transient state must be cleared
     expect(s.selection).toBeNull()
@@ -419,7 +419,7 @@ describe('Save/Open JSON round-trip', () => {
     const envelope = buildExportData(useStore.getState())
 
     expect(envelope.format).toBe('interior-studio')
-    expect(envelope.version).toBe(1)
+    expect(envelope.version).toBe(2)
     expect(typeof envelope.exportedAt).toBe('string')
     expect(envelope.data).toHaveProperty('walls')
     expect(envelope.data).toHaveProperty('furniture')
@@ -429,7 +429,94 @@ describe('Save/Open JSON round-trip', () => {
   })
 })
 
-// ─── 9. useDrawWalls — shape-click guard (Issue 2 fix) ───────────────────────
+// ─── 9. Multi-level migration ────────────────────────────────────────────────
+
+describe('Multi-level migration', () => {
+  beforeEach(resetStore)
+
+  it('loadProject with no levels creates a default ground floor', () => {
+    useStore.getState().loadProject({
+      walls: [{ id: 'w1', x1: 0, y1: 0, x2: 100, y2: 0 }],
+      furniture: [],
+      openings: [],
+    })
+    const { levels, activeLevel } = useStore.getState()
+    expect(levels).toHaveLength(1)
+    expect(levels[0].id).toBe('L00000')
+    expect(activeLevel).toBe('L00000')
+  })
+
+  it('loadProject assigns levelId to items that lack one', () => {
+    useStore.getState().loadProject({
+      walls: [{ id: 'w1', x1: 0, y1: 0, x2: 100, y2: 0 }],
+      furniture: [{ id: 'f1', type: 'chair', x: 50, y: 50, rotation: 0, width: 0.45, depth: 0.5, height: 0.85, color: '#888', model: null }],
+      openings: [{ id: 'o1', type: 'door', wallId: 'w1', position: 0.5, width: 0.9, height: 2.1, sillHeight: 0, open: false }],
+    })
+    const { walls, furniture, openings } = useStore.getState()
+    expect(walls[0].levelId).toBe('L00000')
+    expect(furniture[0].levelId).toBe('L00000')
+    expect(openings[0].levelId).toBe('L00000')
+  })
+
+  it('loadProject preserves levelId that is already set', () => {
+    useStore.getState().loadProject({
+      walls: [{ id: 'w1', x1: 0, y1: 0, x2: 100, y2: 0, levelId: 'UPPER1' }],
+      furniture: [],
+      openings: [],
+      levels: [
+        { id: 'L00000', name: 'Ground', height: 2.7, order: 0 },
+        { id: 'UPPER1', name: 'Floor 1', height: 2.7, order: 1 },
+      ],
+      activeLevel: 'UPPER1',
+    })
+    expect(useStore.getState().walls[0].levelId).toBe('UPPER1')
+    expect(useStore.getState().activeLevel).toBe('UPPER1')
+  })
+
+  it('new walls get the active levelId', () => {
+    useStore.getState().addLevel()
+    const newLevelId = useStore.getState().levels[1].id
+    useStore.getState().setActiveLevel(newLevelId)
+    useStore.getState().addWall(0, 0, 100, 0)
+    expect(useStore.getState().walls[0].levelId).toBe(newLevelId)
+  })
+
+  it('new furniture gets the active levelId', () => {
+    useStore.getState().addLevel()
+    const newLevelId = useStore.getState().levels[1].id
+    useStore.getState().setActiveLevel(newLevelId)
+    useStore.getState().addFurniture('chair', 50, 50)
+    expect(useStore.getState().furniture[0].levelId).toBe(newLevelId)
+  })
+
+  it('buildExportData includes levels and activeLevel', () => {
+    const envelope = buildExportData(useStore.getState())
+    expect(envelope.data).toHaveProperty('levels')
+    expect(envelope.data).toHaveProperty('activeLevel')
+    expect(Array.isArray(envelope.data.levels)).toBe(true)
+  })
+
+  it('validateImport passes through levels from a v2 file', () => {
+    const envelope = buildExportData(useStore.getState())
+    const result = validateImport(envelope)
+    expect(Array.isArray(result.levels)).toBe(true)
+    expect(result.activeLevel).toBe('L00000')
+  })
+
+  it('validateImport accepts a v1 file (no levels field)', () => {
+    const v1Envelope = {
+      format: 'interior-studio',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data: { walls: [], furniture: [], openings: [], roomMeta: {}, underlay: null },
+    }
+    const result = validateImport(v1Envelope)
+    expect(result.walls).toEqual([])
+    expect(result.levels).toBeUndefined()
+  })
+})
+
+// ─── 10. useDrawWalls — shape-click guard (Issue 2 fix) ──────────────────────
 
 describe('useDrawWalls shape-click guard', () => {
   // Build a lightweight fake Konva stage ref + synthetic Konva event helper.

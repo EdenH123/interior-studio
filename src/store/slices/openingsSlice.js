@@ -29,6 +29,7 @@ export const createOpeningsSlice = (set, get) => ({
       id: nanoid(6), type, wallId,
       position: positionT,
       width: spec.width, height: spec.height, sillHeight: spec.sillHeight,
+      levelId: wall.levelId ?? state.activeLevel ?? null,
       ...(type === 'door' ? { open: false } : {}),
     }
     const wallLen = wallLengthPx(wall)

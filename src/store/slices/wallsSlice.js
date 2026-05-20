@@ -7,7 +7,7 @@ import { nanoid } from 'nanoid/non-secure'
 export const createWallsSlice = (set) => ({
   walls: [],
   addWall: (x1, y1, x2, y2) =>
-    set((s) => ({ walls: [...s.walls, { id: nanoid(6), x1, y1, x2, y2 }] })),
+    set((s) => ({ walls: [...s.walls, { id: nanoid(6), x1, y1, x2, y2, levelId: s.activeLevel ?? null }] })),
   updateWall: (id, patch) =>
     set((s) => ({ walls: s.walls.map((w) => (w.id === id ? { ...w, ...patch } : w)) })),
   removeWall: (id) =>

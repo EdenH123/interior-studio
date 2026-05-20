@@ -12,6 +12,13 @@ const base = {
   setDragGhostType: vi.fn(), clearDragGhost: vi.fn(),
   layers: { walls: true, furniture: true, openings: true, rooms: true, underlay: true, grid: true },
   toggleLayer: vi.fn(),
+  levels: [{ id: 'L00000', name: 'Ground Floor', height: 2.7, order: 0 }],
+  activeLevel: 'L00000',
+  setActiveLevel: vi.fn(),
+  addLevel: vi.fn(),
+  removeLevel: vi.fn(),
+  renameLevel: vi.fn(),
+  setLevelHeight: vi.fn(),
 }
 
 beforeEach(() => {
@@ -33,10 +40,10 @@ describe('Sidebar', () => {
     }
   })
 
-  it('shows 12 furniture items', () => {
+  it('shows 13 furniture items', () => {
     render(<Sidebar />)
     const furnitureItems = FURNITURE.filter((f) => !f.type.startsWith('lighting:'))
-    expect(furnitureItems).toHaveLength(12)
+    expect(furnitureItems).toHaveLength(13)
   })
 
   it('shows 4 lighting items', () => {

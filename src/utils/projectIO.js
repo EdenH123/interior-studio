@@ -5,7 +5,7 @@
 // result to the store's `loadProject` action.
 
 export const FORMAT = 'interior-studio'
-export const VERSION = 1
+export const VERSION = 2
 
 // Wraps the current persistable state slices in the versioned envelope.
 // Mirrors the `partialize` slice in useStore.js — keeping these in sync
@@ -21,6 +21,8 @@ export function buildExportData(state) {
       furniture: state.furniture,
       roomMeta: state.roomMeta,
       underlay: state.underlay,
+      levels: state.levels,
+      activeLevel: state.activeLevel,
     },
   }
 }
@@ -31,18 +33,20 @@ export function buildExportData(state) {
 export function validateImport(raw) {
   if (!raw || typeof raw !== 'object') throw new Error('Not a valid project file.')
   if (raw.format !== FORMAT) throw new Error('This is not a .studio.json project file.')
-  if (raw.version !== VERSION) {
+  if (raw.version !== VERSION && raw.version !== 1) {
     throw new Error(`Unsupported project version ${raw.version}. This app reads version ${VERSION}.`)
   }
   if (!raw.data || typeof raw.data !== 'object') throw new Error('Project file is missing its data section.')
 
-  const { walls, openings, furniture, roomMeta, underlay } = raw.data
+  const { walls, openings, furniture, roomMeta, underlay, levels, activeLevel } = raw.data
   return {
     walls: Array.isArray(walls) ? walls : [],
     openings: Array.isArray(openings) ? openings : [],
     furniture: Array.isArray(furniture) ? furniture : [],
     roomMeta: roomMeta && typeof roomMeta === 'object' ? roomMeta : {},
     underlay: underlay && typeof underlay === 'object' ? underlay : null,
+    levels: Array.isArray(levels) ? levels : undefined,
+    activeLevel: typeof activeLevel === 'string' ? activeLevel : undefined,
   }
 }
 

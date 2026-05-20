@@ -36,9 +36,10 @@ export default function CanvasArea() {
   const [containerRef, size] = useElementSize()
   const stageRef = useRef(null)
 
-  const walls = useStore((s) => s.walls)
-  const furniture = useStore((s) => s.furniture)
-  const openings = useStore((s) => s.openings)
+  const allWalls = useStore((s) => s.walls)
+  const allFurniture = useStore((s) => s.furniture)
+  const allOpenings = useStore((s) => s.openings)
+  const activeLevel = useStore((s) => s.activeLevel)
   const layers = useStore((s) => s.layers)
   const updateOpening = useStore((s) => s.updateOpening)
   const removeOpening = useStore((s) => s.removeOpening)
@@ -60,6 +61,12 @@ export default function CanvasArea() {
   const addToSelection = useStore((s) => s.addToSelection)
   const drawStart = useStore((s) => s.drawStart)
   const setDrawStart = useStore((s) => s.setDrawStart)
+
+  // 2D canvas only shows items on the active level.
+  const onLevel = (item) => !item.levelId || item.levelId === activeLevel
+  const walls = allWalls.filter(onLevel)
+  const furniture = allFurniture.filter(onLevel)
+  const openings = allOpenings.filter(onLevel)
 
   const { view, recenterIfUnset, handleWheel, handleStageDragEnd } = useViewport()
   const spaceDown = useCanvasKeyboard()
