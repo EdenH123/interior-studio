@@ -45,6 +45,8 @@ export function reconcileWalls(scene, walls, openings, meshMap) {
       mesh.userData.id = w.id
       mesh.userData.color = color
       mesh.userData.fp = fp
+      mesh.castShadow    = true
+      mesh.receiveShadow = true
       scene.add(mesh)
       meshMap.set(w.id, mesh)
     } else {
@@ -176,6 +178,7 @@ export function reconcileRooms(scene, rooms, meshMap, colorForId) {
       mesh.userData.kind = 'room'
       mesh.userData.id = r.id
       mesh.userData.color = color
+      mesh.receiveShadow = true
       scene.add(mesh)
       meshMap.set(r.id, mesh)
     } else if (mesh.userData.color !== color) {

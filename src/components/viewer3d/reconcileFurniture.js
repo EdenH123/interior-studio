@@ -5,29 +5,59 @@ import {
 } from './furnitureModels'
 import { setObjectEmissive } from './selectionHighlight'
 import { furnitureColorFor } from '../canvas/furnitureMaterials'
+import { kelvinToRgb } from '../../utils/colorTemp'
 
+const WALL_HEIGHT = 2.4  // metres — matches sceneReconcilers
+const MAX_LIGHTS  = 8    // hard cap on active Three.js lights for performance
+
+// True for any type in the 'lighting:' namespace.
+export function isLightingType(type) {
+  return typeof type === 'string' && type.startsWith('lighting:')
+}
+
+// Y position of the Group origin for each light category.
+// Ceiling-mounted items flush against the ceiling; floor/table items sit at y=0.
+function lightYOffset(type, height) {
+  if (type === 'lighting:ceiling-lamp' || type === 'lighting:pendant') {
+    return Math.max(0, WALL_HEIGHT - height)
+  }
+  return 0
+}
+
+// Y coordinate (world space) where the Three.js light source sits.
+function lightSourceY(type, yOffset, height) {
+  if (type === 'lighting:ceiling-lamp') return yOffset           // at shade bottom
+  if (type === 'lighting:pendant')      return yOffset           // at shade bottom
+  if (type === 'lighting:floor-lamp')   return yOffset + height * 0.9   // near shade
+  return yOffset + height * 0.7                                  // table-lamp mid-shade
+}
+
+// ─── main export ─────────────────────────────────────────────────────────────
+
+// `lightMap`  — Map<furnitureId, THREE.Light> owned by useThree.
+// `lightsOn`  — global master switch from the lighting slice.
+//
 // Furniture meshes are wrapped in a `THREE.Group` so we can swap the visual
 // (BoxGeometry fallback ↔ loaded GLB) without recreating the addressable
 // scene object that picking and selection-highlight reference.
-//
-// Lifecycle per item:
-//   • First seen → create Group, tag userData{kind,id,dims,color,modelUrl},
-//     populate with either the loaded model (if cached) or a Box fallback
-//     while the GLB loads.
-//   • Existing  → update position / rotation; if dims changed, rebuild the
-//     current child at the new size; sync color into the box fallback.
-//   • Missing   → cancel any pending load listener, dispose the Group's
-//     subtree, remove from the scene.
-export function reconcileFurniture(scene, furniture, meshMap) {
+export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map(), lightsOn = true) {
   const present = new Set()
+
+  // Count currently-on lighting items to enforce the cap.
+  let activeLightCount = 0
+  for (const f of furniture) {
+    if (isLightingType(f.type) && lightsOn && f.on !== false) activeLightCount++
+  }
+
+  let assignedCount = 0
+
   for (const f of furniture) {
     present.add(f.id)
     const pos = konvaToFloor(f.x, f.y)
-
-    // Resolved colour: per-piece material override wins, else the catalog
-    // default snapshotted onto the piece at add-time.
     const color = furnitureColorFor(f)
 
+    // ── mesh group ──────────────────────────────────────────────────────────
+    const yOff = lightYOffset(f.type, f.height)
     let group = meshMap.get(f.id)
     if (!group) {
       group = new THREE.Group()
@@ -55,9 +85,50 @@ export function reconcileFurniture(scene, furniture, meshMap) {
         }
       }
     }
-    group.position.set(pos.x, 0, pos.z)
+    group.position.set(pos.x, yOff, pos.z)
     group.rotation.y = konvaRotationToThreeY(f.rotation)
+
+    // ── Three.js light (lighting items only) ────────────────────────────────
+    if (isLightingType(f.type)) {
+      const intensity = f.intensity ?? 1.0
+      const colorTemp = f.colorTemp ?? 3000
+      const distance  = f.distance ?? 5
+      const itemOn    = f.on !== false && lightsOn
+      const { r, g, b } = kelvinToRgb(colorTemp)
+      const lightColor = new THREE.Color(r / 255, g / 255, b / 255)
+
+      // Enforce cap: items beyond MAX_LIGHTS are silenced (not removed).
+      const withinCap = !itemOn || assignedCount < MAX_LIGHTS
+      const effectiveIntensity = itemOn && withinCap ? intensity : 0
+      if (itemOn) assignedCount++
+
+      let light = lightMap.get(f.id)
+      if (!light) {
+        light = f.lightType === 'spot'
+          ? buildSpotLight(scene)
+          : new THREE.PointLight()
+        light.castShadow = false  // set below
+        light.shadow.mapSize.setScalar(512)
+        scene.add(light)
+        lightMap.set(f.id, light)
+      }
+
+      const srcY = lightSourceY(f.type, yOff, f.height)
+      light.position.set(pos.x, srcY, pos.z)
+      light.color.copy(lightColor)
+      light.intensity = effectiveIntensity
+      light.distance  = distance
+      light.castShadow = (f.castShadow !== false) && itemOn
+
+      if (light.isSpotLight) {
+        light.target.position.set(pos.x, 0, pos.z)
+        // SpotLight.target must be in the scene to affect direction.
+        if (!light.target.parent) scene.add(light.target)
+      }
+    }
   }
+
+  // ── remove stale entries ──────────────────────────────────────────────────
   for (const [id, group] of meshMap) {
     if (!present.has(id)) {
       group.userData.cancelLoad?.()
@@ -66,6 +137,23 @@ export function reconcileFurniture(scene, furniture, meshMap) {
       meshMap.delete(id)
     }
   }
+  for (const [id, light] of lightMap) {
+    if (!present.has(id)) {
+      if (light.isSpotLight && light.target?.parent) scene.remove(light.target)
+      scene.remove(light)
+      lightMap.delete(id)
+    }
+  }
+}
+
+// ─── private helpers ─────────────────────────────────────────────────────────
+
+function buildSpotLight(scene) {
+  const light = new THREE.SpotLight()
+  light.angle    = THREE.MathUtils.degToRad(30)
+  light.penumbra = 0.2
+  light.decay    = 2
+  return light
 }
 
 function populateBoxFallback(group) {
@@ -76,6 +164,8 @@ function populateBoxFallback(group) {
     new THREE.MeshStandardMaterial({ color: new THREE.Color(group.userData.color ?? '#888') }),
   )
   mesh.position.y = height / 2
+  mesh.castShadow    = true
+  mesh.receiveShadow = true
   group.add(mesh)
   group.userData.childKind = 'box'
 }
@@ -86,8 +176,8 @@ function populateModelOrSchedule(group) {
   populateBoxFallback(group)
   loadFurnitureModel(url)
   group.userData.cancelLoad = onceModelLoaded(url, (loaded) => {
-    if (!loaded) return                                 // failed — keep the box fallback
-    if (group.userData.modelUrl !== url) return         // url changed mid-flight
+    if (!loaded) return
+    if (group.userData.modelUrl !== url) return
     populateLoadedModel(group)
   })
 }
@@ -98,10 +188,11 @@ function populateLoadedModel(group) {
   if (!clone) { populateBoxFallback(group); return }
   const { width, depth, height } = group.userData.dims
   fitToBox(clone, width, depth, height)
+  clone.traverse((node) => {
+    if (node.isMesh) { node.castShadow = true; node.receiveShadow = true }
+  })
   group.add(clone)
   group.userData.childKind = 'model'
-  // If the piece is currently selected, the previous child carried the
-  // emissive highlight; the new child needs it too.
   if (group.userData.highlighted) setObjectEmissive(clone, true)
 }
 

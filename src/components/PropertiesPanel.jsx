@@ -9,6 +9,7 @@ import FurnitureProps from './canvas/FurnitureProps'
 import OpeningProps from './canvas/OpeningProps'
 import MultiSelectProps from './canvas/MultiSelectProps'
 import MaterialPicker from './canvas/MaterialPicker'
+import LightingProps from './canvas/LightingProps'
 
 // Thin router: looks at `selection` and renders the matching per-kind
 // editor. Each editor lives in its own file under `canvas/` (paired with
@@ -52,7 +53,11 @@ export default function PropertiesPanel() {
     if (w) body = <WallProps key={w.id} wall={w} onUpdate={updateWall} />
   } else if (single?.kind === 'furniture') {
     const f = furniture.find((x) => x.id === single.id)
-    if (f) body = <FurnitureProps item={f} onUpdate={updateFurniture} />
+    if (f) {
+      body = f.type?.startsWith('lighting:')
+        ? <LightingProps item={f} onUpdate={updateFurniture} />
+        : <FurnitureProps item={f} onUpdate={updateFurniture} />
+    }
   } else if (single?.kind === 'room') {
     const r = rooms.find((x) => x.id === single.id)
     if (r) body = <RoomProps room={r} meta={roomMeta[r.id] ?? {}} onUpdate={updateRoomMeta} />
