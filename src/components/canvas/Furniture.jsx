@@ -4,7 +4,7 @@ import { furnitureColorFor } from './furnitureMaterials'
 
 const SELECTION_COLOR = '#3b82f6'
 
-export default function Furniture({ item, selected, scale, onSelect, onDragEnd, onContextMenu }) {
+export default function Furniture({ item, selected, scale, onSelect, onShiftSelect, onDragStart, onDragEnd, onContextMenu }) {
   const w = item.width * PIXELS_PER_METER
   const d = item.depth * PIXELS_PER_METER
   const fill = furnitureColorFor(item)
@@ -18,13 +18,13 @@ export default function Furniture({ item, selected, scale, onSelect, onDragEnd, 
       y={item.y}
       rotation={item.rotation}
       draggable
-      onDragEnd={(e) => {
-        onDragEnd?.(item.id, { x: e.target.x(), y: e.target.y() })
-      }}
+      onDragStart={() => onDragStart?.(item.id, { x: item.x, y: item.y })}
+      onDragEnd={(e) => onDragEnd?.(item.id, { x: e.target.x(), y: e.target.y() })}
       onMouseDown={(e) => {
         if (e.evt.button === 0) {
           e.cancelBubble = true
-          onSelect?.(item.id)
+          if (e.evt.shiftKey) onShiftSelect?.(item.id)
+          else onSelect?.(item.id)
         }
       }}
       onContextMenu={(e) => {

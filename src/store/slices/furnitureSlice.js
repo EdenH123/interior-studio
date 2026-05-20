@@ -22,7 +22,7 @@ export const createFurnitureSlice = (set) => ({
           model: spec.model ?? null,
         },
       ],
-      selection: { kind: 'furniture', id },
+      selection: { items: [{ kind: 'furniture', id }] },
     }))
     return id
   },
@@ -37,6 +37,9 @@ export const createFurnitureSlice = (set) => ({
   removeFurniture: (id) =>
     set((s) => ({
       furniture: s.furniture.filter((f) => f.id !== id),
-      selection: s.selection?.id === id ? null : s.selection,
+      selection: (() => {
+        const items = (s.selection?.items ?? []).filter((i) => !(i.kind === 'furniture' && i.id === id))
+        return items.length ? { items } : null
+      })(),
     })),
 })

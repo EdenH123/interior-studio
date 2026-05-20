@@ -9,7 +9,7 @@ import { wallColorFor } from './wallMaterials'
 //
 // Selection + delete handlers live on the Group so clicks on any segment
 // of the wall behave identically.
-export default function Wall({ wall, segments, onContextMenu, onClick, selected }) {
+export default function Wall({ wall, segments, onContextMenu, onClick, onShiftSelect, selected }) {
   const stroke = selected ? '#3b82f6' : wallColorFor(wall)
   const sw = WALL_THICKNESS
   const hit = Math.max(WALL_THICKNESS, 16)
@@ -23,7 +23,12 @@ export default function Wall({ wall, segments, onContextMenu, onClick, selected 
   return (
     <Group
       onContextMenu={(e) => { e.evt.preventDefault(); onContextMenu?.(wall.id) }}
-      onClick={(e) => { if (e.evt.button === 0) onClick?.(wall.id) }}
+      onClick={(e) => {
+        if (e.evt.button === 0) {
+          if (e.evt.shiftKey) onShiftSelect?.(wall.id)
+          else onClick?.(wall.id)
+        }
+      }}
     >
       {segs.map((s, i) => (
         <Line

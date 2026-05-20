@@ -16,11 +16,15 @@ export const createWallsSlice = (set) => ({
       const removedOpeningIds = new Set(
         (s.openings ?? []).filter((o) => o.wallId === id).map((o) => o.id),
       )
-      // Selection clears if it pointed at the wall itself OR at an
-      // opening that lived on it.
-      let selection = s.selection
-      if (selection?.id === id) selection = null
-      else if (selection?.kind === 'opening' && removedOpeningIds.has(selection.id)) selection = null
+      // Selection clears any reference to the removed wall or its openings.
+      const prevItems = s.selection?.items ?? []
+      const nextItems = prevItems.filter(
+        (i) => !(i.kind === 'wall' && i.id === id) &&
+               !(i.kind === 'opening' && removedOpeningIds.has(i.id)),
+      )
+      const selection = nextItems.length === prevItems.length
+        ? s.selection
+        : nextItems.length ? { items: nextItems } : null
       return {
         walls: s.walls.filter((w) => w.id !== id),
         openings,

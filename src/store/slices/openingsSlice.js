@@ -45,7 +45,7 @@ export const createOpeningsSlice = (set, get) => ({
 
     set((s) => ({
       openings: [...s.openings, candidate],
-      selection: { kind: 'opening', id: candidate.id },
+      selection: { items: [{ kind: 'opening', id: candidate.id }] },
     }))
     return { ok: true, id: candidate.id }
   },
@@ -83,6 +83,9 @@ export const createOpeningsSlice = (set, get) => ({
   removeOpening: (id) =>
     set((s) => ({
       openings: s.openings.filter((o) => o.id !== id),
-      selection: s.selection?.id === id ? null : s.selection,
+      selection: (() => {
+        const items = (s.selection?.items ?? []).filter((i) => !(i.kind === 'opening' && i.id === id))
+        return items.length ? { items } : null
+      })(),
     })),
 })

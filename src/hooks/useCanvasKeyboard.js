@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
+import { selectionItems } from '../store/selectionHelpers'
 
 // Wires global keyboard shortcuts for the canvas: space-to-pan, Esc cancel,
-// Delete/Backspace remove selected, R / Shift+R rotate selected furniture.
+// Delete/Backspace remove all selected, R / Shift+R rotate selected furniture,
+// Ctrl/Cmd+A select all visible items.
 // Ignores key events that originate from form inputs.
 //
 // Returns `spaceDown` so the canvas can switch cursor + draggable mode.
@@ -17,6 +19,7 @@ export default function useCanvasKeyboard() {
   const removeOpening = useStore((s) => s.removeOpening)
   const rotateFurniture = useStore((s) => s.rotateFurniture)
   const cancelCalibration = useStore((s) => s.cancelCalibration)
+  const selectAll = useStore((s) => s.selectAll)
 
   useEffect(() => {
     const down = (e) => {
@@ -28,12 +31,23 @@ export default function useCanvasKeyboard() {
         else { setDrawStart(null); clearSelection() }
       }
       if (e.code === 'Delete' || e.code === 'Backspace') {
-        if (selection?.kind === 'wall') removeWall(selection.id)
-        if (selection?.kind === 'furniture') removeFurniture(selection.id)
-        if (selection?.kind === 'opening') removeOpening(selection.id)
+        // Delete every selected item. Walls cascade-remove their openings,
+        // so if a wall and one of its openings are both selected the opening
+        // removeOpening call is a safe no-op.
+        selectionItems(selection).forEach(({ kind, id }) => {
+          if (kind === 'wall') removeWall(id)
+          else if (kind === 'furniture') removeFurniture(id)
+          else if (kind === 'opening') removeOpening(id)
+        })
       }
       if (e.key === 'r' || e.key === 'R') {
-        if (selection?.kind === 'furniture') rotateFurniture(selection.id, e.shiftKey ? -15 : 15)
+        selectionItems(selection)
+          .filter((i) => i.kind === 'furniture')
+          .forEach(({ id }) => rotateFurniture(id, e.shiftKey ? -15 : 15))
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === 'a' || e.key === 'A')) {
+        e.preventDefault()
+        selectAll()
       }
       // Undo / redo — Cmd on macOS, Ctrl elsewhere. The input/textarea guard
       // above means Cmd+Z still hits native text-undo when typing in a field
@@ -49,7 +63,7 @@ export default function useCanvasKeyboard() {
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
-  }, [selection, calibration, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration])
+  }, [selection, calibration, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration, selectAll])
 
   return spaceDown
 }

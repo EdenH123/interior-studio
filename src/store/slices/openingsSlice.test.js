@@ -40,7 +40,7 @@ describe('openingsSlice.addOpening', () => {
   it('auto-selects the new opening', () => {
     const wallId = store.getState().walls[0].id
     const r = store.getState().addOpening('window', wallId, 0.3)
-    expect(store.getState().selection).toEqual({ kind: 'opening', id: r.id })
+    expect(store.getState().selection).toEqual({ items: [{ kind: 'opening', id: r.id }] })
   })
 
   it('rejects unknown opening types', () => {
@@ -125,7 +125,7 @@ describe('openingsSlice.removeOpening + wall cascade', () => {
   it('removes by id and clears matching selection', () => {
     const wallId = store.getState().walls[0].id
     const id = store.getState().addOpening('door', wallId, 0.5).id
-    expect(store.getState().selection).toEqual({ kind: 'opening', id })
+    expect(store.getState().selection).toEqual({ items: [{ kind: 'opening', id }] })
     store.getState().removeOpening(id)
     expect(store.getState().openings).toHaveLength(0)
     expect(store.getState().selection).toBeNull()
@@ -142,7 +142,7 @@ describe('openingsSlice.removeOpening + wall cascade', () => {
   it('removeWall clears selection pointing at one of its openings', () => {
     const wallId = store.getState().walls[0].id
     const r = store.getState().addOpening('door', wallId, 0.5)
-    expect(store.getState().selection).toEqual({ kind: 'opening', id: r.id })
+    expect(store.getState().selection).toEqual({ items: [{ kind: 'opening', id: r.id }] })
     store.getState().removeWall(wallId)
     expect(store.getState().selection).toBeNull()
   })

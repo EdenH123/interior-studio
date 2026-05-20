@@ -12,7 +12,7 @@ import { openingPlacement, projectOntoWall, wallLengthPx } from './openingGeomet
 // stage-transform) frame Konva expects. On drag end we recompute the
 // normalised `position` and dispatch through `onUpdate(id, patch)`. The
 // store's `updateOpening` rejects overlaps — caller toasts on false.
-export default function Opening({ opening, wall, view, selected, onSelect, onUpdate, onContextMenu, onUpdateRejected }) {
+export default function Opening({ opening, wall, view, selected, onSelect, onShiftSelect, onUpdate, onContextMenu, onUpdateRejected }) {
   const p = openingPlacement(opening, wall)
   const angleDeg = (p.angleRad * 180) / Math.PI
 
@@ -48,7 +48,8 @@ export default function Opening({ opening, wall, view, selected, onSelect, onUpd
       onMouseDown={(e) => {
         if (e.evt.button === 0) {
           e.cancelBubble = true
-          onSelect?.(opening.id)
+          if (e.evt.shiftKey) onShiftSelect?.(opening.id)
+          else onSelect?.(opening.id)
         }
       }}
       onContextMenu={(e) => {
