@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { FURNITURE_MATERIALS } from './furnitureMaterials'
-import Swatch from './Swatch'
+import { FURNITURE_MATERIALS, resolveFurnitureMaterialId } from './furnitureMaterials'
+import MaterialPicker from './MaterialPicker'
 
 // Properties panel shown when multiple items are selected.
 // If all selected items share the same kind, shows editable common fields.
@@ -69,15 +69,12 @@ function MultiFurnitureProps({ ids, furniture, updateFurniture }) {
         />
       </label>
       <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Material (all)</div>
-      <div className="grid grid-cols-3 gap-1.5">
-        <Swatch label="Default" color={null} active={commonMaterial === null}
-          onClick={() => furnitureItems.forEach((f) => updateFurniture(f.id, { material: null }))} />
-        {FURNITURE_MATERIALS.map((m) => (
-          <Swatch key={m.id} label={m.label} color={m.color}
-            active={commonMaterial === m.id}
-            onClick={() => furnitureItems.forEach((f) => updateFurniture(f.id, { material: m.id }))} />
-        ))}
-      </div>
+      <MaterialPicker
+        materials={FURNITURE_MATERIALS}
+        currentId={commonMaterial === undefined ? null : commonMaterial}
+        resolveId={resolveFurnitureMaterialId}
+        onChange={(id) => furnitureItems.forEach((f) => updateFurniture(f.id, { material: id }))}
+      />
     </div>
   )
 }

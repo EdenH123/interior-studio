@@ -2,13 +2,13 @@ import { useMemo } from 'react'
 import useStore from '../store/useStore'
 import { getSingleItem, selectionItems, commonKind } from '../store/selectionHelpers'
 import { detectRooms, polygonAreaM2 } from './canvas/roomDetection'
-import { FLOOR_MATERIALS } from './canvas/floorMaterials'
+import { FLOOR_MATERIALS, resolveFloorMaterialId } from './canvas/floorMaterials'
 import UnderlayProps from './canvas/UnderlayProps'
 import WallProps from './canvas/WallProps'
 import FurnitureProps from './canvas/FurnitureProps'
 import OpeningProps from './canvas/OpeningProps'
 import MultiSelectProps from './canvas/MultiSelectProps'
-import Swatch from './canvas/Swatch'
+import MaterialPicker from './canvas/MaterialPicker'
 
 // Thin router: looks at `selection` and renders the matching per-kind
 // editor. Each editor lives in its own file under `canvas/` (paired with
@@ -106,14 +106,12 @@ function RoomProps({ room, meta, onUpdate }) {
       </label>
       <div className="mt-3">
         <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Floor material</div>
-        <div className="grid grid-cols-3 gap-1.5">
-          <Swatch label="Default" color={null} active={!meta.floorMaterial} onClick={() => onUpdate(room.id, { floorMaterial: null })} />
-          {FLOOR_MATERIALS.map((m) => (
-            <Swatch key={m.id} label={m.label} color={m.color}
-              active={meta.floorMaterial === m.id}
-              onClick={() => onUpdate(room.id, { floorMaterial: m.id })} />
-          ))}
-        </div>
+        <MaterialPicker
+          materials={FLOOR_MATERIALS}
+          currentId={meta.floorMaterial}
+          resolveId={resolveFloorMaterialId}
+          onChange={(id) => onUpdate(room.id, { floorMaterial: id })}
+        />
       </div>
       <div className="mt-3">
         <Row label="Area" value={`${area.toFixed(2)} m²`} />
