@@ -1,0 +1,590 @@
+# Interior Studio — User Guide
+
+_Last updated: 2026-05-20_  <!-- doors and windows on walls -->
+
+
+A short tour of everything Interior Studio can do today. Read it
+beginning-to-end the first time; after that, the **Keyboard shortcuts**
+section at the bottom is the cheat sheet you'll come back to.
+
+## What you can do
+
+Sketch a floor plan, place furniture, view your room in 3D, and have it
+all save automatically. No account, no upload, no installation — it runs
+entirely in your browser.
+
+The screen has four areas:
+
+- **Top bar** — the app name and the **3D** toggle button.
+- **Left panel** — the furniture catalog.
+- **Center** — the 2D canvas where you draw and arrange things.
+- **Right panel** — properties of whatever is currently selected.
+
+## Drawing walls
+
+1. Click anywhere empty on the canvas to drop the **start point**. A blue
+   dot appears.
+2. Move the mouse. You'll see a dashed blue preview wall following the
+   cursor, with a floating measurement (e.g. `3.20 m`) showing the
+   current length.
+3. Click again to **commit** the wall. It turns solid white.
+4. The wall is committed *and* the next wall is already starting from
+   that endpoint. Keep clicking to draw a chain of connected walls.
+
+### Ending a chain
+
+When you're done drawing, finish the chain in any of these ways:
+
+- Click the **same point again** (a "double-click" on the endpoint).
+- Press **`Esc`**.
+- **Right-click** on an empty part of the canvas.
+
+### Snap to existing points
+
+While you're drawing, if your cursor gets near an existing wall's
+**endpoint** or **midpoint**, a small **cyan marker** appears:
+
+- A small square = an endpoint.
+- A small diamond = a midpoint.
+
+When the marker is visible, your next click will lock to that exact
+point instead of wherever the cursor was. This makes it easy to close
+rooms (snap back to where you started) and to connect walls cleanly to
+existing geometry without aiming.
+
+### 90° wall snapping
+
+If there's no nearby snap point, the preview wall automatically locks to
+**perfectly horizontal or vertical** from the start point. The cursor
+suggests the direction; the wall just stays straight.
+
+If you want a free angle, you'll need to either draw to an existing
+snap point or place a wall and rotate the world (rotation isn't in this
+build — every wall is currently 0° or 90°).
+
+### Deleting a wall
+
+**Right-click** on any wall to delete it. Or click the wall to select it
+and press **`Del`** / **`Backspace`**. Any doors or windows on that wall
+are removed at the same time.
+
+## Doors and windows
+
+Above the furniture catalog, the left panel has an **Openings** group with
+a **Door** tile and a **Window** tile.
+
+1. Drag a tile from the sidebar onto the canvas. While dragging, a blue
+   preview locks to the nearest wall — that's where it'll land. Drop with
+   no wall close enough and you'll see a red X; nothing happens.
+2. The opening appears on the wall with its default size (door 0.9 × 2.1
+   m, window 1.2 × 1.4 m with a 0.9 m sill).
+3. The wall stays whole visually but renders as two segments around the
+   gap. In 3D the hole is actually carved out of the wall geometry.
+
+### Moving an opening
+
+Click an opening to select it (it turns blue), then drag it. It stays
+locked to its parent wall — there's no way to move a door from one wall to
+another short of deleting and re-dropping it.
+
+### Editing size
+
+With an opening selected, the right panel shows **Width** and **Height**
+in meters. Windows also show **Sill height** (how far above the floor the
+bottom of the window sits). Type a new number and press tab or enter.
+
+If your edit would make the opening fall off the end of the wall or
+overlap another opening already on it, the change is rejected and a toast
+explains why.
+
+### Deleting an opening
+
+Right-click it, or select it and press **`Del`** / **`Backspace`**.
+
+## Placing furniture
+
+The left panel is a catalog grouped into five categories:
+
+- **Seating** — Sofa, Armchair, Chair
+- **Tables** — Coffee table, Dining table, Desk
+- **Bedroom** — Bed
+- **Storage** — Bookshelf, Wardrobe
+- **Decor** — Rug, Lamp, TV
+
+Each tile shows a small footprint preview (the rectangle's aspect ratio
+matches the real-world footprint) and the real dimensions in metres.
+
+To place a piece:
+
+1. **Drag** a tile from the catalog onto the canvas.
+2. While you're over the canvas, a **translucent preview** of the
+   item's footprint follows the cursor at the correct real-world size
+   (snapped to the grid). It shows exactly where a drop will commit.
+3. **Release** anywhere on the canvas. The item lands at the preview's
+   position and becomes selected automatically. The preview disappears.
+
+If you drag back off the canvas (or press Esc / release outside any
+drop target), the preview clears and nothing is placed.
+
+### Moving furniture
+
+**Click and drag** a piece on the canvas to move it.
+
+### Choosing a furniture material
+
+Select a piece, then pick a swatch from the **Material** row in the
+right panel: **Default** (the catalog's stock colour for that piece),
+**Light Wood**, **Dark Wood**, **White**, **Black**, **Linen**, **Navy**,
+**Forest**. The change applies in both the 2D footprint and the 3D box
+fallback. Loaded 3D models keep their own materials — the override is
+for the box stand-ins.
+
+### Rotating furniture
+
+Select the piece, then **drag the small blue rotation handle** that
+appears on a short stick extending from the back of the footprint. The
+piece rotates around its centre to follow your cursor.
+
+Keyboard shortcuts still work and are best for precise angles:
+
+- **`R`** — rotate clockwise by 15°.
+- **`Shift+R`** — rotate counter-clockwise by 15°.
+
+A small light tick on the "front" edge of the footprint shows which way
+the piece is currently facing; the rotation handle sticks out from the
+opposite (back) edge.
+
+### Deleting furniture
+
+Right-click the piece to delete it instantly. Or click it once to
+select, then press **`Del`** / **`Backspace`**.
+
+## Selecting and editing
+
+**Left-click** any wall, furniture item, or room to select it. Selected
+items are outlined in blue.
+
+Once selected:
+
+- The **right panel** shows the item's properties — for furniture: type,
+  width, depth, height, rotation, position. For walls: an editable
+  length and the start/end positions. For rooms: name input,
+  floor-material picker, area, and vertex count.
+- **`Del`** / **`Backspace`** deletes the selection (walls and
+  furniture only — rooms aren't deletable directly; delete the walls
+  to remove the room).
+- **`Esc`** clears the selection.
+
+### Editing a wall's length
+
+Once a wall is selected, the right panel shows a **Length (m)** input.
+Type a new length in metres (up to 2 decimals — e.g. `3.20`) and press
+**Enter** (or click anywhere else) to apply. The wall keeps its first
+endpoint fixed and extends or shortens along its existing direction;
+the second endpoint moves to land at the new length.
+
+Press **Esc** while typing to revert to the current length and exit
+the field.
+
+Minimum length: 0.05 m (5 cm). Below that the input rejects the change
+silently and the displayed value snaps back.
+
+### Wall materials
+
+Below the length input, the right panel has a **Material** picker with
+six swatches: **Default**, **Painted White**, **Brick**, **Concrete**,
+**Wood Panel**, **Wallpaper**. Click a swatch to apply that material;
+the wall changes colour in both the 2D plan and the 3D viewer. **Default**
+restores the neutral gray every wall starts with.
+
+Materials are per-wall — different walls in the same room can use
+different finishes. They save with your design and survive a refresh.
+
+Only one thing is selected at a time. Clicking on empty canvas clears
+the selection (and starts a new wall — see below).
+
+## Room detection
+
+When you draw a **closed loop** of walls (every endpoint connects to
+the next), the area inside fills with a subtle **sky-blue tint** to
+mark it as a room. You'll see this happen automatically the moment the
+loop closes.
+
+This works for any closed shape — rectangles, L-shapes, octagons,
+anything that has no gaps. If you leave even a small gap, the room
+won't be detected; close the gap (snap-to-endpoint helps) and the tint
+will appear.
+
+### Naming a room
+
+**Click inside a detected room** (anywhere on the tinted floor area)
+to select it. The right panel shows the room's editor:
+
+- **Name** — type any name (e.g. "Living room", "Kitchen 2"). The name
+  appears on the canvas at the room's centre.
+- **Floor material** — pick from Default, Wood, Tile, Carpet, Marble, or
+  Concrete. The room's floor tint changes to match.
+- **Area** and **Vertices** — read-only stats about the room.
+
+Room names and materials are saved automatically and survive page
+refresh, just like walls and furniture.
+
+### Re-finding a renamed room
+
+Each room is identified by the exact corner positions of its walls. If
+you delete and redraw the same walls to the same coordinates, the
+room's name and material come back. If you redraw them in slightly
+different positions, the app treats it as a new room.
+
+### Drawing inside a room
+
+Clicking inside a room normally selects it. To draw a wall inside an
+existing room (e.g. to subdivide it), click somewhere outside any
+detected room to start the chain, then continue inside. Or use
+snap-to-endpoint: click near an existing wall endpoint to start a chain
+from there — that works inside a room because the endpoint is on the
+room's boundary.
+
+## Floor-plan underlay
+
+Have an existing floor plan as an image (a scanned blueprint, a real
+estate listing, a photo of a hand-drawn sketch)? Bring it in as an
+**underlay** and trace your walls over it.
+
+### Uploading
+
+Click **Upload underlay** in the top bar. Pick a PNG or JPG. The image
+appears in the canvas at its natural pixel size, semi-transparent (40%
+by default), with its top-left corner at the canvas origin.
+
+### Positioning before calibration
+
+Right after upload, the image is **unlocked**:
+
+- You can **drag it** to move it around.
+- The toolbar button changes to **Underlay** (not yet locked).
+- Click the image to select it; the right panel shows its properties.
+
+### Calibrating the scale
+
+The image's pixels are not the same as canvas pixels — a 1000×1000 PNG
+isn't 20 m × 20 m unless you say so. **Calibration** tells the app what
+real-world distance is represented by a known span on the image.
+
+1. Select the underlay (click it on the canvas, or click **Underlay** in
+   the top bar).
+2. In the right panel, click **Calibrate**.
+3. The hint at the bottom-right of the canvas changes to "click first
+   calibration point". Click any point on the image whose real-world
+   location you know — e.g. the corner of a known doorway.
+4. Click a second point a known distance away — e.g. the opposite
+   corner of that doorway, or a printed scale bar's tick mark.
+5. A small dialog appears: "Real distance (meters)". Type the distance
+   (e.g. `0.9` for a 90 cm door). Press Enter or click **Apply**.
+6. The image rescales so those two points end up exactly that many
+   metres apart in the canvas. The first point stays where it was; the
+   second moves to match the new scale.
+7. The image **locks**. The toolbar button now shows **Underlay ·
+   locked**.
+
+Once locked, clicks on the image pass through to whatever's underneath
+— so you can draw walls right over it without the image shifting.
+
+### Re-calibrating
+
+Made a mistake or measured the wrong span? Select the underlay, click
+**Re-calibrate**, and repeat the two-click + distance flow. The image
+unlocks during calibration and re-locks on apply.
+
+### Opacity
+
+While the underlay is selected, the right panel has an **Opacity**
+slider. Lower it to see your walls more clearly; raise it to read
+fine details on the image. The setting saves with the underlay.
+
+### Removing
+
+Select the underlay and click **Remove** in the right panel. The image
+disappears immediately. To re-upload, click **Upload underlay** in the
+top bar.
+
+### Auto-save and underlays
+
+Underlays save to your browser along with walls and furniture. To stay
+within your browser's storage quota, very large images are
+**automatically downscaled** on upload to 2000 pixels on the long side
+and re-encoded as JPEG at high quality. A small toast notification
+tells you when this happens.
+
+If even after downscaling the image is too large to fit in the
+browser's localStorage (rare, but it can happen on phones with strict
+limits or when you already have a lot of other state), a red toast
+warns you that the image won't survive a reload. The rest of your
+design (walls, furniture, room metadata) still saves normally; only
+the underlay is at risk.
+
+## 3D viewer
+
+Click the **3D** button in the top bar to open a 3D view of your floor
+plan next to the 2D canvas. The two views stay synced — as you change
+the 2D side, the 3D side updates instantly.
+
+- Walls show up as boxes that are 2.4 m tall.
+- Furniture shows up as colored blocks sized to its real dimensions.
+  (When real 3D models ship for furniture in a future release, those
+  will replace the blocks automatically; the right panel's **Model**
+  row tells you whether a piece is using a model or the box fallback.)
+- Each detected room shows up as a coloured **floor piece** matching
+  its floor material (Wood, Tile, Carpet, etc.). Rooms with no material
+  set yet use a neutral gray. Beyond the room boundaries, the dark
+  ground plane stays visible.
+- Change a room's floor material on the 2D side (right panel) and the
+  3D floor updates instantly.
+
+### Moving the 3D camera
+
+- **Left-click and drag** — orbit around the scene.
+- **Right-click and drag** — pan (slide the view sideways/up/down).
+- **Mouse wheel** — zoom in and out.
+
+Click **3D** again to hide the 3D view and reclaim the full canvas
+width for 2D.
+
+### Selection is bidirectional
+
+Selection is synchronised between the 2D and 3D views:
+
+- Selecting a **wall, furniture item, or room in 2D** makes the
+  corresponding 3D mesh glow blue.
+- **Click a mesh directly in the 3D view** to select it — the same
+  blue highlight appears in 3D, and the right-panel editor updates as
+  if you'd selected on the 2D side. Clicking empty 3D space clears the
+  selection.
+
+(Orbit drags don't trigger selection — only a still click does.)
+
+> **Heads-up:** the first time you click **3D** in a fresh session, the
+> 3D engine downloads in the background. You'll see "loading 3D…" for
+> a moment, then the view appears.
+
+## AI design assistant
+
+Click **AI** in the top bar to open a chat panel on the right side (it
+temporarily replaces the Properties panel). Click **AI** again, or the
+**×** in the panel, to close it.
+
+### Setting up
+
+You'll need an **Anthropic API key**. Paste it into the input the first
+time you open the panel.
+
+> ⚠ **Dev-mode feature.** A browser-side app cannot keep an API key
+> truly private. Any script on this page, any browser extension, or
+> anyone with access to your dev tools can read it. The key is stored
+> only in **sessionStorage** — it disappears when you close this tab,
+> and it never goes into a project file or `localStorage`. Even so,
+> use a key with strict spending limits.
+
+You can clear the key any time from the same panel (**Clear key**).
+
+### Using it
+
+Two ways to start a conversation:
+
+- **Analyze current design** — sends the whole project (walls,
+  furniture, rooms with names + materials, whether an underlay is
+  loaded — but **not** the underlay image bytes) to Claude with a
+  request for concrete suggestions. Good for "what's missing?"
+- **Free-form prompt** — type a question in the box at the bottom
+  (e.g. "suggest a furniture layout for a small home office",
+  "what would you swap to make this room feel less crowded?").
+  **Enter** sends; **Shift+Enter** for a newline.
+
+Responses stream in as text. A blinking cursor on the active reply
+indicates Claude is still responding.
+
+### Following up
+
+The panel keeps a multi-turn conversation in memory. Each request
+includes the full conversation so far **plus** the current design
+state, so Claude sees both what you've discussed and what you've
+edited since. Use **Clear conversation** to start over.
+
+### Applying suggestions
+
+When Claude proposes concrete changes, it returns a JSON block
+representing the full intended state of your design. The app:
+
+1. **Parses and validates** the JSON against the project schema. If
+   it's malformed, you'll see "Can't apply — …" with the reason, and
+   you can still **Copy** the raw block to use elsewhere.
+2. **Diffs against your current design** and shows a **Preview
+   changes** card above the input. The card lists, per slice:
+   - **+N** in green — items to add
+   - **~N** in amber — items to modify
+   - **−N** in red — items to remove
+3. **Highlights the diff on the 2D canvas**:
+   - **Green** dashed strokes / footprints for additions
+   - **Amber** strokes for modifications
+   - **Red** dashed strokes for removals
+4. **Apply** commits the changes in one step — pressing
+   **Ctrl/Cmd+Z** afterwards reverts the entire AI change.
+   **Discard** drops the preview, leaves the transcript and the
+   canvas as they were.
+
+Starting a new turn (sending another prompt) automatically discards
+any preview that wasn't applied.
+
+> The underlay (your uploaded floor-plan image) is intentionally
+> outside the AI's scope. Apply never touches it.
+
+### Limits
+
+- Conversations don't persist. Close the tab → conversation gone.
+- The model used is `claude-sonnet-4-20250514`. Cost is charged to
+  your Anthropic account at that model's rates.
+- The underlay's image bytes are never sent — Claude knows an
+  underlay is loaded and whether it's locked, but not what it looks
+  like.
+
+## Undo and redo
+
+Made a mistake? Press **Ctrl/Cmd+Z** to undo. **Ctrl/Cmd+Shift+Z**
+redoes. The small **↶** / **↷** buttons in the top bar (just to the
+right of the app name) do the same thing, and grey out when there's
+nothing to undo or redo.
+
+History tracks changes to walls, furniture, rooms, and the underlay.
+It does **not** track which item is selected, the 3D toggle, or your
+camera position — those are just view state.
+
+A few details:
+
+- Continuous actions like dragging the rotation handle or typing into
+  the room name field collapse into a single undo step (~300 ms of
+  quiet ends the step).
+- History is session-only. Reload the page and you start fresh, but the
+  walls/furniture/etc. that were on screen before the reload come back
+  from auto-save.
+- The limit is 50 steps. Beyond that, the oldest entry drops off.
+
+Pressing **Ctrl/Cmd+Z** while typing in a text field (room name, wall
+length, calibration distance) does the normal text undo, not the
+app-wide one.
+
+## Saving, opening, and exporting
+
+The top bar has three save/export buttons:
+
+- **Open** — opens a `.studio.json` file you saved previously. If you
+  have any current work, the app will ask you to confirm before
+  replacing it. The file picker accepts only `.json` files.
+- **Save** — downloads a `.studio.json` file containing the entire
+  project (walls, furniture, room names + floor materials, underlay
+  image). Filename is `interior-studio-{timestamp}.studio.json`.
+- **Export PNG** — captures the current 2D canvas view as a PNG image
+  at 2× resolution. Includes the dark backdrop, grid, walls, furniture,
+  rooms, and the underlay if one is loaded. Filename is
+  `interior-studio-{timestamp}.png`.
+
+`.studio.json` files are versioned for future compatibility. The
+current format is version 1; if you open a file from a newer version
+than the app can read, you'll get a clear error.
+
+> **Tip:** PNG export captures the current view. Pan and zoom to frame
+> the area you want before clicking Export PNG; the export uses
+> whatever's visible (including a selection highlight if you have
+> something selected — clear with Esc first for a clean shot).
+
+## Auto-save
+
+Everything you draw is **saved automatically** to your browser's local
+storage. Close the tab, come back tomorrow, and your walls and
+furniture will still be there.
+
+What's saved:
+
+- All walls
+- All furniture (including position and rotation)
+- All room names and floor materials
+- The floor-plan underlay (image + calibration + opacity), if any
+
+What's **not** saved (resets every session):
+
+- Selection
+- Whether the 3D view was open
+- Pan/zoom position on the canvas
+
+If you want a truly clean slate, clear the site's storage in your
+browser's developer tools (we don't yet expose a "reset" button).
+
+## Pan and zoom (2D)
+
+- **Mouse wheel** — zoom in and out around the cursor.
+- **Hold `Space` + drag** — pan the canvas.
+- **Middle-mouse drag** — also pans.
+
+The bottom-left of the canvas shows the current zoom percentage and
+your cursor position in metres.
+
+## Keyboard shortcuts
+
+| Key | What it does |
+|---|---|
+| `Esc` | End the current wall chain / clear selection |
+| `Del` or `Backspace` | Delete the selected item |
+| `R` | Rotate selected furniture clockwise 15° |
+| `Shift+R` | Rotate selected furniture counter-clockwise 15° |
+| `Ctrl/Cmd+Z` | Undo last change |
+| `Ctrl/Cmd+Shift+Z` | Redo |
+| `Space` (hold) + drag | Pan the canvas |
+| Mouse wheel | Zoom 2D (or zoom 3D camera, when hovering the 3D view) |
+| Middle-mouse drag | Pan the canvas |
+| Left-click (empty canvas) | Start / extend a wall chain |
+| Left-click (item) | Select item |
+| Left-click + drag (item) | Move item |
+| Right-click (item) | Delete item |
+| Right-click (empty canvas, while drawing) | Cancel the chain |
+| 3D view: left-drag | Orbit camera |
+| 3D view: right-drag | Pan camera |
+
+## Frequently asked
+
+**Why didn't a room fill in when I closed it?**
+Your walls probably don't quite meet. Watch for the cyan marker — if
+it didn't appear when you placed the last endpoint, the wall isn't
+locked to the existing geometry. Delete the last wall and redraw it,
+making sure the marker shows before you click.
+
+**Why is the 3D view blank for a second?**
+First-time download. After the first click, switching between 2D-only
+and split views is instant.
+
+**Can I undo a mistake?**
+Not yet. Undo/redo is on the roadmap. For now: delete the offending
+item and redraw.
+
+**Can I export to a real CAD file or to PDF?**
+Not yet. Export to PNG / PDF / `.studio.json` round-trip is planned.
+
+**Can I work on a phone or tablet?**
+The app is built for desktop. Touch input isn't supported yet.
+
+---
+
+## For developers
+
+The project has a Vitest test suite for the store + pure utilities (the
+visual canvas + 3D rendering still need component tests; see Up Next in
+`CONTEXT.md`).
+
+| Command | What it does |
+|---|---|
+| `npm test` | Run the full suite once and exit. CI-friendly. |
+| `npm run test:watch` | Re-run tests on file change. Best while writing. |
+| `npm run test:ui` | Open Vitest's browser UI for interactive runs. |
+| `npm run build` | Production build — must pass before declaring work done (per `debugging-discipline` skill). |
+
+Tests live next to source files as `*.test.js` / `*.test.jsx`. Shared
+setup (jsdom storage stub, `@testing-library/jest-dom` matchers) is in
+`src/test/setup.js`.

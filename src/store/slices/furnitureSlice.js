@@ -1,0 +1,42 @@
+import { nanoid } from 'nanoid/non-secure'
+import { getFurnitureSpec } from '../../components/canvas/furnitureCatalog'
+
+// Furniture is fully self-contained per piece — width/depth/height/color/
+// model are snapshotted from the catalog spec at add-time so catalog edits
+// don't retroactively reshape existing pieces. Cross-slice writes:
+//   • addFurniture auto-selects the new piece
+//   • removeFurniture clears the selection if it matched
+export const createFurnitureSlice = (set) => ({
+  furniture: [],
+  addFurniture: (type, x, y) => {
+    const spec = getFurnitureSpec(type)
+    if (!spec) return null
+    const id = nanoid(6)
+    set((s) => ({
+      furniture: [
+        ...s.furniture,
+        {
+          id, type, x, y, rotation: 0,
+          width: spec.width, depth: spec.depth, height: spec.height,
+          color: spec.color,
+          model: spec.model ?? null,
+        },
+      ],
+      selection: { kind: 'furniture', id },
+    }))
+    return id
+  },
+  updateFurniture: (id, patch) =>
+    set((s) => ({ furniture: s.furniture.map((f) => (f.id === id ? { ...f, ...patch } : f)) })),
+  rotateFurniture: (id, deltaDeg) =>
+    set((s) => ({
+      furniture: s.furniture.map((f) =>
+        f.id === id ? { ...f, rotation: (f.rotation + deltaDeg + 360) % 360 } : f,
+      ),
+    })),
+  removeFurniture: (id) =>
+    set((s) => ({
+      furniture: s.furniture.filter((f) => f.id !== id),
+      selection: s.selection?.id === id ? null : s.selection,
+    })),
+})
