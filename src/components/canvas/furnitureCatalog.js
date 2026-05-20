@@ -29,9 +29,37 @@ export const FURNITURE = [
   { type: 'rug',          label: 'Rug',          category: 'Decor',   width: 2.0,  depth: 1.4,  height: 0.01, color: '#b45309', model: glb('rug.glb') },
   { type: 'lamp',         label: 'Lamp',         category: 'Decor',   width: 0.4,  depth: 0.4,  height: 1.5,  color: '#facc15', model: glb('lamp.glb') },
   { type: 'tv',           label: 'TV',           category: 'Decor',   width: 1.2,  depth: 0.15, height: 0.7,  color: '#0f172a', model: glb('tv.glb') },
+
+  // Lighting — each carries extra light properties that are snapshotted into
+  // the furniture item by furnitureSlice.addFurniture (all fields prefixed with
+  // nothing — they live flat on the item alongside width/depth/height/color).
+  {
+    type: 'lighting:ceiling-lamp', label: 'Ceiling lamp', category: 'Lighting',
+    width: 0.4, depth: 0.4, height: 0.4, color: '#fff8e1',
+    model: glb('ceiling-lamp.glb'),
+    lightType: 'point', intensity: 1.0, colorTemp: 3000, distance: 8, castShadow: true, on: true,
+  },
+  {
+    type: 'lighting:floor-lamp', label: 'Floor lamp', category: 'Lighting',
+    width: 0.4, depth: 0.4, height: 1.8, color: '#fff8e1',
+    model: glb('floor-lamp.glb'),
+    lightType: 'point', intensity: 0.8, colorTemp: 3000, distance: 5, castShadow: true, on: true,
+  },
+  {
+    type: 'lighting:table-lamp', label: 'Table lamp', category: 'Lighting',
+    width: 0.36, depth: 0.36, height: 0.45, color: '#fff8e1',
+    model: glb('table-lamp.glb'),
+    lightType: 'point', intensity: 0.6, colorTemp: 2700, distance: 3, castShadow: true, on: true,
+  },
+  {
+    type: 'lighting:pendant', label: 'Pendant', category: 'Lighting',
+    width: 0.3, depth: 0.3, height: 0.65, color: '#c8a850',
+    model: glb('pendant.glb'),
+    lightType: 'spot', intensity: 1.2, colorTemp: 3000, distance: 5, castShadow: true, on: true,
+  },
 ]
 
-export const CATEGORIES = ['Seating', 'Tables', 'Bedroom', 'Storage', 'Decor']
+export const CATEGORIES = ['Seating', 'Tables', 'Bedroom', 'Storage', 'Decor', 'Lighting']
 
 const BY_TYPE = Object.fromEntries(FURNITURE.map((f) => [f.type, f]))
 
