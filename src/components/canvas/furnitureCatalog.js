@@ -135,11 +135,36 @@ export const FURNITURE = [
   },
 
   // ── Architecture ──────────────────────────────────────────────────────────
+  // Stairs
   {
-    type: 'stairs', label: 'Stairs', category: 'Architecture',
+    type: 'stairs',          label: 'Stairs',          category: 'Architecture',
     width: 0.9, depth: 3.0, height: 2.7, color: '#8b7355', model: null,
-    stairType: true,
+    stairType: true, stairStyle: 'standard',
   },
+  {
+    type: 'stairs-floating', label: 'Floating stairs',  category: 'Architecture',
+    width: 1.1, depth: 3.2, height: 2.7, color: '#c8b89a', model: null,
+    stairType: true, stairStyle: 'floating',
+  },
+  {
+    type: 'stairs-spiral',   label: 'Spiral stairs',    category: 'Architecture',
+    width: 2.2, depth: 2.2, height: 2.7, color: '#8b7355', model: null,
+    stairType: true, stairStyle: 'spiral',
+  },
+  // Railings — procedural geometry
+  {
+    type: 'railing-wood',  label: 'Wood railing',   category: 'Architecture',
+    width: 1.2, depth: 0.06, height: 1.0, color: '#a16207', railingStyle: 'wood',
+  },
+  {
+    type: 'railing-metal', label: 'Metal railing',  category: 'Architecture',
+    width: 1.2, depth: 0.04, height: 1.0, color: '#64748b', railingStyle: 'metal',
+  },
+  {
+    type: 'railing-cable', label: 'Cable railing',  category: 'Architecture',
+    width: 1.2, depth: 0.05, height: 1.0, color: '#94a3b8', railingStyle: 'cable',
+  },
+  // Glass railings and partition (box fallback + glass material)
   {
     type: 'glass-railing',    label: 'Glass railing',    category: 'Architecture',
     width: 1.2, depth: 0.02, height: 1.0, color: '#ddeef5', material: 'glass-clear',

@@ -8,6 +8,7 @@ import { setObjectEmissive } from './selectionHighlight'
 import { furnitureColorFor, furnitureMaterialPropsFor } from '../canvas/furnitureMaterials'
 import { kelvinToRgb } from '../../utils/colorTemp'
 import { buildStairsGeometry } from './stairsGeometry'
+import { buildRailingGeometry } from './railingGeometry'
 
 const WALL_HEIGHT = 2.4  // metres — matches sceneReconcilers
 const MAX_LIGHTS  = 8    // hard cap on active Three.js lights for performance
@@ -84,6 +85,8 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       group.userData.partColors   = partColors
       group.userData.partColorsKey = partColorsKey
       group.userData.modelUrl = f.model ?? null
+      group.userData.stairStyle   = f.stairStyle   ?? null
+      group.userData.railingStyle = f.railingStyle ?? null
       scene.add(group)
       meshMap.set(f.id, group)
       if (group.userData.modelUrl) populateModelOrSchedule(group)
@@ -188,23 +191,28 @@ function buildSpotLight(scene) {
 function populateBoxFallback(group) {
   clearChildren(group)
   const { width, depth, height } = group.userData.dims
-  const isStairs = group.userData.type === 'stairs'
-  let geo = isStairs
-    ? buildStairsGeometry(width, depth, height)
-    : new THREE.BoxGeometry(width, height, depth)
-  // One round of Loop subdivision softens the hard box edges (fallback only;
-  // loaded GLBs already have proper geometry). Skip for stairs — stepped shape
-  // must stay sharp.
-  if (!isStairs) {
-    const subdivided = LoopSubdivision.modify(geo, 1)
-    geo.dispose()
+  const stairStyle   = group.userData.stairStyle
+  const railingStyle = group.userData.railingStyle
+  const isStairs     = stairStyle != null
+  const isRailing    = railingStyle != null
+
+  let geo
+  if (isStairs) {
+    geo = buildStairsGeometry(width, depth, height, { style: stairStyle })
+  } else if (isRailing) {
+    geo = buildRailingGeometry(width, height, railingStyle)
+  } else {
+    let boxGeo = new THREE.BoxGeometry(width, height, depth)
+    const subdivided = LoopSubdivision.modify(boxGeo, 1)
+    boxGeo.dispose()
     geo = subdivided
   }
-  const props = group.userData.tintMatProps
+
+  const props   = group.userData.tintMatProps
   const isGlass = props?.isGlass ?? false
   const mat = isGlass
     ? new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color(group.userData.color ?? '#ddeef5'),
+        color:        new THREE.Color(group.userData.color ?? '#ddeef5'),
         transmission: props.transmission ?? 0.92,
         roughness:    props.roughness    ?? 0.03,
         metalness:    props.metalness    ?? 0.05,
@@ -213,9 +221,10 @@ function populateBoxFallback(group) {
         depthWrite: false,
       })
     : new THREE.MeshStandardMaterial({ color: new THREE.Color(group.userData.color ?? '#888') })
+
   const mesh = new THREE.Mesh(geo, mat)
-  // Stairs geometry spans y=[0..height]; boxes are centred so lift by height/2.
-  if (!isStairs) mesh.position.y = height / 2
+  // Stairs + railings span y=[0..height]; boxes are centred so lift by height/2.
+  if (!isStairs && !isRailing) mesh.position.y = height / 2
   mesh.castShadow    = !isGlass
   mesh.receiveShadow = true
   mesh.renderOrder   = isGlass ? 1 : 0

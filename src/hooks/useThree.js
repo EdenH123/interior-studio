@@ -265,9 +265,10 @@ export default function useThree(containerRef) {
     const allRooms = levels.flatMap((lv) => {
       const lvWalls = walls.filter((w) => (w.levelId ?? activeLevel) === lv.id)
       const lvRooms = detectRooms(lvWalls).map((r) => ({ ...r, id: `${lv.id}:${r.id}`, levelId: lv.id }))
-      const arrivingStairs  = furniture.filter((f) => f.type === 'stairs' && f.toLevel === lv.id)
+      const isStairItem = (f) => f.stairStyle != null || f.type === 'stairs'
+      const arrivingStairs  = furniture.filter((f) => isStairItem(f) && f.toLevel === lv.id)
       const departingStairs = furniture.filter(
-        (f) => f.type === 'stairs' && (f.levelId ?? activeLevel) === lv.id && f.toLevel,
+        (f) => isStairItem(f) && (f.levelId ?? activeLevel) === lv.id && f.toLevel,
       )
       const floorHolesMap   = arrivingStairs.length  > 0 ? computeStairHolesForRooms(lvRooms, arrivingStairs)  : null
       const ceilHolesMap    = departingStairs.length > 0 ? computeStairHolesForRooms(lvRooms, departingStairs) : null

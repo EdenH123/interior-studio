@@ -37,8 +37,13 @@ export const createFurnitureSlice = (set) => ({
         const sorted = [...(s.levels ?? [])].sort((a, b) => a.order - b.order)
         const idx = sorted.findIndex((l) => l.id === activeLevel)
         const nextLevel = idx >= 0 && idx + 1 < sorted.length ? sorted[idx + 1] : null
-        stairFields = { fromLevel: activeLevel, toLevel: nextLevel?.id ?? null }
+        stairFields = {
+          fromLevel:  activeLevel,
+          toLevel:    nextLevel?.id ?? null,
+          stairStyle: spec.stairStyle ?? 'standard',
+        }
       }
+      const railingFields = spec.railingStyle ? { railingStyle: spec.railingStyle } : {}
       return {
         furniture: [
           ...s.furniture,
@@ -53,6 +58,7 @@ export const createFurnitureSlice = (set) => ({
             ...lightFields,
             ...wallMountFields,
             ...stairFields,
+            ...railingFields,
           },
         ],
         selection: { items: [{ kind: 'furniture', id }] },
