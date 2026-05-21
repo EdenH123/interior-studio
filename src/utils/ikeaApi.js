@@ -30,6 +30,27 @@ export function parseDimensions(str) {
 // Try gb/en first, then us/en — IKEA article numbers are global.
 const LOCALES = ['gb/en', 'us/en']
 
+// corsproxy.io passes the response through unchanged — no API key needed.
+const CORS_PROXY = 'https://corsproxy.io/?'
+
+async function fetchJson(url) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(6000) })
+  if (!res.ok) return null
+  return res.json()
+}
+
+function parseHit(hit, clean) {
+  if (!hit) return null
+  const typeName = hit.typeName ?? hit.type ?? ''
+  return {
+    articleNumber: clean,
+    name: hit.name ?? '',
+    typeName,
+    imageUrl: hit.mainImageHref ?? hit.contextualImageUrl ?? hit.imageHref ?? null,
+    ...parseDimensions(typeName),
+  }
+}
+
 export async function fetchIkeaProduct(articleNumber) {
   const clean = normalizeArticleNumber(articleNumber)
   if (!/^\d{8}$/.test(clean)) {
@@ -37,31 +58,21 @@ export async function fetchIkeaProduct(articleNumber) {
   }
 
   for (const locale of LOCALES) {
-    try {
-      const url = `${SEARCH_BASE}/${locale}/search?q=${clean}&types=PRODUCT&size=5`
-      const res = await fetch(url, { signal: AbortSignal.timeout(6000) })
-      if (!res.ok) continue
-      const data = await res.json()
+    const searchUrl = `${SEARCH_BASE}/${locale}/search?q=${clean}&types=PRODUCT&size=5`
 
-      const products = data?.searchResultPage?.productWindow ?? []
-      // Prefer exact article-number match; fall back to first result.
-      const hit = products.find((p) => normalizeArticleNumber(p.id ?? '') === clean) ?? products[0]
-      if (!hit) continue
-
-      const typeName = hit.typeName ?? hit.type ?? ''
-      const dims = parseDimensions(typeName)
-      return {
-        articleNumber: clean,
-        name: hit.name ?? '',
-        typeName,
-        imageUrl: hit.mainImageHref ?? hit.contextualImageUrl ?? hit.imageHref ?? null,
-        ...dims,
+    // Try direct first; if CORS blocks it, retry through the proxy.
+    for (const url of [searchUrl, CORS_PROXY + encodeURIComponent(searchUrl)]) {
+      try {
+        const data = await fetchJson(url)
+        const products = data?.searchResultPage?.productWindow ?? []
+        const hit = products.find((p) => normalizeArticleNumber(p.id ?? '') === clean) ?? products[0]
+        const result = parseHit(hit, clean)
+        if (result) return result
+      } catch {
+        // continue to next attempt
       }
-    } catch {
-      // CORS or network — try next locale
     }
   }
 
-  // All locales failed — return article number so the form can still be filled in.
   return { articleNumber: clean, error: 'unreachable', message: "Couldn't reach IKEA — enter dimensions manually." }
 }
