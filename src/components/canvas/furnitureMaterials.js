@@ -72,12 +72,21 @@ const LEATHER_TONES = [
   { id: 'leather-bordeaux',  label: 'Bordeaux',   color: '#681820', category: 'Leather' },
 ]
 
+const GLASS_VARIANTS = [
+  { id: 'glass-clear',    label: 'Clear',    color: '#ddeef5', category: 'Glass' },
+  { id: 'glass-frosted',  label: 'Frosted',  color: '#e8eef0', category: 'Glass' },
+  { id: 'glass-smoke',    label: 'Smoke',    color: '#7b8a95', category: 'Glass' },
+  { id: 'glass-bronze',   label: 'Bronze',   color: '#8a7a65', category: 'Glass' },
+  { id: 'glass-ice-blue', label: 'Ice Blue', color: '#9bc8e0', category: 'Glass' },
+]
+
 export const FURNITURE_MATERIALS = [
   ...WOOD_FINISHES.map(fromWood),
   ...ALL_PAINTS,
   ...FABRIC_TONES,
   ...VELVET_TONES,
   ...LEATHER_TONES,
+  ...GLASS_VARIANTS,
 ]
 
 const LEGACY_MIGRATIONS = {
@@ -112,13 +121,27 @@ export function furnitureColorFor(item) {
   return item?.color ?? '#888'
 }
 
-// Returns { roughness, metallic, fabricOnly } overrides for the selected
-// material, or null for Wood/Paint (keep the GLB's own roughness).
-// fabricOnly=true → tint only upholstery meshes, leave legs/frame unchanged.
+// Per-variant physical properties for glass.
+const GLASS_PROPS = {
+  'glass-clear':    { transmission: 0.92, roughness: 0.03, opacity: 0.12 },
+  'glass-frosted':  { transmission: 0.30, roughness: 0.50, opacity: 0.65 },
+  'glass-smoke':    { transmission: 0.62, roughness: 0.05, opacity: 0.45 },
+  'glass-bronze':   { transmission: 0.65, roughness: 0.08, opacity: 0.40 },
+  'glass-ice-blue': { transmission: 0.80, roughness: 0.04, opacity: 0.25 },
+}
+
+// Returns physical property overrides for the selected material, or null for
+// Wood/Paint (keep the GLB's authored roughness/metalness).
+// isGlass:true → 3D renderer switches to MeshPhysicalMaterial with transmission.
+// fabricOnly:true → tint only upholstery meshes, leave frame unchanged.
 export function furnitureMaterialPropsFor(item) {
   if (!item?.material) return null
   const m = getFurnitureMaterial(item.material)
   if (!m) return null
+  if (m.category === 'Glass') {
+    const v = GLASS_PROPS[m.id] ?? GLASS_PROPS['glass-clear']
+    return { isGlass: true, transmission: v.transmission, roughness: v.roughness, metalness: 0.05, opacity: v.opacity, transparent: true }
+  }
   if (m.category === 'Velvet')  return { roughness: 0.95, metallic: 0.0, fabricOnly: true }
   if (m.category === 'Leather') return { roughness: 0.38, metallic: 0.0, fabricOnly: true }
   if (m.category === 'Fabric')  return { roughness: 0.88, metallic: 0.0, fabricOnly: true }

@@ -140,6 +140,18 @@ export const FURNITURE = [
     width: 0.9, depth: 3.0, height: 2.7, color: '#8b7355', model: null,
     stairType: true,
   },
+  {
+    type: 'glass-railing',    label: 'Glass railing',    category: 'Architecture',
+    width: 1.2, depth: 0.02, height: 1.0, color: '#ddeef5', material: 'glass-clear',
+  },
+  {
+    type: 'glass-balustrade', label: 'Glass balustrade', category: 'Architecture',
+    width: 0.9, depth: 0.02, height: 0.9, color: '#ddeef5', material: 'glass-clear',
+  },
+  {
+    type: 'glass-partition',  label: 'Glass partition',  category: 'Architecture',
+    width: 2.0, depth: 0.02, height: 2.4, color: '#ddeef5', material: 'glass-clear',
+  },
 ]
 
 export const CATEGORIES = [

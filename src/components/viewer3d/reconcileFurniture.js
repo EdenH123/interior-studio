@@ -91,8 +91,10 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
     } else {
       const d = group.userData.dims
       const dimsChanged = !d || d.width !== f.width || d.depth !== f.depth || d.height !== f.height
+      const glassChanged = Boolean(group.userData.tintMatProps?.isGlass) !== Boolean(tintMatProps?.isGlass)
       const tintChanged = group.userData.tintColor !== tintColor
         || group.userData.tintMatProps?.roughness !== tintMatProps?.roughness
+        || glassChanged
       const partColorsChanged = group.userData.partColorsKey !== partColorsKey
       group.userData.dims = { width: f.width, depth: f.depth, height: f.height }
       group.userData.tintColor    = tintColor
@@ -103,10 +105,9 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
         group.userData.color = color
         rebuildChild(group)
       } else if (group.userData.childKind === 'box') {
-        if (group.userData.color !== color) {
+        if (group.userData.color !== color || glassChanged) {
           group.userData.color = color
-          const box = group.children[0]
-          if (box?.material) box.material.color.set(color)
+          populateBoxFallback(group)
         }
       }
     }
@@ -199,14 +200,25 @@ function populateBoxFallback(group) {
     geo.dispose()
     geo = subdivided
   }
-  const mesh = new THREE.Mesh(
-    geo,
-    new THREE.MeshStandardMaterial({ color: new THREE.Color(group.userData.color ?? '#888') }),
-  )
+  const props = group.userData.tintMatProps
+  const isGlass = props?.isGlass ?? false
+  const mat = isGlass
+    ? new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color(group.userData.color ?? '#ddeef5'),
+        transmission: props.transmission ?? 0.92,
+        roughness:    props.roughness    ?? 0.03,
+        metalness:    props.metalness    ?? 0.05,
+        transparent: true,
+        opacity:      props.opacity      ?? 0.15,
+        depthWrite: false,
+      })
+    : new THREE.MeshStandardMaterial({ color: new THREE.Color(group.userData.color ?? '#888') })
+  const mesh = new THREE.Mesh(geo, mat)
   // Stairs geometry spans y=[0..height]; boxes are centred so lift by height/2.
   if (!isStairs) mesh.position.y = height / 2
-  mesh.castShadow    = true
+  mesh.castShadow    = !isGlass
   mesh.receiveShadow = true
+  mesh.renderOrder   = isGlass ? 1 : 0
   group.add(mesh)
   group.userData.childKind = 'box'
 }
@@ -254,16 +266,40 @@ function clearChildren(group) {
 // Per-part colors take priority. Global tint (from material override) applies to
 // remaining parts (respecting fabricOnly). No color change if neither is set.
 function applyPartTints(group) {
-  const globalColor = group.userData.tintColor       // hex | null
-  const partColors  = group.userData.partColors ?? {} // { [matName]: hex | null }
-  const props       = group.userData.tintMatProps     // { roughness, metallic, fabricOnly } | null
+  const globalColor = group.userData.tintColor
+  const partColors  = group.userData.partColors ?? {}
+  const props       = group.userData.tintMatProps
   const fabricOnly  = props?.fabricOnly ?? false
+  const isGlass     = props?.isGlass ?? false
 
   group.traverse((node) => {
     if (node === group || !node.isMesh) return
-    const mats = Array.isArray(node.material) ? node.material : [node.material]
-    for (const mat of mats) {
-      if (!mat.isMeshStandardMaterial) continue
+    const mats    = Array.isArray(node.material) ? node.material : [node.material]
+    const isArray = Array.isArray(node.material)
+
+    for (let i = 0; i < mats.length; i++) {
+      const mat = mats[i]
+      if (!mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial) continue
+
+      if (isGlass) {
+        // Replace with a physical transmission material.
+        const glassMat = new THREE.MeshPhysicalMaterial({
+          color:        new THREE.Color(globalColor ?? '#ddeef5'),
+          transmission: props.transmission ?? 0.92,
+          roughness:    props.roughness    ?? 0.03,
+          metalness:    props.metalness    ?? 0.05,
+          transparent:  true,
+          opacity:      props.opacity      ?? 0.15,
+          depthWrite:   false,
+        })
+        if (isArray) node.material[i] = glassMat
+        else         node.material    = glassMat
+        mat.dispose()
+        node.renderOrder = 1
+        node.castShadow  = false
+        continue
+      }
+
       const partColor = mat.name ? (partColors[mat.name] ?? null) : null
       if (partColor) {
         mat.color.set(partColor)
