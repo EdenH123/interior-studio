@@ -302,16 +302,15 @@ writeGLB('ikea-hemnes-daybed', [
 
 // ─── IKEA STORAGE ─────────────────────────────────────────────────────────────
 
-// KALLAX 2×2  W0.77 × D0.39 × H0.77  (open front = +Z)
-// Panels 36 mm thick — clearly visible in 3D
+// KALLAX 2×2  W0.77 × D0.39 × H0.77  (open front = +Z, no back panel so
+// compartments appear dark/open — makes the 2×2 grid clearly visible in 3D)
 writeGLB('ikea-kallax-2x2', [
   box(-0.385, 0,     -0.195,  0.385, 0.036, 0.195),  // bottom
   box(-0.385, 0.734, -0.195,  0.385, 0.770, 0.195),  // top
   box(-0.385, 0.036, -0.195, -0.349, 0.734, 0.195),  // left side
   box( 0.349, 0.036, -0.195,  0.385, 0.734, 0.195),  // right side
-  box(-0.385, 0,     -0.195,  0.385, 0.770,-0.159),  // back panel
-  box(-0.018, 0.036, -0.159,  0.018, 0.734, 0.195),  // vertical mid-divider
-  box(-0.349, 0.367, -0.159,  0.349, 0.403, 0.195),  // horizontal mid-divider
+  box(-0.018, 0.036, -0.195,  0.018, 0.734, 0.195),  // vertical mid-divider
+  box(-0.349, 0.367, -0.195,  0.349, 0.403, 0.195),  // horizontal mid-divider
 ], C_IKEA_WHITE)
 
 // KALLAX 4×2  W1.47 × D0.39 × H0.77
@@ -320,28 +319,26 @@ writeGLB('ikea-kallax-4x2', [
   box(-0.735, 0.734, -0.195,  0.735, 0.770, 0.195),  // top
   box(-0.735, 0.036, -0.195, -0.699, 0.734, 0.195),  // left side
   box( 0.699, 0.036, -0.195,  0.735, 0.734, 0.195),  // right side
-  box(-0.735, 0,     -0.195,  0.735, 0.770,-0.159),  // back panel
   // 3 vertical dividers — 4 equal columns across 1.47 m
-  box(-0.3765, 0.036, -0.159, -0.3405, 0.734, 0.195),
-  box(-0.018,  0.036, -0.159,  0.018,  0.734, 0.195),
-  box( 0.3405, 0.036, -0.159,  0.3765, 0.734, 0.195),
+  box(-0.3765, 0.036, -0.195, -0.3405, 0.734, 0.195),
+  box(-0.018,  0.036, -0.195,  0.018,  0.734, 0.195),
+  box( 0.3405, 0.036, -0.195,  0.3765, 0.734, 0.195),
   // horizontal mid-divider
-  box(-0.699, 0.367, -0.159,  0.699, 0.403, 0.195),
+  box(-0.699, 0.367, -0.195,  0.699, 0.403, 0.195),
 ], C_IKEA_WHITE)
 
-// BILLY bookcase  W0.80 × D0.28 × H2.02  (open front = +Z)
+// BILLY bookcase  W0.80 × D0.28 × H2.02  (open front = +Z, no back panel)
 writeGLB('ikea-billy', (() => {
   const parts = [
-    box(-0.40, 0,     -0.14,  0.40, 0.036, 0.14),  // bottom (36mm)
-    box(-0.40, 1.984, -0.14,  0.40, 2.02,  0.14),  // top (36mm)
-    box(-0.40, 0.036, -0.14, -0.364, 1.984, 0.14), // left side (36mm)
-    box( 0.364, 0.036,-0.14,  0.40, 1.984, 0.14),  // right side (36mm)
-    box(-0.40, 0,     -0.14,  0.40, 2.02, -0.104), // back panel (36mm)
+    box(-0.40, 0,     -0.14,  0.40, 0.036, 0.14),   // bottom (36mm)
+    box(-0.40, 1.984, -0.14,  0.40, 2.02,  0.14),   // top (36mm)
+    box(-0.40, 0.036, -0.14, -0.364, 1.984, 0.14),  // left side (36mm)
+    box( 0.364, 0.036,-0.14,  0.40, 1.984, 0.14),   // right side (36mm)
   ]
-  // 4 adjustable shelves
+  // 4 shelves spanning full depth (visible from front and back)
   const shelfY = [0.38, 0.76, 1.14, 1.52]
   for (const y of shelfY) {
-    parts.push(box(-0.364, y, -0.104, 0.364, y + 0.018, 0.14))
+    parts.push(box(-0.364, y, -0.14, 0.364, y + 0.018, 0.14))
   }
   return parts
 })(), C_BIRCH)
