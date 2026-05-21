@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import useStore from '../store/useStore'
 import { searchIkeaCatalog } from '../utils/ikeaCatalog'
+import { normalizeArticleNumber, fetchIkeaProduct, templateFromProduct } from '../utils/ikeaApi'
 import { TEMPLATES, generateModelBlobUrl } from '../utils/glbGenerator'
 
 export default function IkeaProductSearch() {
@@ -34,67 +35,111 @@ export default function IkeaProductSearch() {
   )
 }
 
+// Returns true when the input looks like an IKEA article number.
+function looksLikeCode(v) {
+  return /^\d{3}[\s.]?\d{3}[\s.]?\d{2}$/.test(v.trim()) ||
+    /^\d{7,8}$/.test(v.replace(/[\s.]/g, ''))
+}
+
 function SearchForm() {
   const setPendingPlacement = useStore((s) => s.setPendingPlacement)
 
-  const [query,    setQuery]    = useState('')
-  const [selected, setSelected] = useState(null)   // catalog item or null
-  const [showAll,  setShowAll]  = useState(false)
-  const inputRef = useRef(null)
+  // ── shared state ──────────────────────────────────────────────────────────
+  const [query,     setQuery]     = useState('')     // text field value
+  const [selected,  setSelected]  = useState(null)   // { name, w, d, h, t } from catalog OR fetched
+  const [dropOpen,  setDropOpen]  = useState(false)
 
-  const results = searchIkeaCatalog(query, 10)
-  const showResults = query.trim().length > 0 || showAll
+  // ── article-code fetch state ──────────────────────────────────────────────
+  const [fetching,  setFetching]  = useState(false)
+  const [fetchErr,  setFetchErr]  = useState(null)
 
+  const isCode    = looksLikeCode(query)
+  const results   = !isCode && query.trim() ? searchIkeaCatalog(query, 10) : []
+  const showDrop  = dropOpen && results.length > 0
+
+  // ── pick from catalog dropdown ────────────────────────────────────────────
   function pick(item) {
-    setSelected(item)
+    setSelected({ name: item.n, w: item.w, d: item.d, h: item.h, t: item.t })
     setQuery(item.n)
-    setShowAll(false)
+    setDropOpen(false)
+    setFetchErr(null)
   }
 
+  // ── fetch by article code ─────────────────────────────────────────────────
+  async function handleLookup() {
+    setFetching(true)
+    setFetchErr(null)
+    setSelected(null)
+    try {
+      const p = await fetchIkeaProduct(query)
+      // If dimensions are missing (API didn't return them), surface that to the user.
+      if (!p.width || !p.depth || !p.height) {
+        setFetchErr(`Found "${p.name}" but dimensions are unavailable. Try searching by name instead.`)
+      } else {
+        setSelected({
+          name: p.name,
+          w: Math.round(p.width),
+          d: Math.round(p.depth),
+          h: Math.round(p.height),
+          t: p.template,
+        })
+        setQuery(p.name)
+      }
+    } catch (e) {
+      setFetchErr(e.message)
+    } finally {
+      setFetching(false)
+    }
+  }
+
+  // ── place ─────────────────────────────────────────────────────────────────
   function handlePlace() {
     if (!selected) return
     const w = selected.w / 100
     const d = selected.d / 100
     const h = selected.h / 100
-    const tmpl = TEMPLATES[selected.t] ?? TEMPLATES['sofa']
-    const modelUrl = generateModelBlobUrl(selected.t, w, d, h)
+    const tmpl = TEMPLATES[selected.t] ?? TEMPLATES.sofa
     setPendingPlacement({
       type:  `custom-${selected.t}-${Date.now()}`,
-      label: selected.n,
+      label: selected.name,
       width: w, depth: d, height: h,
       color: tmpl.hex,
-      model: modelUrl,
+      model: generateModelBlobUrl(selected.t, w, d, h),
     })
-  }
-
-  function handleQueryChange(e) {
-    setQuery(e.target.value)
-    setSelected(null)
-    setShowAll(false)
   }
 
   return (
     <div className="px-3 pt-2 pb-3 space-y-2">
 
-      {/* Search input */}
+      {/* Search / code input */}
       <div className="relative">
         <label className="text-[9px] uppercase tracking-wider text-gray-500 block mb-0.5">
-          Search IKEA product
+          {isCode ? 'Article code' : 'Search by name or paste a code'}
         </label>
-        <input
-          ref={inputRef}
-          type="text"
-          placeholder="e.g. KALLAX, MALM bed 140, PAX…"
-          value={query}
-          onChange={handleQueryChange}
-          onFocus={() => { if (!query.trim()) setShowAll(true) }}
-          onBlur={() => setTimeout(() => setShowAll(false), 150)}
-          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-gray-200 text-xs placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-        />
+        <div className="flex gap-1">
+          <input
+            type="text"
+            placeholder="KALLAX 2×2  or  803.518.72"
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setSelected(null); setFetchErr(null); setDropOpen(true) }}
+            onFocus={() => setDropOpen(true)}
+            onBlur={() => setTimeout(() => setDropOpen(false), 150)}
+            className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-gray-200 text-xs placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+          />
+          {isCode && (
+            <button
+              onClick={handleLookup}
+              disabled={fetching}
+              className="px-2 py-1 bg-blue-700 hover:bg-blue-600 disabled:bg-gray-700 text-white text-[10px] rounded transition-colors shrink-0"
+            >
+              {fetching ? '…' : 'Look up'}
+            </button>
+          )}
+        </div>
 
-        {/* Dropdown results */}
-        {showResults && results.length > 0 && (
-          <ul className="absolute z-50 left-0 right-0 bg-gray-850 border border-gray-700 rounded-b shadow-lg max-h-52 overflow-y-auto"
+        {/* Catalog dropdown */}
+        {showDrop && (
+          <ul className="absolute z-50 left-0 right-0 border border-gray-700 rounded-b shadow-lg max-h-52 overflow-y-auto"
               style={{ top: '100%', backgroundColor: '#1a1f2e' }}>
             {results.map((item, i) => (
               <li key={i}>
@@ -111,18 +156,24 @@ function SearchForm() {
             ))}
           </ul>
         )}
-        {showResults && results.length === 0 && (
-          <div className="absolute z-50 left-0 right-0 bg-gray-850 border border-gray-700 rounded-b px-2.5 py-2"
-               style={{ top: '100%', backgroundColor: '#1a1f2e' }}>
-            <span className="text-[10px] text-gray-500">No results for "{query}"</span>
-          </div>
-        )}
       </div>
+
+      {/* Article code hint */}
+      {isCode && !selected && !fetchErr && !fetching && (
+        <p className="text-[9px] text-gray-500 leading-snug">
+          Paste any 8-digit IKEA article number and click Look up.
+        </p>
+      )}
+
+      {/* Fetch error */}
+      {fetchErr && (
+        <p className="text-[9px] text-red-400 leading-snug">{fetchErr}</p>
+      )}
 
       {/* Selected item summary */}
       {selected && (
         <div className="bg-gray-800 rounded px-2.5 py-2 space-y-0.5">
-          <p className="text-xs text-gray-200 font-medium leading-snug">{selected.n}</p>
+          <p className="text-xs text-gray-200 font-medium leading-snug">{selected.name}</p>
           <p className="text-[10px] text-gray-400">
             {selected.w} × {selected.d} × {selected.h} cm &nbsp;·&nbsp; {TEMPLATES[selected.t]?.label}
           </p>
