@@ -1,9 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import useStore from '../store/useStore'
-import { parseDimensions } from '../utils/ikeaApi'
+import { searchIkeaCatalog } from '../utils/ikeaCatalog'
 import { TEMPLATES, generateModelBlobUrl } from '../utils/glbGenerator'
-
-const TEMPLATE_KEYS = Object.keys(TEMPLATES)
 
 export default function IkeaProductSearch() {
   const [open, setOpen]       = useState(false)
@@ -16,7 +14,7 @@ export default function IkeaProductSearch() {
         className="w-full flex items-center justify-between px-4 py-2 text-[10px] uppercase tracking-widest text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors"
         onClick={() => setOpen((v) => !v)}
       >
-        <span>Custom item</span>
+        <span>Add custom item</span>
         <span className="text-gray-600">{open ? '▲' : '▼'}</span>
       </button>
 
@@ -31,136 +29,112 @@ export default function IkeaProductSearch() {
         </div>
       )}
 
-      {open && !pendingPlacement && <PlaceForm />}
+      {open && !pendingPlacement && <SearchForm />}
     </div>
   )
 }
 
-function PlaceForm() {
+function SearchForm() {
   const setPendingPlacement = useStore((s) => s.setPendingPlacement)
 
-  const [label,    setLabel]    = useState('')
-  const [template, setTemplate] = useState('sofa')
-  const [dims,     setDims]     = useState({ width: '', depth: '', height: '' })
-  const [dimPaste, setDimPaste] = useState('')
-  const [parseMsg, setParseMsg] = useState('')
+  const [query,    setQuery]    = useState('')
+  const [selected, setSelected] = useState(null)   // catalog item or null
+  const [showAll,  setShowAll]  = useState(false)
+  const inputRef = useRef(null)
 
-  function handleDimPaste(e) {
-    const raw = e.target.value
-    setDimPaste(raw)
-    const parsed = parseDimensions(raw)
-    if (parsed) {
-      setDims({
-        width:  parsed.width  != null ? String(Math.round(parsed.width  * 100)) : dims.width,
-        depth:  parsed.depth  != null ? String(Math.round(parsed.depth  * 100)) : dims.depth,
-        height: parsed.height != null ? String(Math.round(parsed.height * 100)) : dims.height,
-      })
-      setParseMsg('✓ Dimensions parsed')
-    } else {
-      setParseMsg('')
-    }
+  const results = searchIkeaCatalog(query, 10)
+  const showResults = query.trim().length > 0 || showAll
+
+  function pick(item) {
+    setSelected(item)
+    setQuery(item.n)
+    setShowAll(false)
   }
 
   function handlePlace() {
-    const wCm = parseFloat(dims.width)
-    const dCm = parseFloat(dims.depth)
-    const hCm = parseFloat(dims.height)
-    if (!isFinite(wCm) || wCm <= 0) { alert('Enter a valid width (cm).'); return }
-    if (!isFinite(dCm) || dCm <= 0) { alert('Enter a valid depth (cm).'); return }
-    if (!isFinite(hCm) || hCm <= 0) { alert('Enter a valid height (cm).'); return }
-
-    const w = wCm / 100
-    const d = dCm / 100
-    const h = hCm / 100
-
-    const tmpl    = TEMPLATES[template]
-    const modelUrl = generateModelBlobUrl(template, w, d, h)
-    const name    = label.trim() || tmpl.label
-
+    if (!selected) return
+    const w = selected.w / 100
+    const d = selected.d / 100
+    const h = selected.h / 100
+    const tmpl = TEMPLATES[selected.t] ?? TEMPLATES['sofa']
+    const modelUrl = generateModelBlobUrl(selected.t, w, d, h)
     setPendingPlacement({
-      type:  `custom-${template}-${Date.now()}`,
-      label: name,
+      type:  `custom-${selected.t}-${Date.now()}`,
+      label: selected.n,
       width: w, depth: d, height: h,
       color: tmpl.hex,
       model: modelUrl,
     })
   }
 
-  const canPlace = parseFloat(dims.width) > 0 && parseFloat(dims.depth) > 0 && parseFloat(dims.height) > 0
+  function handleQueryChange(e) {
+    setQuery(e.target.value)
+    setSelected(null)
+    setShowAll(false)
+  }
 
   return (
-    <div className="px-3 pt-1 pb-3 space-y-2">
+    <div className="px-3 pt-2 pb-3 space-y-2">
 
-      {/* Template type */}
-      <div>
-        <label className="text-[9px] uppercase tracking-wider text-gray-500 block mb-1">Shape</label>
-        <div className="grid grid-cols-4 gap-1">
-          {TEMPLATE_KEYS.map((key) => (
-            <button
-              key={key}
-              onClick={() => setTemplate(key)}
-              className={`py-1 px-1 rounded text-[9px] text-center transition-colors ${
-                template === key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
-              }`}
-            >
-              {TEMPLATES[key].label.split(' ')[0]}
-            </button>
-          ))}
-        </div>
-        <p className="text-[9px] text-gray-600 mt-0.5">{TEMPLATES[template].label}</p>
-      </div>
-
-      {/* Product name */}
-      <div>
-        <label className="text-[9px] uppercase tracking-wider text-gray-500 block mb-0.5">Name <span className="normal-case text-gray-600">(optional)</span></label>
-        <input
-          type="text"
-          placeholder={TEMPLATES[template].label}
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-xs placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-        />
-      </div>
-
-      {/* Quick-paste dimension string */}
-      <div>
+      {/* Search input */}
+      <div className="relative">
         <label className="text-[9px] uppercase tracking-wider text-gray-500 block mb-0.5">
-          Paste dimensions <span className="normal-case text-gray-600">(e.g. 77×39×77 cm)</span>
+          Search IKEA product
         </label>
         <input
+          ref={inputRef}
           type="text"
-          placeholder="77×39×77 cm"
-          value={dimPaste}
-          onChange={handleDimPaste}
-          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-xs font-mono placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+          placeholder="e.g. KALLAX, MALM bed 140, PAX…"
+          value={query}
+          onChange={handleQueryChange}
+          onFocus={() => { if (!query.trim()) setShowAll(true) }}
+          onBlur={() => setTimeout(() => setShowAll(false), 150)}
+          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-gray-200 text-xs placeholder-gray-600 focus:border-blue-500 focus:outline-none"
         />
-        {parseMsg && <p className="text-[9px] text-green-400 mt-0.5">{parseMsg}</p>}
+
+        {/* Dropdown results */}
+        {showResults && results.length > 0 && (
+          <ul className="absolute z-50 left-0 right-0 bg-gray-850 border border-gray-700 rounded-b shadow-lg max-h-52 overflow-y-auto"
+              style={{ top: '100%', backgroundColor: '#1a1f2e' }}>
+            {results.map((item, i) => (
+              <li key={i}>
+                <button
+                  onMouseDown={() => pick(item)}
+                  className="w-full text-left px-2.5 py-1.5 hover:bg-gray-700 transition-colors"
+                >
+                  <span className="text-xs text-gray-200 block leading-snug">{item.n}</span>
+                  <span className="text-[9px] text-gray-500">
+                    {item.w} × {item.d} × {item.h} cm
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {showResults && results.length === 0 && (
+          <div className="absolute z-50 left-0 right-0 bg-gray-850 border border-gray-700 rounded-b px-2.5 py-2"
+               style={{ top: '100%', backgroundColor: '#1a1f2e' }}>
+            <span className="text-[10px] text-gray-500">No results for "{query}"</span>
+          </div>
+        )}
       </div>
 
-      {/* W / D / H inputs in cm */}
-      <div className="grid grid-cols-3 gap-1">
-        {['width', 'depth', 'height'].map((field) => (
-          <label key={field} className="flex flex-col gap-0.5">
-            <span className="text-[9px] uppercase tracking-wider text-gray-500">{field[0].toUpperCase()} (cm)</span>
-            <input
-              type="number" step="1" min="1"
-              placeholder="0"
-              value={dims[field]}
-              onChange={(e) => setDims((d) => ({ ...d, [field]: e.target.value }))}
-              className="bg-gray-800 border border-gray-700 rounded px-1.5 py-1 text-gray-200 text-xs font-mono focus:border-blue-500 focus:outline-none w-full"
-            />
-          </label>
-        ))}
-      </div>
+      {/* Selected item summary */}
+      {selected && (
+        <div className="bg-gray-800 rounded px-2.5 py-2 space-y-0.5">
+          <p className="text-xs text-gray-200 font-medium leading-snug">{selected.n}</p>
+          <p className="text-[10px] text-gray-400">
+            {selected.w} × {selected.d} × {selected.h} cm &nbsp;·&nbsp; {TEMPLATES[selected.t]?.label}
+          </p>
+        </div>
+      )}
 
       <button
         onClick={handlePlace}
-        disabled={!canPlace}
+        disabled={!selected}
         className="w-full py-1.5 text-[11px] bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded transition-colors font-medium"
       >
-        Place on canvas
+        {selected ? 'Place on canvas' : 'Search a product above'}
       </button>
     </div>
   )
