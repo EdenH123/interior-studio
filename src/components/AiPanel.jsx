@@ -7,11 +7,11 @@ import { buildSystemPrompt } from '../services/aiPrompts'
 import AiSettings from './AiSettings'
 import AiProposalCard from './AiProposalCard'
 
-const MODEL = 'claude-sonnet-4-20250514'
+const MODEL = 'gemini-2.0-flash'
 
 // AI assistant side panel. Replaces the properties panel when `aiPanelOpen`.
 // Session-scoped: no transcript persistence, no key persistence beyond the
-// tab. Streams Claude responses as text via `streamClaude`.
+// tab. Streams Gemini responses as text via `streamClaude`.
 export default function AiPanel() {
   const closeAiPanel = useStore((s) => s.closeAiPanel)
   const pushToast = useStore((s) => s.pushToast)

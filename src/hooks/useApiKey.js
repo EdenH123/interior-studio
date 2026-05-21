@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react'
 
-// API key storage — sessionStorage only, never localStorage. sessionStorage
-// is scoped to a single tab and cleared on close; localStorage would
-// persist the key indefinitely on disk. Pasting an Anthropic API key into
-// a browser app is already a "dev mode" trade-off; keeping it tab-scoped
-// is the bare minimum.
+// Google Gemini API key storage — sessionStorage only, never localStorage.
+// sessionStorage is scoped to a single tab and cleared on close; localStorage
+// would persist the key indefinitely on disk. Tab-scoped is the bare minimum
+// for a browser-side key.
 //
 // Returns [key, setKey] with the same shape as useState. The setter
 // writes-through to sessionStorage.
 
-const STORAGE_KEY = 'interior-studio:anthropic-api-key'
+const STORAGE_KEY = 'interior-studio:gemini-api-key'
 
 function read() {
   try { return sessionStorage.getItem(STORAGE_KEY) ?? '' } catch { return '' }
