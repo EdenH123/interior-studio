@@ -479,6 +479,13 @@ interior-studio/
   - **Multi-select room materials** (`MultiSelectProps.jsx` + `PropertiesPanel.jsx`): When all selected items are rooms, the properties panel shows shared Floor material and Ceiling material pickers. Pickers show no active selection when rooms have differing materials (same `undefined → null` pattern as multi-furniture). `roomMeta` + `updateRoomMeta` now passed through from PropertiesPanel.
   - Total: 396 tests, all green. Build green.
 
+- [x] Stair railing system — slope-following railings per stair type (2026-05-21)
+  - `furnitureSlice.js`: stair items now snapshot `addRailing: false` + `railingType: 'wood'` at placement time.
+  - `railingGeometry.js` rewritten: `buildStairRailingGeometry(W,D,H,N,style)` places a diagonal handrail (`slopeBox`) that follows the stair angle, vertical balusters stepping up at each tread nosing, and newel posts at start/end. Four styles: **Wood** (chunky 45mm balusters + 70mm flat rail), **Metal** (15mm posts + diagonal mid-rail), **Cable** (stout posts + 5 parallel diagonal cables), **Glass** (vertical per-step panels + metal cap). `buildSpiralRailingGeometry` handles spiral stairs with outer posts + segment-wise helix handrail. Standalone horizontal `buildRailingGeometry` unchanged.
+  - `reconcileFurniture.js`: tracks `stairStyle`, `addRailing`, `railingType` in `group.userData`; rebuilds when any changes. `addStairRailingMesh` adds a second child mesh (wood/metal/cable → MeshStandardMaterial; glass → MeshPhysicalMaterial with transmission). Also fixes a bug where changing stairStyle did not rebuild the mesh.
+  - `StairProps.jsx` (new): Properties panel for stair items — Style buttons (Standard / Floating / Spiral), read-only dims, "Add railing" checkbox, and Railing type buttons (Wood / Metal / Cable / Glass) with a one-line hint.
+  - `PropertiesPanel.jsx`: routes `f.stairStyle != null` furniture to `StairProps` instead of `FurnitureProps`.
+
 ### 🚧 In Progress
 - (nothing active)
 
