@@ -6,15 +6,10 @@ import { FURNITURE_MATERIALS, resolveFurnitureMaterialId } from './furnitureMate
 import { getModelStatus, onCacheChange } from '../viewer3d/furnitureModelCache'
 import MaterialPicker from './MaterialPicker'
 
-// Properties-panel editor for a selected furniture item. Read-only stats
-// for dimensions + position + rotation, plus a material override picker
-// (same pattern as Walls and Rooms), plus a 3D model-status row.
-//
-// Material override applies on top of the catalog default — "Default"
-// restores `item.color`, picking a swatch sets `item.material` to that id.
+// Properties-panel editor for a selected furniture item. Editable dimensions
+// (W/D/H) plus read-only stats, material override picker, and 3D model status.
 export default function FurnitureProps({ item, onUpdate }) {
   const spec = getFurnitureSpec(item.type)
-  // Re-render when any model load state transitions so the Model row updates live.
   const [, bump] = useState(0)
   useEffect(() => onCacheChange(() => bump((v) => v + 1)), [])
   return (
@@ -22,12 +17,12 @@ export default function FurnitureProps({ item, onUpdate }) {
       <h3 className="text-gray-200 text-xs uppercase tracking-widest mb-2">{spec?.label ?? item.label ?? item.type}</h3>
       <Row label="ID" value={item.id} />
       <Row label="Type" value={item.type} />
-      <Row label="Width" value={`${item.width.toFixed(2)} m`} />
-      <Row label="Depth" value={`${item.depth.toFixed(2)} m`} />
-      <Row label="Height" value={`${item.height.toFixed(2)} m`} />
+      <DimField label="Width"  dim="width"  item={item} onUpdate={onUpdate} />
+      <DimField label="Depth"  dim="depth"  item={item} onUpdate={onUpdate} />
+      <DimField label="Height" dim="height" item={item} onUpdate={onUpdate} />
       <Row label="Rotation" value={`${item.rotation}°`} />
       <Row label="Position" value={`${formatMeters(item.x)}, ${formatMeters(item.y)}`} />
-      <Row label="Model" value={describeModelStatus(item.model)} />
+      <Row label="Model" value={describeModelStatus(item.model ?? item.customModelId)} />
       {item.wallMounted && <MountHeightField item={item} onUpdate={onUpdate} />}
 
       {item.wallMounted && (
@@ -77,6 +72,39 @@ export default function FurnitureProps({ item, onUpdate }) {
       <p className="text-[10px] text-gray-500 mt-3 leading-snug">
         Part colors override individual sections. Global material sets roughness/finish and tints parts without a color override.
       </p>
+    </div>
+  )
+}
+
+function DimField({ label, dim, item, onUpdate }) {
+  const [val, setVal] = useState(item[dim].toFixed(2))
+  useEffect(() => { setVal(item[dim].toFixed(2)) }, [item[dim]])
+
+  function commit() {
+    const m = parseFloat(val)
+    if (!isFinite(m) || m <= 0) { setVal(item[dim].toFixed(2)); return }
+    const rounded = Math.round(m * 100) / 100
+    onUpdate(item.id, { [dim]: rounded })
+    setVal(rounded.toFixed(2))
+  }
+
+  return (
+    <div className="flex justify-between items-center py-1 border-b border-gray-800">
+      <span className="text-gray-500 text-[11px] uppercase tracking-wider">{label}</span>
+      <div className="flex items-center gap-1">
+        <input
+          type="number" min="0.01" step="0.01"
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter')  { e.preventDefault(); commit() }
+            if (e.key === 'Escape') { e.preventDefault(); setVal(item[dim].toFixed(2)); e.currentTarget.blur() }
+          }}
+          className="w-16 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-gray-200 text-[12px] font-mono text-right focus:border-blue-500 focus:outline-none"
+        />
+        <span className="text-gray-500 text-[10px]">m</span>
+      </div>
     </div>
   )
 }
