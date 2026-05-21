@@ -38,7 +38,6 @@ const ALL_PAINTS = [...BENJAMIN_MOORE, ...SHERWIN_WILLIAMS]
   .map((c) => ({ id: c.id, label: c.name, color: c.hex, code: c.code, category: 'Paint' }))
 
 // Fabric / upholstery tones — designed-for-furniture neutrals + accents.
-// No supplier code; these are abstract palette entries.
 const FABRIC_TONES = [
   { id: 'fabric-ivory',         label: 'Ivory',          color: '#EFE7D3', category: 'Fabric' },
   { id: 'fabric-cream-linen',   label: 'Cream Linen',    color: '#D6C5B3', category: 'Fabric' },
@@ -50,10 +49,35 @@ const FABRIC_TONES = [
   { id: 'fabric-deep-navy',     label: 'Deep Navy',      color: '#26334A', category: 'Fabric' },
 ]
 
+// Velvet — very matte, deep saturated colours (roughness 0.95 applied in 3D)
+const VELVET_TONES = [
+  { id: 'velvet-emerald',    label: 'Emerald',    color: '#2A6048', category: 'Velvet' },
+  { id: 'velvet-cobalt',     label: 'Cobalt',     color: '#1B3880', category: 'Velvet' },
+  { id: 'velvet-rose',       label: 'Dusty Rose', color: '#C05070', category: 'Velvet' },
+  { id: 'velvet-mauve',      label: 'Mauve',      color: '#8A5070', category: 'Velvet' },
+  { id: 'velvet-ochre',      label: 'Ochre',      color: '#C87830', category: 'Velvet' },
+  { id: 'velvet-midnight',   label: 'Midnight',   color: '#1E2040', category: 'Velvet' },
+  { id: 'velvet-forest',     label: 'Forest',     color: '#2A4438', category: 'Velvet' },
+  { id: 'velvet-terracotta', label: 'Terracotta', color: '#B84830', category: 'Velvet' },
+]
+
+// Leather — semi-smooth, warm tones (roughness 0.38 applied in 3D)
+const LEATHER_TONES = [
+  { id: 'leather-cognac',    label: 'Cognac',     color: '#9C4418', category: 'Leather' },
+  { id: 'leather-caramel',   label: 'Caramel',    color: '#B87028', category: 'Leather' },
+  { id: 'leather-chocolate', label: 'Chocolate',  color: '#4A2010', category: 'Leather' },
+  { id: 'leather-cream',     label: 'Cream',      color: '#E0D4B8', category: 'Leather' },
+  { id: 'leather-black',     label: 'Black',      color: '#181818', category: 'Leather' },
+  { id: 'leather-tan',       label: 'Tan',        color: '#C09860', category: 'Leather' },
+  { id: 'leather-bordeaux',  label: 'Bordeaux',   color: '#681820', category: 'Leather' },
+]
+
 export const FURNITURE_MATERIALS = [
   ...WOOD_FINISHES.map(fromWood),
   ...ALL_PAINTS,
   ...FABRIC_TONES,
+  ...VELVET_TONES,
+  ...LEATHER_TONES,
 ]
 
 const LEGACY_MIGRATIONS = {
@@ -86,4 +110,17 @@ export function furnitureColorFor(item) {
     if (m) return m.color
   }
   return item?.color ?? '#888'
+}
+
+// Returns { roughness, metallic, fabricOnly } overrides for the selected
+// material, or null for Wood/Paint (keep the GLB's own roughness).
+// fabricOnly=true → tint only upholstery meshes, leave legs/frame unchanged.
+export function furnitureMaterialPropsFor(item) {
+  if (!item?.material) return null
+  const m = getFurnitureMaterial(item.material)
+  if (!m) return null
+  if (m.category === 'Velvet')  return { roughness: 0.95, metallic: 0.0, fabricOnly: true }
+  if (m.category === 'Leather') return { roughness: 0.38, metallic: 0.0, fabricOnly: true }
+  if (m.category === 'Fabric')  return { roughness: 0.88, metallic: 0.0, fabricOnly: true }
+  return null
 }

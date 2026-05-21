@@ -4,7 +4,7 @@ import {
   isModelLoaded, cloneLoadedModel, loadFurnitureModel, onceModelLoaded, fitToBox,
 } from './furnitureModels'
 import { setObjectEmissive } from './selectionHighlight'
-import { furnitureColorFor } from '../canvas/furnitureMaterials'
+import { furnitureColorFor, furnitureMaterialPropsFor } from '../canvas/furnitureMaterials'
 import { kelvinToRgb } from '../../utils/colorTemp'
 import { buildStairsGeometry } from './stairsGeometry'
 
@@ -65,7 +65,8 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
     // tintColor is non-null only when the user has explicitly set a material
     // override — it's null when the piece uses its catalog default color so
     // the GLB's authored materials are left untouched.
-    const tintColor = f.material ? color : null
+    const tintColor    = f.material ? color : null
+    const tintMatProps = furnitureMaterialPropsFor(f)  // { roughness, metallic, fabricOnly } | null
 
     let group = meshMap.get(f.id)
     if (!group) {
@@ -75,7 +76,8 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       group.userData.type = f.type
       group.userData.dims = { width: f.width, depth: f.depth, height: f.height }
       group.userData.color = color
-      group.userData.tintColor = tintColor
+      group.userData.tintColor    = tintColor
+      group.userData.tintMatProps = tintMatProps
       group.userData.modelUrl = f.model ?? null
       scene.add(group)
       meshMap.set(f.id, group)
@@ -85,8 +87,10 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       const d = group.userData.dims
       const dimsChanged = !d || d.width !== f.width || d.depth !== f.depth || d.height !== f.height
       const tintChanged = group.userData.tintColor !== tintColor
+        || group.userData.tintMatProps?.roughness !== tintMatProps?.roughness
       group.userData.dims = { width: f.width, depth: f.depth, height: f.height }
-      group.userData.tintColor = tintColor
+      group.userData.tintColor    = tintColor
+      group.userData.tintMatProps = tintMatProps
       if (dimsChanged || (tintChanged && group.userData.childKind === 'model')) {
         group.userData.color = color
         rebuildChild(group)
@@ -230,19 +234,26 @@ function clearChildren(group) {
   }
 }
 
-// Tints every MeshStandardMaterial in the group's model child with the
-// override color stored in userData.tintColor. No-op when tintColor is null
-// (keeps the GLB's authored colors). Materials were already cloned per-instance
-// by cloneLoadedModel so changing one group's tint is isolated.
+// Tints GLB meshes with the override color (and optionally roughness/metallic).
+// fabricOnly=true → only tint upholstery surfaces (roughness>0.70, metallic<0.1),
+// leaving wood legs and metal hardware at their authored values.
+// No-op when tintColor is null — keeps the GLB's authored multi-material look.
 function applyTint(group) {
-  const color = group.userData.tintColor
+  const color     = group.userData.tintColor
   if (!color) return
+  const props      = group.userData.tintMatProps   // { roughness, metallic, fabricOnly } | null
+  const fabricOnly = props?.fabricOnly ?? false
+
   group.traverse((node) => {
     if (node === group) return
     if (node.isMesh) {
       const mats = Array.isArray(node.material) ? node.material : [node.material]
       for (const mat of mats) {
-        if (mat.isMeshStandardMaterial) mat.color.set(color)
+        if (!mat.isMeshStandardMaterial) continue
+        if (fabricOnly && (mat.roughness < 0.70 || mat.metalness > 0.1)) continue
+        mat.color.set(color)
+        if (props?.roughness != null) mat.roughness = props.roughness
+        if (props?.metallic  != null) mat.metalness = props.metallic
       }
     }
   })
