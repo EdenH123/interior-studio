@@ -27,7 +27,8 @@ import CalibrationOverlay from './canvas/CalibrationOverlay'
 import CalibrationPrompt from './canvas/CalibrationPrompt'
 import { detectRooms } from './canvas/roomDetection'
 import { DEFAULT_ROOM_FILL, getFloorMaterial, materialOverlayFill } from './canvas/floorMaterials'
-import { SNAP_RADIUS_SCREEN, WORLD_HALF, snapTo90, findNearestSnapPoint } from './canvas/constants'
+import { SNAP_RADIUS_SCREEN, WORLD_HALF, GRID_SIZE, snapTo90, findNearestSnapPoint } from './canvas/constants'
+import { snapToGrid } from '../hooks/useViewport'
 import HudOverlay from './canvas/HudOverlay'
 
 const UNDERLAY_ID = 'underlay'
@@ -52,6 +53,9 @@ export default function CanvasArea() {
   const cancelCalibration = useStore((s) => s.cancelCalibration)
   const applyCalibration = useStore((s) => s.applyCalibration)
   const dragGhost = useStore((s) => s.dragGhost)
+  const pendingPlacement = useStore((s) => s.pendingPlacement)
+  const clearPendingPlacement = useStore((s) => s.clearPendingPlacement)
+  const addFurnitureWithSpec = useStore((s) => s.addFurnitureWithSpec)
   const aiProposal = useStore((s) => s.aiProposal)
   const selection = useStore((s) => s.selection)
   const removeWall = useStore((s) => s.removeWall)
@@ -101,7 +105,7 @@ export default function CanvasArea() {
       ref={containerRef}
       {...dragHandlers}
       className="flex-1 bg-gray-950 overflow-hidden relative"
-      style={{ cursor: spaceDown ? 'grab' : calibration || drawStart ? 'crosshair' : 'default' }}
+      style={{ cursor: spaceDown ? 'grab' : calibration || drawStart || pendingPlacement ? 'crosshair' : 'default' }}
     >
       {size.width > 0 && size.height > 0 && (
         <Stage
@@ -111,7 +115,19 @@ export default function CanvasArea() {
           draggable={spaceDown}
           onDragEnd={handleStageDragEnd}
           onWheel={handleWheel(stageRef)}
-          onMouseDown={(e) => { handleStageMouseDown(e); onMarqueeDown(e) }}
+          onMouseDown={(e) => {
+            if (pendingPlacement && e.evt.button === 0) {
+              const pos = stageRef.current?.getRelativePointerPosition()
+              if (pos) {
+                const snapped = snapToGrid(pos, GRID_SIZE)
+                addFurnitureWithSpec(pendingPlacement, snapped.x, snapped.y)
+                clearPendingPlacement()
+                return
+              }
+            }
+            handleStageMouseDown(e)
+            onMarqueeDown(e)
+          }}
           onMouseMove={(e) => { setCursorWorld(stageRef.current?.getRelativePointerPosition()); onMarqueeMove(e) }}
           onMouseUp={onMarqueeUp}
           onContextMenu={(e) => { e.evt.preventDefault(); if (e.target === stageRef.current) setDrawStart(null) }}
@@ -176,7 +192,18 @@ export default function CanvasArea() {
               <RotationHandle item={selectedFurniture} scale={view.scale}
                 onRotate={(deg) => updateFurniture(selectedFurniture.id, { rotation: deg })} />
             )}
-            <DragGhost ghost={dragGhost} scale={view.scale} />
+            <DragGhost
+              ghost={dragGhost ?? (pendingPlacement && cursorWorld ? {
+                kind: 'furniture',
+                type: pendingPlacement.type,
+                x: cursorWorld.x,
+                y: cursorWorld.y,
+                width: pendingPlacement.width,
+                depth: pendingPlacement.depth,
+                color: pendingPlacement.color,
+              } : null)}
+              scale={view.scale}
+            />
             {aiProposal && <DiffOverlay diff={aiProposal.diff} scale={view.scale} />}
             {drawStart && previewEnd && <DrawPreview start={drawStart} end={previewEnd} scale={view.scale} />}
             {snapTarget && !calibration && <SnapIndicator point={snapTarget} scale={view.scale} />}

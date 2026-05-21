@@ -66,6 +66,32 @@ export const createFurnitureSlice = (set) => ({
         f.id === id ? { ...f, rotation: (f.rotation + deltaDeg + 360) % 360 } : f,
       ),
     })),
+  // Place a fully-specified item directly (used by IKEA product search and
+  // any other flow that builds a spec outside the static catalog).
+  // `spec` must have: type, width, depth, height. color, label are optional.
+  addFurnitureWithSpec: (spec, x, y, opts = {}) => {
+    const id = nanoid(6)
+    set((s) => ({
+      furniture: [
+        ...s.furniture,
+        {
+          id,
+          type: spec.type,
+          label: spec.label ?? null,
+          x, y,
+          rotation: opts.rotation ?? 0,
+          width: spec.width,
+          depth: spec.depth,
+          height: spec.height,
+          color: spec.color ?? '#94a3b8',
+          model: null,
+          levelId: s.activeLevel ?? null,
+        },
+      ],
+      selection: { items: [{ kind: 'furniture', id }] },
+    }))
+    return id
+  },
   removeFurniture: (id) =>
     set((s) => ({
       furniture: s.furniture.filter((f) => f.id !== id),
