@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid/non-secure'
 import { streamClaude } from './claudeApi'
 import { extractJsonBlock } from './aiPrompts'
 
-const TRACE_MODEL = 'claude-opus-4-7'
+const TRACE_MODEL = 'gemini-2.0-flash'
 
 const TRACE_SYSTEM = `You are an architectural plan digitizer.
 Analyze the provided floor plan image and identify all wall line segments.
@@ -81,11 +81,11 @@ export async function traceFloorPlan({ apiKey, underlayDataUrl, underlay }) {
   }
 
   const jsonStr = extractJsonBlock(fullText)
-  if (!jsonStr) throw new Error('Claude did not return a JSON block in its response.')
+  if (!jsonStr) throw new Error('Model did not return a JSON block in its response.')
 
   let parsed
   try { parsed = JSON.parse(jsonStr) } catch (e) {
-    throw new Error(`Could not parse Claude's JSON: ${e.message}`)
+    throw new Error(`Could not parse model JSON: ${e.message}`)
   }
 
   if (!Array.isArray(parsed.walls)) throw new Error('Response JSON missing "walls" array.')

@@ -1,32 +1,65 @@
-// Minimal browser-side wrapper around Anthropic's Messages API. No SDK —
-// just fetch + the SSE parsing required for streaming. Exposed as an async
-// generator so callers can `for await (const chunk of streamClaude(...))`
-// and append to the UI as text arrives.
+// Browser-side wrapper around Google's Generative Language API (Gemini).
+// Exposed as an async generator — callers do:
+//   for await (const chunk of streamClaude({ apiKey, model, system, messages }))
 //
-// Browser-side access requires the `anthropic-dangerous-direct-browser-access`
-// header; the API will reject without it. The "dangerous" framing is
-// intentional — pasting an API key into a browser app exposes it to any
-// script on the page. This module doesn't try to hide that; the UI
-// surfaces a clear warning.
+// The function signature is compatible with the old Anthropic wrapper so
+// callers (AiPanel, traceFloorPlan) need no changes. Internally it maps
+// Anthropic-style message objects to Gemini's content format, including
+// the vision case (Anthropic source.base64 → Gemini inline_data).
+//
+// Auth: the API key travels as a ?key= query parameter. Google's free-tier
+// Gemini Flash is rate-limited to 15 RPM / 1 500 RPD at no cost. Same
+// caveat as before — any browser-visible key can be extracted from devtools;
+// get a key from https://aistudio.google.com/app/apikey and keep its scope
+// narrow.
 
-const API_URL = 'https://api.anthropic.com/v1/messages'
-const API_VERSION = '2023-06-01'
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
+
+// Maps one Anthropic-format message part → Gemini part.
+function toGeminiPart(part) {
+  if (typeof part === 'string') return { text: part }
+  if (part.type === 'text') return { text: part.text }
+  if (part.type === 'image') {
+    // Anthropic: { source: { type:'base64', media_type, data } }
+    // Gemini:    { inline_data: { mime_type, data } }
+    const { media_type, data } = part.source
+    return { inline_data: { mime_type: media_type, data } }
+  }
+  return { text: '' }
+}
+
+function toGeminiContent(msg) {
+  // Gemini roles: 'user' | 'model' (not 'assistant')
+  const role = msg.role === 'assistant' ? 'model' : 'user'
+  const parts = Array.isArray(msg.content)
+    ? msg.content.map(toGeminiPart)
+    : [{ text: msg.content ?? '' }]
+  return { role, parts }
+}
 
 export async function* streamClaude({ apiKey, model, system, messages, maxTokens = 2048 }) {
-  const response = await fetch(API_URL, {
+  const url = `${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`
+
+  // Drop empty-string messages that the UI may insert as placeholder slots.
+  const contents = messages
+    .filter((m) => Array.isArray(m.content) ? m.content.length > 0 : m.content !== '')
+    .map(toGeminiContent)
+
+  const body = {
+    ...(system ? { system_instruction: { parts: [{ text: system }] } } : {}),
+    contents,
+    generationConfig: { maxOutputTokens: maxTokens },
+  }
+
+  const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': API_VERSION,
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({ model, max_tokens: maxTokens, stream: true, system, messages }),
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
   })
 
   if (!response.ok) {
-    const body = await response.text().catch(() => '')
-    throw new Error(`Claude API ${response.status}: ${parseErrorMessage(body) || response.statusText}`)
+    const text = await response.text().catch(() => '')
+    throw new Error(`Gemini API ${response.status}: ${parseErrorMessage(text) || response.statusText}`)
   }
 
   const reader = response.body.getReader()
@@ -37,23 +70,19 @@ export async function* streamClaude({ apiKey, model, system, messages, maxTokens
     const { value, done } = await reader.read()
     if (done) break
     buffer += decoder.decode(value, { stream: true })
-    // SSE frames are separated by blank lines; events arrive as
-    // `event: <name>\ndata: <json>\n\n`. We only care about the `data:`
-    // lines.
     const lines = buffer.split('\n')
-    buffer = lines.pop() ?? '' // keep the (possibly incomplete) trailing line
+    buffer = lines.pop() ?? ''
     for (const line of lines) {
       if (!line.startsWith('data: ')) continue
       const payload = line.slice(6).trim()
       if (!payload || payload === '[DONE]') continue
       let event
       try { event = JSON.parse(payload) } catch { continue }
-      if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
-        yield event.delta.text
+      if (event.error) {
+        throw new Error(`Gemini API error: ${event.error.message ?? 'unknown'}`)
       }
-      // Surface API-side errors mid-stream (e.g. overloaded_error)
-      if (event.type === 'error') {
-        throw new Error(`Claude API error: ${event.error?.message ?? 'unknown'}`)
+      for (const part of event.candidates?.[0]?.content?.parts ?? []) {
+        if (part.text) yield part.text
       }
     }
   }
