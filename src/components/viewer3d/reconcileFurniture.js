@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { LoopSubdivision } from 'three-subdivide'
 import { konvaToFloor, konvaRotationToThreeY } from './threeMath'
 import {
   isModelLoaded, cloneLoadedModel, loadFurnitureModel, onceModelLoaded, fitToBox,
@@ -180,9 +181,17 @@ function populateBoxFallback(group) {
   clearChildren(group)
   const { width, depth, height } = group.userData.dims
   const isStairs = group.userData.type === 'stairs'
-  const geo = isStairs
+  let geo = isStairs
     ? buildStairsGeometry(width, depth, height)
     : new THREE.BoxGeometry(width, height, depth)
+  // One round of Loop subdivision softens the hard box edges (fallback only;
+  // loaded GLBs already have proper geometry). Skip for stairs — stepped shape
+  // must stay sharp.
+  if (!isStairs) {
+    const subdivided = LoopSubdivision.modify(geo, 1)
+    geo.dispose()
+    geo = subdivided
+  }
   const mesh = new THREE.Mesh(
     geo,
     new THREE.MeshStandardMaterial({ color: new THREE.Color(group.userData.color ?? '#888') }),

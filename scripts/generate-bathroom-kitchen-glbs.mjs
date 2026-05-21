@@ -82,6 +82,47 @@ function merge(parts) {
   return { positions, normals, indices }
 }
 
+function cushion(x1, y1, z1, x2, y2, z2, bulge = 0.04, nX = 6, nZ = 4) {
+  const pos = [], nor = [], idx = []
+  const w = x2 - x1, d = z2 - z1
+  const stride = nX + 1
+  const verts = []
+  for (let iz = 0; iz <= nZ; iz++) {
+    for (let ix = 0; ix <= nX; ix++) {
+      const u = ix / nX, v = iz / nZ
+      const b    = bulge * Math.sin(Math.PI * u) * Math.sin(Math.PI * v)
+      const dfdx = bulge * (Math.PI / w) * Math.cos(Math.PI * u) * Math.sin(Math.PI * v)
+      const dfdz = bulge * (Math.PI / d) * Math.sin(Math.PI * u) * Math.cos(Math.PI * v)
+      const ilen = 1 / Math.sqrt(dfdx * dfdx + 1 + dfdz * dfdz)
+      verts.push(x1 + u * w, y2 + b, z1 + v * d, -dfdx * ilen, ilen, -dfdz * ilen)
+    }
+  }
+  const V = (i) => verts.slice(i * 6, i * 6 + 6)
+  for (let iz = 0; iz < nZ; iz++) {
+    for (let ix = 0; ix < nX; ix++) {
+      const i00 = iz * stride + ix, i01 = i00 + 1
+      const i10 = (iz + 1) * stride + ix, i11 = i10 + 1
+      const b = pos.length / 3
+      for (const i of [i00, i01, i11, i10]) {
+        const v = V(i); pos.push(v[0], v[1], v[2]); nor.push(v[3], v[4], v[5])
+      }
+      idx.push(b, b+1, b+2, b, b+2, b+3)
+    }
+  }
+  const flat = (pts, n) => {
+    const b = pos.length / 3
+    pts.forEach(p => pos.push(...p))
+    for (let i = 0; i < 4; i++) nor.push(...n)
+    idx.push(b, b+1, b+2, b, b+2, b+3)
+  }
+  flat([[x2,y1,z1],[x2,y2,z1],[x2,y2,z2],[x2,y1,z2]], [1,0,0])
+  flat([[x1,y1,z2],[x1,y2,z2],[x1,y2,z1],[x1,y1,z1]], [-1,0,0])
+  flat([[x1,y1,z2],[x2,y1,z2],[x2,y1,z1],[x1,y1,z1]], [0,-1,0])
+  flat([[x1,y1,z2],[x2,y1,z2],[x2,y2,z2],[x1,y2,z2]], [0,0,1])
+  flat([[x2,y1,z1],[x1,y1,z1],[x1,y2,z1],[x2,y2,z1]], [0,0,-1])
+  return { positions: pos, normals: nor, indices: idx }
+}
+
 function writeGLB(name, parts, color = [0.72, 0.65, 0.57, 1.0]) {
   const { positions, normals, indices } = merge(Array.isArray(parts) ? parts : [parts])
 
@@ -334,7 +375,7 @@ writeGLB('pantry-unit', [
 
 // BAR STOOL  0.40 × 0.40 × 0.75
 writeGLB('bar-stool', [
-  cyl(0, 0, 0.68, 0.75, 0.185, 12),                   // seat disc
+  cushion(-0.185, 0.68, -0.185, 0.185, 0.75, 0.185, 0.018, 6, 6), // seat pad with dome
   cyl(0, 0, 0.06, 0.68, 0.033,  8),                   // central column
   box(-0.19, 0,    -0.025, 0.19, 0.055,  0.025),      // base X arm
   box(-0.025, 0,   -0.19,  0.025, 0.055, 0.19),       // base Z arm
