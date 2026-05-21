@@ -119,6 +119,7 @@ interior-studio/
 │   │   ├── useWalkthrough.js    # PointerLockControls hook — physics (gravity/jump/wall-collision) wired to stateRef.current.onFrame
 │   │   ├── useApiKey.js         # sessionStorage-backed [key, setKey] for the Anthropic API key — never persisted
 │   │   ├── useAiProposalSync.js # watches the latest assistant message; parses ```json → validates → diffs → setAiProposal; returns helpers for the panel UI
+│   │   ├── useFurnitureDrop3D.js  # 3D sidebar drag-drop: furniture (floor raycast + 0.5m snap) + openings (wall raycast → wallPositionFrom → addOpening); exports wallPositionFrom for tests
 │   │   └── useThree.js          # the only file outside viewer3d/ that imports `three`; owns scene/camera/renderer/controls/RAF/resize, reconciles walls + furniture + rooms from the store via useEffect
 │   ├── store/
 │   │   ├── useStore.js          # composer: imports slices, wires persist + zundo, holds loadProject + getSelectedFurniture
@@ -445,6 +446,39 @@ interior-studio/
   - **`stairFloorHoles.test.js`** (new) — 13 tests covering all three exported functions: corner positions at rotation=0, center invariant, 90° CW swap of width/depth extents, center-after-rotation, `holesFp` stability + order-independence, `computeStairHolesForRooms` inside/outside/multi-room/empty cases.
   - Total: 373 tests, all green. Build green.
 
+- [x] Bathroom and Kitchen fixture categories — wall-mounted item system (session 29, 2026-05-21)
+  - **18 new catalog items**: Bathroom (8: toilet, basin, bathtub, shower-tray, towel-rack, bathroom-mirror, vanity-unit, laundry-basket) + Kitchen (10: kitchen-sink, fridge, oven, dishwasher, microwave, upper-cabinet, range-hood, kitchen-island, pantry-unit, bar-stool). All `model: null` (box fallback).
+  - **Wall-mounted items**: towel-rack, bathroom-mirror, upper-cabinet, range-hood carry `wallMounted: true` and a `mountHeight` (meters above floor). `addFurniture` snapshots both fields onto new pieces.
+  - **`wallMountedPlacement(snap, depthMetres, worldPoint)`** exported from `openingGeometry.js` — uses wall normal + drop-side detection to compute x/y/rotation when a wall-mounted item is dropped against a wall.
+  - **`useFurnitureDrop.js`** updated — wall-mounted items snap to nearest wall within 60 screen px during dragover (same threshold as openings), orient perpendicular, and show a red-X ghost when no wall is in range. Non-wall-mounted items still grid-snap as before.
+  - **`DragGhost.jsx`** — FurnitureGhost shows red X when `ghost.wallSnap === false`; applies `rotation` from ghost extra data.
+  - **`reconcileFurniture.js`** — `yOff = f.wallMounted ? (f.mountHeight ?? 0) : lightYOffset(f.type, f.height)` positions wall-mounted items at their mount height.
+  - **`FurnitureProps.jsx`** — adds `MountHeightField` (number input 0–4 m, Enter/Esc/blur commit) visible when `item.wallMounted`.
+  - CATEGORIES updated to include `'Bathroom'` and `'Kitchen'`.
+  - Tests: new `furnitureCatalog.test.js` (12 tests: category counts, wall-mounted fields, required fields); expanded `openingGeometry.test.js` (+4 tests for `wallMountedPlacement`). Build green.
+
+- [x] Gemini Flash API migration (session 29b, 2026-05-21)
+  - **`src/services/claudeApi.js`** — complete replacement with a Google Gemini streaming implementation. Calls `generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=…`. Internally converts Anthropic-format messages to Gemini `contents` + `system_instruction` (including `inline_data` for vision messages used by the floor-plan tracer). Kept `streamClaude` function name and file path so callers and test mocks need no changes.
+  - **`AiPanel.jsx`**: `MODEL = 'gemini-2.0-flash'`.
+  - **`traceFloorPlan.js`**: `TRACE_MODEL = 'gemini-2.0-flash'`; error messages de-branded.
+  - **`useApiKey.js`**: storage key changed to `'interior-studio:gemini-api-key'`.
+  - **`AiSettings.jsx`**: label/placeholder/warning updated for Google Gemini; links to `aistudio.google.com/app/apikey`. Key is free-tier (15 RPM / 1500 RPD at no cost).
+
+- [x] UX overhaul — fullscreen 3D, ceilings, drag-into-3D, zoom-drag fix, controls sensitivity, LevelsPanel (session 30, 2026-05-21)
+  - **2D drag jump fix**: `Furniture.jsx` now tracks a `dragOffset` ref (world coords delta between pointer and item origin) using `stage.getRelativePointerPosition()`. `onDragMove` corrects the Konva node's world position on every move; `onDragEnd` reports the correct final world position. Fixes the scale-dependent "jump" where Konva's internal drag computed positions in screen-space without dividing by Stage scale. Regression test in `furnitureDrag.test.js` (5 tests across scale 1/2/3 and pan offset).
+  - **Fullscreen 3D**: `App.jsx` now renders EITHER `<CanvasArea />` OR `<Viewer3D />` (not both simultaneously). The 3D toolbar button changes to `← 2D` when 3D is active, providing a clear back affordance. Sidebar and PropertiesPanel remain visible in both modes.
+  - **3D drag-drop** (`useFurnitureDrop3D.js` new hook; `Viewer3D.jsx` wired): sidebar tiles can be dragged directly onto the 3D canvas. `onDragOver` raycasts from cursor through camera onto the floor plane (y=0), shows a translucent blue ghost box at the snapped floor position (0.5 m grid). `onDrop` converts Three XZ → Konva XY coords and calls `addFurniture`. Ghost mesh is managed in scene directly (not React state); removed on leave or drop. Coordinate conversion tests in `useFurnitureDrop3D.test.js` (5 tests).
+  - **OrbitControls sensitivity tuned**: `zoomSpeed = 0.8`, `panSpeed = 0.8`, `minDistance = 1.5`, `maxDistance = 80` (mirrors 2D 20%–500% zoom feel).
+  - **Ceiling support**: each 3D room gets a ceiling plane at `levelOffset + levelHeight`. `reconcileCeilings()` in `sceneReconcilers.js` mirrors `reconcileRooms` but positions at the top of the level and cuts stair holes for stairs that DEPART the level (going up through the ceiling). Ceiling material stored in `roomMeta[id].ceilingMaterial` (defaults to near-white `#F0F0EE`). `ceilingMaterials.js` exports 7 options. PropertiesPanel `RoomProps` gains a ceiling material picker. LightingToolbar gains a `Ceilings ON/OFF` toggle (`ceilingsVisible` flag in levelsSlice). Tests in `ceilingReconciler.test.js` (6 ceiling tests + 1 stair-hole reciprocity test).
+  - **LevelsPanel relocated**: moved to the top of the sidebar (above the Elements header) so it's the first visible element. Added a tooltip and a single-floor empty-state hint ("Single floor · press + to add a level").
+  - Total: 389 tests, all green. Build green.
+
+- [x] Session 31: PDF export, 3D opening drop, multi-select room materials (2026-05-21)
+  - **PDF export** (`useProjectIO.js` + `Toolbar.jsx`): A4 landscape PDF with floor plan image + a drawn scale bar (1 m marker sized to the current viewport zoom via `stage.scaleX() * pixelRatio`). jsPDF + html2canvas lazy-loaded via dynamic `import()` so the main bundle stays at ~637 kB gzip. `Export PDF` button added to toolbar.
+  - **3D opening drop** (`useFurnitureDrop3D.js` extended): Door and Window tiles can now be dragged directly onto the 3D view. `onDragOver` raycasts against wall meshes (walks up parent chain to handle wall-overlay children), shows a translucent blue slab ghost positioned at the wall face (correctly aligned to the wall's angle and sill height). `wallPositionFrom(wallId, threePoint)` projects the hit point onto the Konva wall to get 0–1 position; clamped to 0.01–0.99. `onDrop` calls `addOpening(type, wallId, position)` and toasts on failure. Ghost kind tracked via `ghostKindRef` to handle transitions between furniture (floor) and opening (wall) ghosts. 6 new `wallPositionFrom` unit tests.
+  - **Multi-select room materials** (`MultiSelectProps.jsx` + `PropertiesPanel.jsx`): When all selected items are rooms, the properties panel shows shared Floor material and Ceiling material pickers. Pickers show no active selection when rooms have differing materials (same `undefined → null` pattern as multi-furniture). `roomMeta` + `updateRoomMeta` now passed through from PropertiesPanel.
+  - Total: 396 tests, all green. Build green.
+
 ### 🚧 In Progress
 - (nothing active)
 
@@ -452,9 +486,7 @@ interior-studio/
 - [ ] Further GLB quality: Poly Pizza and other real-model sources were inaccessible this session. When network access allows, swap additional items (sofa, bed, etc.) for real CC0 geometry beyond SheenChair.
 - [ ] Lighting: LightingProps material/color picker (add a warm color preset row alongside the Kelvin slider).
 - [ ] AI prompt caching — split static system prompt from dynamic project snapshot via Anthropic `cache_control` blocks.
-- [ ] AI prompt caching — the system prompt's role + data-model doc is static across turns; only the project snapshot changes. Splitting these via Anthropic's `cache_control` blocks would cut tokens on multi-turn chats.
 - [ ] AI markdown rendering — the chat transcript shows plain whitespace-preserved text today; rendering headings + lists + code blocks would make responses more scannable.
-- [ ] PDF export with a printed scale bar — PNG round-trip is in place; PDF is a separate code path (paged, vector-friendly).
 - [ ] Underlay selection from 3D (today 3D picking only finds walls / furniture / rooms; underlay is a 2D-only concept)
 
 ## Key Data Structures

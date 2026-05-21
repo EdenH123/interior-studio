@@ -20,13 +20,13 @@ describe('Bathroom category', () => {
   it('includes all expected types', () => {
     const types = items.map((f) => f.type)
     expect(types).toContain('toilet')
-    expect(types).toContain('sink-vanity')
+    expect(types).toContain('basin')
     expect(types).toContain('bathtub')
-    expect(types).toContain('shower-stall')
-    expect(types).toContain('walk-in-shower')
-    expect(types).toContain('bidet')
+    expect(types).toContain('shower-tray')
     expect(types).toContain('towel-rack')
     expect(types).toContain('bathroom-mirror')
+    expect(types).toContain('vanity-unit')
+    expect(types).toContain('laundry-basket')
   })
 
   it('wall-mounted items have wallMounted:true and mountHeight', () => {
@@ -59,22 +59,22 @@ describe('Kitchen category', () => {
 
   it('includes all expected types', () => {
     const types = items.map((f) => f.type)
-    expect(types).toContain('refrigerator')
-    expect(types).toContain('stove')
     expect(types).toContain('kitchen-sink')
+    expect(types).toContain('fridge')
+    expect(types).toContain('oven')
     expect(types).toContain('dishwasher')
     expect(types).toContain('microwave')
-    expect(types).toContain('lower-cabinet-60')
-    expect(types).toContain('lower-cabinet-90')
     expect(types).toContain('upper-cabinet')
-    expect(types).toContain('kitchen-island')
     expect(types).toContain('range-hood')
+    expect(types).toContain('kitchen-island')
+    expect(types).toContain('pantry-unit')
+    expect(types).toContain('bar-stool')
   })
 
   it('wall-mounted items have wallMounted:true and mountHeight', () => {
     const mounted = items.filter((f) => f.wallMounted)
     expect(mounted.map((f) => f.type)).toEqual(
-      expect.arrayContaining(['upper-cabinet', 'range-hood']),
+      expect.arrayContaining(['microwave', 'upper-cabinet', 'range-hood']),
     )
     for (const f of mounted) {
       expect(f.wallMounted).toBe(true)

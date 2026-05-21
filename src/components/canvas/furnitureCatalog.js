@@ -26,6 +26,28 @@ export const FURNITURE = [
   { type: 'bookshelf',    label: 'Bookshelf',    category: 'Storage', width: 0.8,  depth: 0.35, height: 1.8,  color: '#78350f', model: glb('bookshelf.glb') },
   { type: 'wardrobe',     label: 'Wardrobe',     category: 'Storage', width: 1.2,  depth: 0.6,  height: 2.0,  color: '#78350f', model: glb('wardrobe.glb') },
 
+  // ── Bathroom ──────────────────────────────────────────────────────────────
+  { type: 'toilet',          label: 'Toilet',        category: 'Bathroom', width: 0.38, depth: 0.70, height: 0.80, color: '#d4d0cc', model: glb('toilet.glb') },
+  { type: 'basin',           label: 'Basin',          category: 'Bathroom', width: 0.55, depth: 0.45, height: 0.85, color: '#d4d0cc', model: glb('basin.glb') },
+  { type: 'bathtub',         label: 'Bathtub',        category: 'Bathroom', width: 1.70, depth: 0.75, height: 0.55, color: '#d4d0cc', model: glb('bathtub.glb') },
+  { type: 'shower-tray',     label: 'Shower tray',    category: 'Bathroom', width: 0.90, depth: 0.90, height: 0.15, color: '#d4d0cc', model: glb('shower-tray.glb') },
+  { type: 'towel-rack',      label: 'Towel rack',     category: 'Bathroom', width: 0.60, depth: 0.08, height: 0.04, color: '#b0b4b8', model: glb('towel-rack.glb'), wallMounted: true, mountHeight: 1.2 },
+  { type: 'bathroom-mirror', label: 'Mirror',         category: 'Bathroom', width: 0.60, depth: 0.05, height: 0.80, color: '#b0b4b8', model: glb('bathroom-mirror.glb'), wallMounted: true, mountHeight: 1.4 },
+  { type: 'vanity-unit',     label: 'Vanity unit',    category: 'Bathroom', width: 0.90, depth: 0.50, height: 0.85, color: '#d4d0cc', model: glb('vanity-unit.glb') },
+  { type: 'laundry-basket',  label: 'Laundry basket', category: 'Bathroom', width: 0.45, depth: 0.40, height: 0.55, color: '#8b7355', model: glb('laundry-basket.glb') },
+
+  // ── Kitchen ───────────────────────────────────────────────────────────────
+  { type: 'kitchen-sink',   label: 'Kitchen sink',   category: 'Kitchen', width: 0.80, depth: 0.60, height: 0.90, color: '#9eaab0', model: glb('kitchen-sink.glb') },
+  { type: 'fridge',         label: 'Fridge',         category: 'Kitchen', width: 0.70, depth: 0.70, height: 1.85, color: '#9eaab0', model: glb('fridge.glb') },
+  { type: 'oven',           label: 'Oven',           category: 'Kitchen', width: 0.60, depth: 0.60, height: 0.90, color: '#4b5563', model: glb('oven.glb') },
+  { type: 'dishwasher',     label: 'Dishwasher',     category: 'Kitchen', width: 0.60, depth: 0.60, height: 0.85, color: '#4b5563', model: glb('dishwasher.glb') },
+  { type: 'microwave',      label: 'Microwave',      category: 'Kitchen', width: 0.55, depth: 0.35, height: 0.32, color: '#4b5563', model: glb('microwave.glb'), wallMounted: true, mountHeight: 1.4 },
+  { type: 'upper-cabinet',  label: 'Upper cabinet',  category: 'Kitchen', width: 0.60, depth: 0.35, height: 0.70, color: '#c4b49a', model: glb('upper-cabinet.glb'), wallMounted: true, mountHeight: 1.45 },
+  { type: 'range-hood',     label: 'Range hood',     category: 'Kitchen', width: 0.60, depth: 0.40, height: 0.35, color: '#9eaab0', model: glb('range-hood.glb'), wallMounted: true, mountHeight: 1.75 },
+  { type: 'kitchen-island', label: 'Kitchen island', category: 'Kitchen', width: 1.50, depth: 0.80, height: 0.90, color: '#c4b49a', model: glb('kitchen-island.glb') },
+  { type: 'pantry-unit',    label: 'Pantry unit',    category: 'Kitchen', width: 0.60, depth: 0.60, height: 2.00, color: '#c4b49a', model: glb('pantry-unit.glb') },
+  { type: 'bar-stool',      label: 'Bar stool',      category: 'Kitchen', width: 0.40, depth: 0.40, height: 0.75, color: '#a16207', model: glb('bar-stool.glb') },
+
   { type: 'rug',          label: 'Rug',          category: 'Decor',   width: 2.0,  depth: 1.4,  height: 0.01, color: '#b45309', model: glb('rug.glb') },
   { type: 'lamp',         label: 'Lamp',         category: 'Decor',   width: 0.4,  depth: 0.4,  height: 1.5,  color: '#facc15', model: glb('lamp.glb') },
   { type: 'tv',           label: 'TV',           category: 'Decor',   width: 1.2,  depth: 0.15, height: 0.7,  color: '#0f172a', model: glb('tv.glb') },
@@ -64,44 +86,6 @@ export const FURNITURE = [
     type: 'stairs', label: 'Stairs', category: 'Architecture',
     width: 0.9, depth: 3.0, height: 2.7, color: '#8b7355', model: null,
     stairType: true,
-  },
-
-  // ── Bathroom ────────────────────────────────────────────────────────────────
-  { type: 'toilet',          label: 'Toilet',          category: 'Bathroom', width: 0.4, depth: 0.7, height: 0.8,  color: '#e2e8f0', model: null },
-  { type: 'sink-vanity',     label: 'Sink / vanity',   category: 'Bathroom', width: 0.6, depth: 0.5, height: 0.9,  color: '#e2e8f0', model: null },
-  { type: 'bathtub',         label: 'Bathtub',         category: 'Bathroom', width: 1.7, depth: 0.7, height: 0.6,  color: '#e2e8f0', model: null },
-  { type: 'shower-stall',    label: 'Shower stall',    category: 'Bathroom', width: 0.9, depth: 0.9, height: 2.0,  color: '#94a3b8', model: null },
-  { type: 'walk-in-shower',  label: 'Walk-in shower',  category: 'Bathroom', width: 1.2, depth: 0.9, height: 2.0,  color: '#94a3b8', model: null },
-  { type: 'bidet',           label: 'Bidet',           category: 'Bathroom', width: 0.4, depth: 0.6, height: 0.4,  color: '#e2e8f0', model: null },
-  {
-    type: 'towel-rack', label: 'Towel rack', category: 'Bathroom',
-    width: 0.6, depth: 0.1, height: 0.3, color: '#cbd5e1', model: null,
-    wallMounted: true, mountHeight: 1.2,
-  },
-  {
-    type: 'bathroom-mirror', label: 'Bathroom mirror', category: 'Bathroom',
-    width: 0.6, depth: 0.05, height: 0.8, color: '#e2e8f0', model: null,
-    wallMounted: true, mountHeight: 1.4,
-  },
-
-  // ── Kitchen ─────────────────────────────────────────────────────────────────
-  { type: 'refrigerator',      label: 'Refrigerator',        category: 'Kitchen', width: 0.7, depth: 0.7,  height: 1.8,  color: '#64748b', model: null },
-  { type: 'stove',             label: 'Stove / oven',        category: 'Kitchen', width: 0.6, depth: 0.6,  height: 0.9,  color: '#1e293b', model: null },
-  { type: 'kitchen-sink',      label: 'Kitchen sink',        category: 'Kitchen', width: 0.6, depth: 0.6,  height: 0.9,  color: '#94a3b8', model: null },
-  { type: 'dishwasher',        label: 'Dishwasher',          category: 'Kitchen', width: 0.6, depth: 0.6,  height: 0.85, color: '#64748b', model: null },
-  { type: 'microwave',         label: 'Microwave',           category: 'Kitchen', width: 0.5, depth: 0.4,  height: 0.3,  color: '#374151', model: null },
-  { type: 'lower-cabinet-60',  label: 'Lower cabinet 60cm',  category: 'Kitchen', width: 0.6, depth: 0.6,  height: 0.9,  color: '#e7e5e4', model: null },
-  { type: 'lower-cabinet-90',  label: 'Lower cabinet 90cm',  category: 'Kitchen', width: 0.9, depth: 0.6,  height: 0.9,  color: '#e7e5e4', model: null },
-  {
-    type: 'upper-cabinet', label: 'Upper cabinet', category: 'Kitchen',
-    width: 0.6, depth: 0.35, height: 0.7, color: '#e7e5e4', model: null,
-    wallMounted: true, mountHeight: 1.4,
-  },
-  { type: 'kitchen-island',    label: 'Kitchen island',      category: 'Kitchen', width: 1.5, depth: 0.9,  height: 0.9,  color: '#78716c', model: null },
-  {
-    type: 'range-hood', label: 'Range hood', category: 'Kitchen',
-    width: 0.9, depth: 0.5, height: 0.4, color: '#71717a', model: null,
-    wallMounted: true, mountHeight: 1.8,
   },
 ]
 

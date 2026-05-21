@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-20_  <!-- multi-level buildings, stairs, stair floor holes -->
+_Last updated: 2026-05-21_  <!-- PDF export, 3D opening drop, multi-select room materials -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -210,11 +210,17 @@ You can select more than one item at a time in three ways:
 - **Ctrl/Cmd+A** — selects every visible item at once (walls, furniture,
   openings, underlay — only on layers that are currently shown).
 
-With multiple items selected, the right panel shows a count breakdown
-by type (e.g. "2 walls, 1 furniture"). If all selected items are
-furniture, a shared **Rotation** control appears; rotating it applies to
-every piece relative to its own centre. **`Del`** / **`Backspace`**
-removes all selected items at once.
+With multiple items selected, the right panel shows shared editing controls
+based on what's selected:
+
+- **All furniture** — shared Rotation control (applies to every piece
+  relative to its own centre) and a Material picker (applies to all).
+- **All rooms** — shared **Floor material** and **Ceiling material** pickers
+  that apply to every selected room at once. Swatches show no active
+  selection when the rooms have different materials currently.
+- **Mixed types** — count breakdown only (e.g. "2 walls, 1 furniture").
+
+**`Del`** / **`Backspace`** removes all selected items at once.
 
 Dragging any one selected furniture piece moves **all** selected
 furniture by the same offset (walls and openings are not drag-moved in
@@ -291,6 +297,33 @@ to select it. The right panel shows the room's editor:
 
 Room names and materials are saved automatically and survive page
 refresh, just like walls and furniture.
+
+### Ceiling material
+
+With a room selected, the right panel shows a **Ceiling** picker below the
+floor material picker. Seven finishes are available:
+
+| Finish | Category |
+|---|---|
+| Painted White | Paint |
+| Off White | Paint |
+| Cream | Paint |
+| Light Gray | Paint |
+| Sky Blue | Paint |
+| Exposed Concrete | Other |
+| Wood Beam | Other |
+
+The ceiling colour updates in the 3D view immediately. Rooms default to
+Painted White.
+
+To toggle ceilings on or off globally, use the **Ceilings** button in the
+3D lighting toolbar (top-right of the 3D view). Turning ceilings off gives
+you an open-top view so you can see all floors at once; it doesn't affect
+the saved per-room ceiling material.
+
+When stairs connect two levels, the ceiling on the lower level and the floor
+on the upper level both show the matching opening — you can see through from
+one floor to the next.
 
 ### Re-finding a renamed room
 
@@ -409,9 +442,8 @@ the underlay is at risk.
 
 ## Layers panel
 
-At the bottom of the left sidebar (below the furniture catalog), a
-collapsible **Layers** panel lets you show or hide each class of content
-on the canvas.
+Near the bottom of the left sidebar, a collapsible **Layers** panel lets
+you show or hide each class of content on the canvas.
 
 Click the **Layers** heading to expand or collapse the panel. Inside,
 six rows each have an eye icon that you can click to toggle:
@@ -437,9 +469,9 @@ toggling a layer on and off doesn't consume an undo step.
 
 ## 3D viewer
 
-Click the **3D** button in the top bar to open a 3D view of your floor
-plan next to the 2D canvas. The two views stay synced — as you change
-the 2D side, the 3D side updates instantly.
+Click the **3D** button in the top bar to switch into fullscreen 3D mode.
+The 2D canvas is replaced by the 3D viewer — all panels (sidebar, properties)
+stay visible. Click **← 2D** in the top bar to return to the 2D canvas.
 
 - Walls show up as boxes that are 2.4 m tall.
 - Furniture shows up as low-poly 3D models sized to the catalog
@@ -463,8 +495,38 @@ the 2D side, the 3D side updates instantly.
 - **Right-click and drag** — pan (slide the view sideways/up/down).
 - **Mouse wheel** — zoom in and out.
 
-Click **3D** again to hide the 3D view and reclaim the full canvas
-width for 2D.
+Click **← 2D** in the top bar to return to the 2D canvas.
+
+### Placing furniture directly in 3D
+
+While in 3D mode you can drag furniture tiles straight from the sidebar
+onto the 3D view — no need to switch back to 2D first.
+
+1. **Drag** any furniture tile from the catalog and hold it over the 3D view.
+2. A **translucent blue ghost** appears on the floor, snapped to a 0.5 m grid.
+   Move your cursor to position it where you want.
+3. **Drop** to place the piece. It is added to the current active level's
+   floor plan and appears immediately in 3D.
+
+The coordinates are automatically converted to 2D canvas coordinates, so the
+piece shows up correctly when you switch back to 2D. If no floor plane is
+found under the cursor (e.g. dragging over a wall or empty air), the ghost
+disappears and nothing is placed.
+
+### Placing doors and windows directly in 3D
+
+Door and window tiles from the **Openings** group can also be dragged
+straight onto the 3D view:
+
+1. **Drag** a Door or Window tile from the sidebar and move it over the 3D view.
+2. Hover over a wall — a **translucent blue slab** appears on the wall face at
+   the cursor position to show where the opening will land.
+3. **Drop** to place. The opening is cut into the wall exactly as if you had
+   placed it in 2D. Width and sill-height default to catalog values and can be
+   adjusted in the properties panel afterwards.
+
+If you hover over empty space (no wall within cursor range) the ghost
+disappears and a toast tells you to aim at a wall.
 
 ### Selection is bidirectional
 
@@ -500,9 +562,10 @@ Drag a tile onto the 2D canvas just like regular furniture. When you switch to 3
 
 ### Lighting toolbar (3D pane)
 
-When the 3D pane is open, a small **Lighting** panel appears in its top-right corner with three controls:
+When the 3D pane is open, a small **Lighting** panel appears in its top-right corner with four controls:
 
 - **Lights ON / OFF** — master switch that silences all placed lights at once (their meshes remain visible).
+- **Ceilings ON / OFF** — shows or hides all ceiling planes. Turn off for an open-top view when working on a multi-level project. Does not change saved ceiling materials.
 - **Time of day** slider (00:00–24:00) — moves the sun across the sky from east to west. Colour changes from warm orange at dawn and dusk (~2500 K) to cool white at noon (~6500 K). The sun disappears below the horizon at night, leaving only ambient and placed lights.
 - **Ambient %** slider (0–100 %) — controls the fill-light intensity so you can darken the whole scene for a dramatic night look or brighten it for a neutral review.
 
@@ -673,6 +736,12 @@ The top bar has three save/export buttons:
   at 2× resolution. Includes the dark backdrop, grid, walls, furniture,
   rooms, and the underlay if one is loaded. Filename is
   `interior-studio-{timestamp}.png`.
+- **Export PDF** — exports the floor plan as an A4 landscape PDF. The
+  image fills the page with a 10 mm margin. A **scale bar** at the
+  bottom left shows how many millimetres on the page equal 1 metre in
+  the real world (based on the current zoom level). The date is printed
+  in the footer. jsPDF loads on-demand the first time you click this
+  button.
 
 `.studio.json` files are versioned for future compatibility. The
 current format is version 1; if you open a file from a newer version
@@ -708,8 +777,10 @@ browser's developer tools (we don't yet expose a "reset" button).
 ## Working with multiple levels
 
 Interior Studio supports multi-storey buildings. By default every project
-starts with a single **Ground Floor**. The **Levels** panel in the left
-sidebar (just above the Layers panel) lets you add more.
+starts with a single **Ground Floor**. The **Levels** panel sits at the
+**top of the left sidebar** (above the furniture catalog) so it's always
+easy to find. If you only have one floor, the panel shows a hint: "Single
+floor · press + to add a level".
 
 ### Managing levels
 
@@ -791,9 +862,11 @@ your cursor position in metres.
 | Left-click + drag (item) | Move item (moves all selected furniture if multiple are selected) |
 | Right-click (item) | Delete item |
 | Right-click (empty canvas, while drawing) | Cancel the chain |
+| **3D** button (toolbar) | Switch to fullscreen 3D view |
+| **← 2D** button (toolbar) | Return to 2D canvas from 3D |
 | 3D view: left-drag | Orbit camera |
 | 3D view: right-drag | Pan camera |
-| Walk button (toolbar) | Toggle first-person walkthrough mode |
+| Walk button (toolbar, 3D only) | Toggle first-person walkthrough mode |
 | `W/A/S/D` or arrow keys (walkthrough) | Move forward/left/back/right |
 | `Shift` (walkthrough) | Run |
 | `Space` (walkthrough) | Jump |
@@ -808,8 +881,8 @@ locked to the existing geometry. Delete the last wall and redraw it,
 making sure the marker shows before you click.
 
 **Why is the 3D view blank for a second?**
-First-time download. After the first click, switching between 2D-only
-and split views is instant.
+First-time download. After the first click, switching between 2D and 3D
+is instant.
 
 **Can I undo a mistake?**
 Yes — press **Ctrl/Cmd+Z** to undo (up to 50 steps). **Ctrl/Cmd+Shift+Z**

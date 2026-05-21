@@ -61,7 +61,7 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
     // ── mesh group ──────────────────────────────────────────────────────────
     // Wall-mounted items use mountHeight (bottom of item above floor level).
     // Lighting items use their ceiling/floor offset. Everything else: 0.
-    const yOff = f.wallMounted ? (f.mountHeight ?? 0) : lightYOffset(f.type, f.height)
+    const yOff = f.wallMounted ? (f.mountHeight ?? 1.2) : lightYOffset(f.type, f.height)
     // tintColor is non-null only when the user has explicitly set a material
     // override — it's null when the piece uses its catalog default color so
     // the GLB's authored materials are left untouched.

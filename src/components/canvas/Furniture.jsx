@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { Group, Rect, Text, Line, Circle } from 'react-konva'
 import { PIXELS_PER_METER } from './constants'
 import { furnitureColorFor } from './furnitureMaterials'
@@ -5,6 +6,11 @@ import { furnitureColorFor } from './furnitureMaterials'
 const SELECTION_COLOR = '#3b82f6'
 
 export default function Furniture({ item, selected, scale, onSelect, onShiftSelect, onDragStart, onDragEnd, onContextMenu }) {
+  // Track drag offset in world coords so we can correctly compute the final
+  // world position regardless of the Stage's current scale/pan. Without this,
+  // Konva's built-in drag accumulates screen-space deltas without dividing by
+  // scale, causing the item to "jump" when zoomed in beyond 1:1.
+  const dragOffset = useRef(null)
   const w = item.width * PIXELS_PER_METER
   const d = item.depth * PIXELS_PER_METER
   const fill = furnitureColorFor(item)
@@ -19,8 +25,23 @@ export default function Furniture({ item, selected, scale, onSelect, onShiftSele
       y={item.y}
       rotation={item.rotation}
       draggable
-      onDragStart={() => onDragStart?.(item.id, { x: item.x, y: item.y })}
-      onDragEnd={(e) => onDragEnd?.(item.id, { x: e.target.x(), y: e.target.y() })}
+      onDragStart={(e) => {
+        const p = e.target.getStage().getRelativePointerPosition()
+        dragOffset.current = { dx: p.x - item.x, dy: p.y - item.y }
+        onDragStart?.(item.id, { x: item.x, y: item.y })
+      }}
+      onDragMove={(e) => {
+        if (!dragOffset.current) return
+        const p = e.target.getStage().getRelativePointerPosition()
+        e.target.x(p.x - dragOffset.current.dx)
+        e.target.y(p.y - dragOffset.current.dy)
+      }}
+      onDragEnd={(e) => {
+        const p = e.target.getStage().getRelativePointerPosition()
+        const off = dragOffset.current ?? { dx: 0, dy: 0 }
+        dragOffset.current = null
+        onDragEnd?.(item.id, { x: p.x - off.dx, y: p.y - off.dy })
+      }}
       onMouseDown={(e) => {
         if (e.evt.button === 0) {
           e.cancelBubble = true

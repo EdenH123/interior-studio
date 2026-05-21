@@ -6,7 +6,8 @@ import useStore from '../../store/useStore'
 
 // Translucent preview of an item's footprint while the sidebar tile is
 // being dragged. Branches on `ghost.kind`:
-//   • furniture — rect at the grid-snapped cursor position
+//   • furniture — rect at the grid-snapped cursor position; wall-mounted
+//     items rotate to wall angle and show a red X when no wall is in range
 //   • opening   — gap-and-pivot preview on the nearest wall, or a red X
 //     near the cursor when no wall is within snap range
 // `listening={false}` everywhere — never intercepts the drag.

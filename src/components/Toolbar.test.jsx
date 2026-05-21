@@ -5,7 +5,7 @@ import Toolbar from './Toolbar'
 vi.mock('../store/useStore', () => ({ default: vi.fn() }))
 vi.mock('../hooks/useProjectIO', () => ({
   default: () => ({
-    exportPng: vi.fn(), exportJson: vi.fn(), openJson: vi.fn(),
+    exportPng: vi.fn(), exportPdf: vi.fn(), exportJson: vi.fn(), openJson: vi.fn(),
     importInputRef: { current: null }, handleImportFile: vi.fn(),
   }),
 }))
@@ -52,15 +52,20 @@ describe('Toolbar', () => {
     expect(screen.getByText('Walk')).toBeInTheDocument()
   })
 
-  it('shows 3D button labelled "3D · on" when active', () => {
+  it('shows "← 2D" button when 3D is active', () => {
     vi.mocked(useStore).mockImplementation((sel) => sel({ ...base, show3d: true }))
     render(<Toolbar />)
-    expect(screen.getByText('3D · on')).toBeInTheDocument()
+    expect(screen.getByText('← 2D')).toBeInTheDocument()
   })
 
   it('renders undo and redo buttons', () => {
     render(<Toolbar />)
     expect(screen.getByTitle('Undo (Ctrl/Cmd+Z)')).toBeInTheDocument()
     expect(screen.getByTitle('Redo (Ctrl/Cmd+Shift+Z)')).toBeInTheDocument()
+  })
+
+  it('renders Export PDF button', () => {
+    render(<Toolbar />)
+    expect(screen.getByText('Export PDF')).toBeInTheDocument()
   })
 })

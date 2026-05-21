@@ -19,8 +19,9 @@ export function computeLevelOffsets(levels) {
 export const createLevelsSlice = (set, get) => ({
   levels: DEFAULT_LEVELS,
   activeLevel: GROUND_FLOOR_ID,
-  solo3d: false,       // show only active level in 3D
-  xrayCeiling: false,  // make levels above active 30% transparent
+  solo3d: false,        // show only active level in 3D
+  xrayCeiling: false,   // make levels above active 30% transparent
+  ceilingsVisible: true, // render ceiling planes in 3D
 
   addLevel: () => {
     const id = nanoid(6)
@@ -56,4 +57,5 @@ export const createLevelsSlice = (set, get) => ({
   setActiveLevel: (id) => set({ activeLevel: id }),
   setSolo3d: (v) => set({ solo3d: Boolean(v) }),
   setXrayCeiling: (v) => set({ xrayCeiling: Boolean(v) }),
+  setCeilingsVisible: (v) => set({ ceilingsVisible: Boolean(v) }),
 })

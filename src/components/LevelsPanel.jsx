@@ -44,10 +44,11 @@ export default function LevelsPanel() {
   }
 
   return (
-    <div className="border-t border-gray-700 shrink-0">
+    <div className="border-b border-gray-700 shrink-0">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full px-4 py-2 flex items-center justify-between hover:bg-gray-800 transition-colors"
+        title="Switch between floors — click a level to make it active, double-click name to rename"
       >
         <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Levels</span>
         <span className="flex items-center gap-2">
@@ -66,6 +67,11 @@ export default function LevelsPanel() {
 
       {open && (
         <div className="pb-2 max-h-36 overflow-y-auto">
+          {sorted.length === 1 && (
+            <p className="px-4 pt-1 pb-0 text-[10px] text-gray-600 font-mono leading-snug">
+              Single floor · press + to add a level
+            </p>
+          )}
           {sorted.map((lv) => {
             const isActive = lv.id === activeLevel
             const isEditing = editingId === lv.id

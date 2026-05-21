@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import useStore from '../store/useStore'
 import {
-  reconcileWalls, reconcileFurniture, reconcileRooms, disposeAll,
+  reconcileWalls, reconcileFurniture, reconcileRooms, reconcileCeilings, disposeAll,
 } from '../components/viewer3d/sceneReconcilers'
 import { reconcileDoors, tickDoorAnims } from '../components/viewer3d/reconcileDoors'
 import { applySelectionHighlight } from '../components/viewer3d/selectionHighlight'
@@ -14,6 +14,7 @@ import { kelvinToRgb } from '../utils/colorTemp'
 import { isLightingType } from '../components/viewer3d/reconcileFurniture'
 import { computeLevelOffsets } from '../store/slices/levelsSlice'
 import { computeStairHolesForRooms } from '../components/viewer3d/stairFloorHoles'
+import { DEFAULT_CEILING_COLOR, getCeilingMaterial } from '../components/canvas/ceilingMaterials'
 
 const CAMERA_FOV = 60
 const FLOOR_SIZE = 100
@@ -50,10 +51,11 @@ function applySunForTime(sunLight, t) {
 // in the Zustand store sync into the scene via one-way useEffect reconcilers.
 export default function useThree(containerRef) {
   const stateRef    = useRef(null)
-  const wallMeshes  = useRef(new Map())
-  const furnMeshes  = useRef(new Map())
-  const roomMeshes  = useRef(new Map())
-  const doorMeshes  = useRef(new Map())
+  const wallMeshes    = useRef(new Map())
+  const furnMeshes    = useRef(new Map())
+  const roomMeshes    = useRef(new Map())
+  const ceilingMeshes = useRef(new Map())
+  const doorMeshes    = useRef(new Map())
   const doorAnims   = useRef(new Map())
   const lightMap    = useRef(new Map())
   const sunRef      = useRef(null)
@@ -67,8 +69,9 @@ export default function useThree(containerRef) {
   const lighting    = useStore((s) => s.lighting)
   const levels      = useStore((s) => s.levels)
   const activeLevel = useStore((s) => s.activeLevel)
-  const solo3d      = useStore((s) => s.solo3d)
-  const xrayCeiling = useStore((s) => s.xrayCeiling)
+  const solo3d          = useStore((s) => s.solo3d)
+  const xrayCeiling     = useStore((s) => s.xrayCeiling)
+  const ceilingsVisible = useStore((s) => s.ceilingsVisible)
   const select          = useStore((s) => s.select)
   const clearSelection  = useStore((s) => s.clearSelection)
   const toggleDoorOpen  = useStore((s) => s.toggleDoorOpen)
@@ -126,7 +129,11 @@ export default function useThree(containerRef) {
     scene.add(new THREE.GridHelper(FLOOR_SIZE, FLOOR_SIZE, 0x374151, 0x1f2937))
 
     const controls = new OrbitControls(camera, renderer.domElement)
-    controls.enableDamping = true
+    controls.enableDamping  = true
+    controls.zoomSpeed      = 0.8   // slightly slower than default to match 2D wheel feel
+    controls.panSpeed       = 0.8
+    controls.minDistance    = 1.5   // ~75 Konva px ≈ close zoom limit
+    controls.maxDistance    = 80    // ~4000 Konva px ≈ far zoom limit
     controls.target.set(0, 1, 0)
     controls.update()
 
@@ -169,6 +176,7 @@ export default function useThree(containerRef) {
       disposeAll(s.scene, wallMeshes.current)
       disposeAll(s.scene, furnMeshes.current)
       disposeAll(s.scene, roomMeshes.current)
+      disposeAll(s.scene, ceilingMeshes.current)
       disposeAll(s.scene, doorMeshes.current)
       for (const [, light] of lightMap.current) {
         if (light.isSpotLight && light.target?.parent) s.scene.remove(light.target)
@@ -212,31 +220,49 @@ export default function useThree(containerRef) {
     )
   }, [furniture, lighting.lightsOn, levels, activeLevel, solo3d])
 
-  // ── rooms ────────────────────────────────────────────────────────────────────
+  // ── rooms + ceilings ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!stateRef.current) return
     const levelOffsets = computeLevelOffsets(levels)
     // Detect rooms per-level; prefix ids with levelId so each level's rooms
-    // are keyed independently in the mesh map. Stair holes are cut into the
-    // floor of the level the stairs arrive at (stair.toLevel === lv.id).
+    // are keyed independently in the mesh map.
+    // Floor stair holes: cut where stairs ARRIVE (stair.toLevel === lv.id).
+    // Ceiling stair holes: cut where stairs DEPART (stair.levelId === lv.id).
     const allRooms = levels.flatMap((lv) => {
       const lvWalls = walls.filter((w) => (w.levelId ?? activeLevel) === lv.id)
       const lvRooms = detectRooms(lvWalls).map((r) => ({ ...r, id: `${lv.id}:${r.id}`, levelId: lv.id }))
-      const lvStairs = furniture.filter((f) => f.type === 'stairs' && f.toLevel === lv.id)
-      if (lvStairs.length > 0) {
-        const holesMap = computeStairHolesForRooms(lvRooms, lvStairs)
-        return lvRooms.map((r) => ({ ...r, stairHoles: holesMap.get(r.id) ?? [] }))
-      }
-      return lvRooms
+      const arrivingStairs  = furniture.filter((f) => f.type === 'stairs' && f.toLevel === lv.id)
+      const departingStairs = furniture.filter(
+        (f) => f.type === 'stairs' && (f.levelId ?? activeLevel) === lv.id && f.toLevel,
+      )
+      const floorHolesMap   = arrivingStairs.length  > 0 ? computeStairHolesForRooms(lvRooms, arrivingStairs)  : null
+      const ceilHolesMap    = departingStairs.length > 0 ? computeStairHolesForRooms(lvRooms, departingStairs) : null
+      return lvRooms.map((r) => ({
+        ...r,
+        stairHoles:        floorHolesMap ? (floorHolesMap.get(r.id) ?? [])  : [],
+        ceilingStairHoles: ceilHolesMap  ? (ceilHolesMap.get(r.id)  ?? [])  : [],
+      }))
     })
-    reconcileRooms(stateRef.current.scene, allRooms, roomMeshes.current, (id) => {
-      // Strip the levelId prefix to look up roomMeta (keyed by raw fingerprint).
+
+    const floorColorFor = (id) => {
       const fp = id.includes(':') ? id.split(':').slice(1).join(':') : id
       const matId = roomMeta[fp]?.floorMaterial
       const mat = matId ? getFloorMaterial(matId) : null
       return mat?.color ?? DEFAULT_FLOOR_COLOR
-    }, levelOffsets, { solo: solo3d, activeLevelId: activeLevel })
-  }, [walls, roomMeta, furniture, levels, activeLevel, solo3d])
+    }
+    const ceilingColorFor = (id) => {
+      const fp = id.includes(':') ? id.split(':').slice(1).join(':') : id
+      const matId = roomMeta[fp]?.ceilingMaterial
+      const mat = matId ? getCeilingMaterial(matId) : null
+      return mat?.color ?? DEFAULT_CEILING_COLOR
+    }
+
+    reconcileRooms(stateRef.current.scene, allRooms, roomMeshes.current,
+      floorColorFor, levelOffsets, { solo: solo3d, activeLevelId: activeLevel })
+    reconcileCeilings(stateRef.current.scene, allRooms, ceilingMeshes.current,
+      ceilingColorFor, levelOffsets, levels,
+      { solo: solo3d, activeLevelId: activeLevel, visible: ceilingsVisible })
+  }, [walls, roomMeta, furniture, levels, activeLevel, solo3d, ceilingsVisible])
 
   // ── selection highlight ──────────────────────────────────────────────────────
   useEffect(() => {

@@ -4,6 +4,7 @@ import useWalkthrough from '../../hooks/useWalkthrough'
 import useStore from '../../store/useStore'
 import { getModelStatus, onCacheChange } from './furnitureModelCache'
 import LightingToolbar from './LightingToolbar'
+import useFurnitureDrop3D from '../../hooks/useFurnitureDrop3D'
 
 function useAnyModelLoading() {
   const furniture = useStore((s) => s.furniture)
@@ -17,6 +18,7 @@ export default function Viewer3D() {
   const loading       = useAnyModelLoading()
   const walkthrough   = useStore((s) => s.walkthrough)
   const stateRef      = useThree(containerRef)
+  const dropHandlers  = useFurnitureDrop3D(containerRef, stateRef)
 
   useWalkthrough(stateRef, walkthrough)
 
@@ -29,7 +31,8 @@ export default function Viewer3D() {
   }, [])
 
   return (
-    <section className="flex-1 bg-gray-950 border-l border-gray-700 relative overflow-hidden">
+    <section className="flex-1 bg-gray-950 relative overflow-hidden"
+      {...dropHandlers}>
       <div ref={containerRef} className="absolute inset-0" />
 
       {/* Normal orbit hint — hidden during walkthrough */}

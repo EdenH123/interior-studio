@@ -27,7 +27,7 @@ export const createFurnitureSlice = (set) => ({
     // Wall-mounted items carry wallMounted + mountHeight (editable in props).
     const wallMountFields = spec.wallMounted ? {
       wallMounted: true,
-      mountHeight: spec.mountHeight ?? 0,
+      mountHeight: spec.mountHeight ?? 1.2,
     } : {}
     set((s) => {
       const activeLevel = s.activeLevel ?? null
@@ -49,8 +49,8 @@ export const createFurnitureSlice = (set) => ({
             model: spec.model ?? null,
             levelId: activeLevel,
             ...lightFields,
-            ...stairFields,
             ...wallMountFields,
+            ...stairFields,
           },
         ],
         selection: { items: [{ kind: 'furniture', id }] },
