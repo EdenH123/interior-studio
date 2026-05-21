@@ -207,64 +207,93 @@ function backCushion(x1, y1, z1, x2, y2, z2, bulge = 0.04, nX = 6, nY = 4) {
   return { positions: pos, normals: nor, indices: idx }
 }
 
-// ─── GLB writer ───────────────────────────────────────────────────────────────
+// ─── GLB writer (multi-material) ─────────────────────────────────────────────
+// groups: Array of { parts, color, roughness?, metallic? }
+// Legacy single-material: writeGLB(name, parts[], color) is auto-wrapped.
+function writeGLB(name, partsOrGroups, legacyColor) {
+  const groups = (Array.isArray(partsOrGroups) && partsOrGroups[0]?.parts !== undefined)
+    ? partsOrGroups
+    : [{ parts: Array.isArray(partsOrGroups) ? partsOrGroups : [partsOrGroups],
+         color: legacyColor ?? [0.72, 0.65, 0.57, 1.0] }]
 
-// color = [r, g, b, a] in linear space (0–1).
-function writeGLB(name, parts, color = [0.72, 0.65, 0.57, 1.0]) {
-  const { positions, normals, indices } = merge(Array.isArray(parts) ? parts : [parts])
+  const primitives = []
+  const materials  = []
+  const accessors  = []
+  const bufViews   = []
+  const chunks     = []
+  let byteOffset   = 0
+  let totalTris    = 0
 
-  const posF32 = new Float32Array(positions)
-  const nrmF32 = new Float32Array(normals)
-  const idxU16 = new Uint16Array(indices)
+  for (const { parts, color, roughness = 0.80, metallic = 0.0 } of groups) {
+    const { positions, normals, indices } = merge(Array.isArray(parts) ? parts : [parts])
 
-  const posBytes = posF32.byteLength
-  const nrmBytes = nrmF32.byteLength
-  const idxBytes = idxU16.byteLength
-  const binLen   = posBytes + nrmBytes + idxBytes
+    const posF32 = new Float32Array(positions)
+    const nrmF32 = new Float32Array(normals)
+    const idxU16 = new Uint16Array(indices)
 
-  const bin = Buffer.alloc(binLen)
-  Buffer.from(posF32.buffer).copy(bin, 0)
-  Buffer.from(nrmF32.buffer).copy(bin, posBytes)
-  Buffer.from(idxU16.buffer).copy(bin, posBytes + nrmBytes)
+    const posBytes = posF32.byteLength
+    const nrmBytes = nrmF32.byteLength
+    const idxBytes = idxU16.byteLength
+    const idxPad   = (4 - (idxBytes % 4)) % 4
 
-  const pMin = [Infinity, Infinity, Infinity]
-  const pMax = [-Infinity, -Infinity, -Infinity]
-  for (let i = 0; i < positions.length; i += 3) {
-    for (let c = 0; c < 3; c++) {
-      pMin[c] = Math.min(pMin[c], positions[i + c])
-      pMax[c] = Math.max(pMax[c], positions[i + c])
+    const pMin = [Infinity, Infinity, Infinity]
+    const pMax = [-Infinity, -Infinity, -Infinity]
+    for (let i = 0; i < positions.length; i += 3) {
+      for (let c = 0; c < 3; c++) {
+        pMin[c] = Math.min(pMin[c], positions[i + c])
+        pMax[c] = Math.max(pMax[c], positions[i + c])
+      }
     }
+    const r4 = (v) => Math.round(v * 10000) / 10000
+    const vc = positions.length / 3
+    const ic = indices.length
+    totalTris += ic / 3
+
+    const posAcc = accessors.length
+    accessors.push({ bufferView: bufViews.length, componentType: 5126, count: vc, type: 'VEC3', min: pMin.map(r4), max: pMax.map(r4) })
+    bufViews.push({ buffer: 0, byteOffset, byteLength: posBytes, target: 34962 })
+    byteOffset += posBytes
+
+    const nrmAcc = accessors.length
+    accessors.push({ bufferView: bufViews.length, componentType: 5126, count: vc, type: 'VEC3' })
+    bufViews.push({ buffer: 0, byteOffset, byteLength: nrmBytes, target: 34962 })
+    byteOffset += nrmBytes
+
+    const idxAcc = accessors.length
+    accessors.push({ bufferView: bufViews.length, componentType: 5123, count: ic, type: 'SCALAR' })
+    bufViews.push({ buffer: 0, byteOffset, byteLength: idxBytes, target: 34963 })
+    byteOffset += idxBytes + idxPad
+
+    materials.push({ pbrMetallicRoughness: { baseColorFactor: color, metallicFactor: metallic, roughnessFactor: roughness }, doubleSided: false })
+    primitives.push({ attributes: { POSITION: posAcc, NORMAL: nrmAcc }, indices: idxAcc, material: materials.length - 1, mode: 4 })
+    chunks.push({ posF32, nrmF32, idxU16, idxPad })
   }
-  const r4 = (v) => Math.round(v * 10000) / 10000
-  const vc = positions.length / 3
-  const ic = indices.length
+
+  const bin = Buffer.alloc(byteOffset)
+  let off = 0
+  for (const { posF32, nrmF32, idxU16, idxPad } of chunks) {
+    Buffer.from(posF32.buffer).copy(bin, off); off += posF32.byteLength
+    Buffer.from(nrmF32.buffer).copy(bin, off); off += nrmF32.byteLength
+    Buffer.from(idxU16.buffer).copy(bin, off); off += idxU16.byteLength
+    off += idxPad
+  }
 
   const gltfJson = {
     asset: { version: '2.0', generator: 'interior-studio-gen-v2' },
-    scenes: [{ nodes: [0] }],
-    scene: 0,
+    scenes: [{ nodes: [0] }], scene: 0,
     nodes: [{ mesh: 0 }],
-    meshes: [{ primitives: [{ attributes: { POSITION: 0, NORMAL: 1 }, indices: 2, material: 0, mode: 4 }] }],
-    materials: [{ pbrMetallicRoughness: { baseColorFactor: color, metallicFactor: 0.0, roughnessFactor: 0.8 }, doubleSided: false }],
-    accessors: [
-      { bufferView: 0, componentType: 5126, count: vc, type: 'VEC3', min: pMin.map(r4), max: pMax.map(r4) },
-      { bufferView: 1, componentType: 5126, count: vc, type: 'VEC3' },
-      { bufferView: 2, componentType: 5123, count: ic, type: 'SCALAR' },
-    ],
-    bufferViews: [
-      { buffer: 0, byteOffset: 0, byteLength: posBytes, target: 34962 },
-      { buffer: 0, byteOffset: posBytes, byteLength: nrmBytes, target: 34962 },
-      { buffer: 0, byteOffset: posBytes + nrmBytes, byteLength: idxBytes, target: 34963 },
-    ],
-    buffers: [{ byteLength: binLen }],
+    meshes: [{ primitives }],
+    materials, accessors,
+    bufferViews: bufViews,
+    buffers: [{ byteLength: byteOffset }],
   }
 
-  const jsonBuf  = Buffer.from(JSON.stringify(gltfJson), 'utf8')
-  const jsonPad  = (jsonBuf.length + 3) & ~3
+  const jsonBuf   = Buffer.from(JSON.stringify(gltfJson), 'utf8')
+  const jsonPad   = (jsonBuf.length + 3) & ~3
   const jsonChunk = Buffer.alloc(jsonPad, 0x20)
   jsonBuf.copy(jsonChunk)
 
-  const totalLen = 12 + 8 + jsonPad + 8 + binLen
+  const totalLen = 12 + 8 + jsonPad + 8 + byteOffset
   const out = Buffer.alloc(totalLen)
   let o = 0
   out.writeUInt32LE(0x46546C67, o); o += 4
@@ -273,14 +302,13 @@ function writeGLB(name, parts, color = [0.72, 0.65, 0.57, 1.0]) {
   out.writeUInt32LE(jsonPad,    o); o += 4
   out.writeUInt32LE(0x4E4F534A, o); o += 4
   jsonChunk.copy(out, o); o += jsonPad
-  out.writeUInt32LE(binLen,     o); o += 4
+  out.writeUInt32LE(byteOffset, o); o += 4
   out.writeUInt32LE(0x004E4942, o); o += 4
   bin.copy(out, o)
 
   const path = resolve(OUT, name + '.glb')
   writeFileSync(path, out)
-  const tris = ic / 3
-  console.log(`  ✓  ${(name + '.glb').padEnd(22)}  ${(totalLen / 1024).toFixed(1).padStart(6)} kB  ${tris} tris`)
+  console.log(`  ✓  ${(name + '.glb').padEnd(22)}  ${(totalLen / 1024).toFixed(1).padStart(6)} kB  ${totalTris} tris`)
 }
 
 // ─── Color palette (linear sRGB) ──────────────────────────────────────────────
@@ -296,45 +324,52 @@ console.log('Generating furniture GLBs (v2 — high-detail procedural)…\n')
 console.log('  (chair.glb produced separately by process-sheenchair.mjs)\n')
 
 // ─── SOFA  2.0 × 0.9 × 0.85 ──────────────────────────────────────────────────
-// Three domed seat cushions, three domed back cushions, arms, frame, feet.
 writeGLB('sofa', [
-  // base platform
-  box(-1.00, 0, -0.45,  1.00, 0.09, 0.45),
-  // three seat cushions — domed top surfaces, 6px gap between each
-  cushion(-1.00, 0.09, -0.45, -0.38, 0.42, 0.45, 0.034),
-  cushion(-0.32, 0.09, -0.45,  0.32, 0.42, 0.45, 0.034),
-  cushion( 0.38, 0.09, -0.45,  1.00, 0.42, 0.45, 0.034),
-  // three back cushions — domed front faces
-  backCushion(-1.00, 0.42, -0.45, -0.38, 0.85, -0.15, 0.030),
-  backCushion(-0.32, 0.42, -0.45,  0.32, 0.85, -0.15, 0.030),
-  backCushion( 0.38, 0.42, -0.45,  1.00, 0.85, -0.15, 0.030),
-  // armrests
-  box(-1.00, 0.09, -0.45, -0.86, 0.65, 0.45),
-  box( 0.86, 0.09, -0.45,  1.00, 0.65, 0.45),
-  // four stubby cylinder feet
-  cyl(-0.88, -0.38, 0, 0.09, 0.055, 8),
-  cyl( 0.88, -0.38, 0, 0.09, 0.055, 8),
-  cyl(-0.88,  0.38, 0, 0.09, 0.055, 8),
-  cyl( 0.88,  0.38, 0, 0.09, 0.055, 8),
-], C_UPHOLSTERY)
+  { parts: [
+    box(-1.00, 0, -0.45,  1.00, 0.09, 0.45),                     // base platform
+    box(-0.86, 0.09, -0.45,  0.86, 0.85, -0.40),                 // solid back panel — closes open back + top gaps
+    // gap dividers: fill the 6 cm x-slots between cushions so hollow interior isn't visible
+    box(-0.38, 0.09, -0.45, -0.32, 0.42,  0.45),                 // seat gap L
+    box( 0.32, 0.09, -0.45,  0.38, 0.42,  0.45),                 // seat gap R
+    box(-0.38, 0.42, -0.45, -0.32, 0.85, -0.15),                 // back gap L
+    box( 0.32, 0.42, -0.45,  0.38, 0.85, -0.15),                 // back gap R
+    // three seat cushions — domed top surfaces
+    cushion(-1.00, 0.09, -0.45, -0.38, 0.42, 0.45, 0.034),
+    cushion(-0.32, 0.09, -0.45,  0.32, 0.42, 0.45, 0.034),
+    cushion( 0.38, 0.09, -0.45,  1.00, 0.42, 0.45, 0.034),
+    // three back cushions — domed front faces
+    backCushion(-1.00, 0.42, -0.45, -0.38, 0.85, -0.15, 0.030),
+    backCushion(-0.32, 0.42, -0.45,  0.32, 0.85, -0.15, 0.030),
+    backCushion( 0.38, 0.42, -0.45,  1.00, 0.85, -0.15, 0.030),
+    // armrests
+    box(-1.00, 0.09, -0.45, -0.86, 0.65, 0.45),
+    box( 0.86, 0.09, -0.45,  1.00, 0.65, 0.45),
+  ], color: C_UPHOLSTERY, roughness: 0.85 },
+  { parts: [
+    cyl(-0.88, -0.38, 0, 0.09, 0.055, 8),
+    cyl( 0.88, -0.38, 0, 0.09, 0.055, 8),
+    cyl(-0.88,  0.38, 0, 0.09, 0.055, 8),
+    cyl( 0.88,  0.38, 0, 0.09, 0.055, 8),
+  ], color: C_WOOD_DK, roughness: 0.60 },
+])
 
 // ─── ARMCHAIR  0.9 × 0.9 × 0.85 ──────────────────────────────────────────────
 writeGLB('armchair', [
-  // base platform
-  box(-0.45, 0, -0.45, 0.45, 0.09, 0.45),
-  // seat cushion — domed top
-  cushion(-0.45, 0.09, -0.45, 0.45, 0.42, 0.45, 0.030),
-  // back cushion — domed front face
-  backCushion(-0.45, 0.42, -0.45, 0.45, 0.85, -0.13, 0.028),
-  // armrests
-  box(-0.45, 0.09, -0.45, -0.33, 0.65, 0.45),
-  box( 0.33, 0.09, -0.45,  0.45, 0.65, 0.45),
-  // four stubby cylinder feet
-  cyl(-0.38, -0.38, 0, 0.09, 0.04, 8),
-  cyl( 0.38, -0.38, 0, 0.09, 0.04, 8),
-  cyl(-0.38,  0.38, 0, 0.09, 0.04, 8),
-  cyl( 0.38,  0.38, 0, 0.09, 0.04, 8),
-], C_UPHOLSTERY)
+  { parts: [
+    box(-0.45, 0, -0.45, 0.45, 0.09, 0.45),                      // base platform
+    box(-0.33, 0.09, -0.45, 0.33, 0.85, -0.40),                  // solid back panel
+    cushion(-0.45, 0.09, -0.45, 0.45, 0.42, 0.45, 0.030),        // seat cushion
+    backCushion(-0.45, 0.42, -0.45, 0.45, 0.85, -0.13, 0.028),   // back cushion
+    box(-0.45, 0.09, -0.45, -0.33, 0.65, 0.45),                  // left armrest
+    box( 0.33, 0.09, -0.45,  0.45, 0.65, 0.45),                  // right armrest
+  ], color: C_UPHOLSTERY, roughness: 0.85 },
+  { parts: [
+    cyl(-0.38, -0.38, 0, 0.09, 0.04, 8),
+    cyl( 0.38, -0.38, 0, 0.09, 0.04, 8),
+    cyl(-0.38,  0.38, 0, 0.09, 0.04, 8),
+    cyl( 0.38,  0.38, 0, 0.09, 0.04, 8),
+  ], color: C_WOOD_DK, roughness: 0.60 },
+])
 
 // ─── COFFEE TABLE  1.1 × 0.6 × 0.45 ─────────────────────────────────────────
 writeGLB('coffee-table', [
@@ -491,18 +526,25 @@ writeGLB('tv', [
 
 // ─── LOVESEAT  1.40 × 0.85 × 0.85 ───────────────────────────────────────────
 writeGLB('loveseat', [
-  box(-0.70, 0, -0.425,  0.70, 0.09,  0.425),
-  cushion(-0.70, 0.09, -0.425, -0.04, 0.42, 0.425, 0.034),
-  cushion( 0.04, 0.09, -0.425,  0.70, 0.42, 0.425, 0.034),
-  backCushion(-0.70, 0.42, -0.425, -0.04, 0.85, -0.13, 0.030),
-  backCushion( 0.04, 0.42, -0.425,  0.70, 0.85, -0.13, 0.030),
-  box(-0.70, 0.09, -0.425, -0.56, 0.65,  0.425),
-  box( 0.56, 0.09, -0.425,  0.70, 0.65,  0.425),
-  cyl(-0.62, -0.37, 0, 0.09, 0.050, 8),
-  cyl( 0.62, -0.37, 0, 0.09, 0.050, 8),
-  cyl(-0.62,  0.37, 0, 0.09, 0.050, 8),
-  cyl( 0.62,  0.37, 0, 0.09, 0.050, 8),
-], C_UPHOLSTERY)
+  { parts: [
+    box(-0.70, 0, -0.425,  0.70, 0.09,  0.425),                  // base
+    box(-0.56, 0.09, -0.425, 0.56, 0.85, -0.38),                 // solid back panel
+    box(-0.04, 0.09, -0.425, 0.04, 0.42,  0.425),                // seat gap divider
+    box(-0.04, 0.42, -0.425, 0.04, 0.85, -0.13),                 // back gap divider
+    cushion(-0.70, 0.09, -0.425, -0.04, 0.42, 0.425, 0.034),
+    cushion( 0.04, 0.09, -0.425,  0.70, 0.42, 0.425, 0.034),
+    backCushion(-0.70, 0.42, -0.425, -0.04, 0.85, -0.13, 0.030),
+    backCushion( 0.04, 0.42, -0.425,  0.70, 0.85, -0.13, 0.030),
+    box(-0.70, 0.09, -0.425, -0.56, 0.65,  0.425),               // left armrest
+    box( 0.56, 0.09, -0.425,  0.70, 0.65,  0.425),               // right armrest
+  ], color: C_UPHOLSTERY, roughness: 0.85 },
+  { parts: [
+    cyl(-0.62, -0.37, 0, 0.09, 0.050, 8),
+    cyl( 0.62, -0.37, 0, 0.09, 0.050, 8),
+    cyl(-0.62,  0.37, 0, 0.09, 0.050, 8),
+    cyl( 0.62,  0.37, 0, 0.09, 0.050, 8),
+  ], color: C_WOOD_DK, roughness: 0.60 },
+])
 
 // ─── CHAISE LOUNGE  1.80 × 0.80 × 0.85 ──────────────────────────────────────
 // Long seat (full length), back only on one end, raised head-end rest.
