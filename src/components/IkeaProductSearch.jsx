@@ -41,16 +41,6 @@ function looksLikeCode(v) {
     /^\d{7,8}$/.test(v.replace(/[\s.]/g, ''))
 }
 
-// Build the placement spec for a selected item.
-// Prefers the catalog GLB of fType (exact furniture shape), then falls
-// back to generating a browser-side blob from the generic template.
-function buildModelUrl(fType, templateKey, w, d, h) {
-  if (fType) {
-    const spec = getFurnitureSpec(fType)
-    if (spec?.model) return spec.model
-  }
-  return generateModelBlobUrl(templateKey, w, d, h)
-}
 
 function SearchForm() {
   const setPendingPlacement = useStore((s) => s.setPendingPlacement)
@@ -103,19 +93,19 @@ function SearchForm() {
     const w = selected.w / 100
     const d = selected.d / 100
     const h = selected.h / 100
-    const tmpl     = TEMPLATES[selected.t] ?? TEMPLATES.sofa
-    const modelUrl = buildModelUrl(selected.fType, selected.t, w, d, h)
-    // Use the catalog spec color when reusing an existing GLB.
-    const color = selected.fType
-      ? (getFurnitureSpec(selected.fType)?.color ?? tmpl.hex)
-      : tmpl.hex
 
+    const fSpec = selected.fType ? getFurnitureSpec(selected.fType) : null
+    const tmpl  = TEMPLATES[selected.t] ?? TEMPLATES.sofa
+
+    // If there's a catalog spec, set type = fType so CanvasArea can call
+    // addFurniture(type) — same path as the sidebar, guaranteed to load the GLB.
+    // Otherwise fall back to addFurnitureWithSpec with a browser-generated blob.
     setPendingPlacement({
-      type:  `custom-${selected.t}-${Date.now()}`,
+      type:  fSpec ? selected.fType : `custom-${selected.t}-${Date.now()}`,
       label: selected.n,
       width: w, depth: d, height: h,
-      color,
-      model: modelUrl,
+      color: fSpec?.color ?? tmpl.hex,
+      model: fSpec?.model ?? generateModelBlobUrl(selected.t, w, d, h),
     })
   }
 

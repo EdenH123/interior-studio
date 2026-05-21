@@ -27,6 +27,7 @@ import CalibrationOverlay from './canvas/CalibrationOverlay'
 import CalibrationPrompt from './canvas/CalibrationPrompt'
 import { detectRooms } from './canvas/roomDetection'
 import { DEFAULT_ROOM_FILL, getFloorMaterial, materialOverlayFill } from './canvas/floorMaterials'
+import { getFurnitureSpec } from './canvas/furnitureCatalog'
 import { SNAP_RADIUS_SCREEN, WORLD_HALF, GRID_SIZE, snapTo90, findNearestSnapPoint } from './canvas/constants'
 import { snapToGrid } from '../hooks/useViewport'
 import HudOverlay from './canvas/HudOverlay'
@@ -55,6 +56,7 @@ export default function CanvasArea() {
   const dragGhost = useStore((s) => s.dragGhost)
   const pendingPlacement = useStore((s) => s.pendingPlacement)
   const clearPendingPlacement = useStore((s) => s.clearPendingPlacement)
+  const addFurniture         = useStore((s) => s.addFurniture)
   const addFurnitureWithSpec = useStore((s) => s.addFurnitureWithSpec)
   const aiProposal = useStore((s) => s.aiProposal)
   const selection = useStore((s) => s.selection)
@@ -120,7 +122,13 @@ export default function CanvasArea() {
               const pos = stageRef.current?.getRelativePointerPosition()
               if (pos) {
                 const snapped = snapToGrid(pos, GRID_SIZE)
-                addFurnitureWithSpec(pendingPlacement, snapped.x, snapped.y)
+                // If the type is a known catalog entry, use addFurniture (same
+                // path as the sidebar drag) so the pre-built GLB always loads.
+                if (getFurnitureSpec(pendingPlacement.type)) {
+                  addFurniture(pendingPlacement.type, snapped.x, snapped.y)
+                } else {
+                  addFurnitureWithSpec(pendingPlacement, snapped.x, snapped.y)
+                }
                 clearPendingPlacement()
                 return
               }
