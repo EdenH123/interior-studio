@@ -119,6 +119,7 @@ interior-studio/
 │   │   ├── useWalkthrough.js    # PointerLockControls hook — physics (gravity/jump/wall-collision) wired to stateRef.current.onFrame
 │   │   ├── useApiKey.js         # sessionStorage-backed [key, setKey] for the Anthropic API key — never persisted
 │   │   ├── useAiProposalSync.js # watches the latest assistant message; parses ```json → validates → diffs → setAiProposal; returns helpers for the panel UI
+│   │   ├── useFurnitureDrop3D.js  # 3D sidebar drag-drop: furniture (floor raycast + 0.5m snap) + openings (wall raycast → wallPositionFrom → addOpening); exports wallPositionFrom for tests
 │   │   └── useThree.js          # the only file outside viewer3d/ that imports `three`; owns scene/camera/renderer/controls/RAF/resize, reconciles walls + furniture + rooms from the store via useEffect
 │   ├── store/
 │   │   ├── useStore.js          # composer: imports slices, wires persist + zundo, holds loadProject + getSelectedFurniture
@@ -472,6 +473,12 @@ interior-studio/
   - **LevelsPanel relocated**: moved to the top of the sidebar (above the Elements header) so it's the first visible element. Added a tooltip and a single-floor empty-state hint ("Single floor · press + to add a level").
   - Total: 389 tests, all green. Build green.
 
+- [x] Session 31: PDF export, 3D opening drop, multi-select room materials (2026-05-21)
+  - **PDF export** (`useProjectIO.js` + `Toolbar.jsx`): A4 landscape PDF with floor plan image + a drawn scale bar (1 m marker sized to the current viewport zoom via `stage.scaleX() * pixelRatio`). jsPDF + html2canvas lazy-loaded via dynamic `import()` so the main bundle stays at ~637 kB gzip. `Export PDF` button added to toolbar.
+  - **3D opening drop** (`useFurnitureDrop3D.js` extended): Door and Window tiles can now be dragged directly onto the 3D view. `onDragOver` raycasts against wall meshes (walks up parent chain to handle wall-overlay children), shows a translucent blue slab ghost positioned at the wall face (correctly aligned to the wall's angle and sill height). `wallPositionFrom(wallId, threePoint)` projects the hit point onto the Konva wall to get 0–1 position; clamped to 0.01–0.99. `onDrop` calls `addOpening(type, wallId, position)` and toasts on failure. Ghost kind tracked via `ghostKindRef` to handle transitions between furniture (floor) and opening (wall) ghosts. 6 new `wallPositionFrom` unit tests.
+  - **Multi-select room materials** (`MultiSelectProps.jsx` + `PropertiesPanel.jsx`): When all selected items are rooms, the properties panel shows shared Floor material and Ceiling material pickers. Pickers show no active selection when rooms have differing materials (same `undefined → null` pattern as multi-furniture). `roomMeta` + `updateRoomMeta` now passed through from PropertiesPanel.
+  - Total: 396 tests, all green. Build green.
+
 ### 🚧 In Progress
 - (nothing active)
 
@@ -479,9 +486,7 @@ interior-studio/
 - [ ] Further GLB quality: Poly Pizza and other real-model sources were inaccessible this session. When network access allows, swap additional items (sofa, bed, etc.) for real CC0 geometry beyond SheenChair.
 - [ ] Lighting: LightingProps material/color picker (add a warm color preset row alongside the Kelvin slider).
 - [ ] AI prompt caching — split static system prompt from dynamic project snapshot via Anthropic `cache_control` blocks.
-- [ ] AI prompt caching — the system prompt's role + data-model doc is static across turns; only the project snapshot changes. Splitting these via Anthropic's `cache_control` blocks would cut tokens on multi-turn chats.
 - [ ] AI markdown rendering — the chat transcript shows plain whitespace-preserved text today; rendering headings + lists + code blocks would make responses more scannable.
-- [ ] PDF export with a printed scale bar — PNG round-trip is in place; PDF is a separate code path (paged, vector-friendly).
 - [ ] Underlay selection from 3D (today 3D picking only finds walls / furniture / rooms; underlay is a 2D-only concept)
 
 ## Key Data Structures

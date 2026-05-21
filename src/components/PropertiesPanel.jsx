@@ -48,6 +48,8 @@ export default function PropertiesPanel() {
       kind={commonKind(selection)}
       furniture={furniture}
       updateFurniture={updateFurniture}
+      roomMeta={roomMeta}
+      updateRoomMeta={updateRoomMeta}
     />
   } else if (single?.kind === 'wall') {
     const w = walls.find((x) => x.id === single.id)

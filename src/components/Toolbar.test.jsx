@@ -5,7 +5,7 @@ import Toolbar from './Toolbar'
 vi.mock('../store/useStore', () => ({ default: vi.fn() }))
 vi.mock('../hooks/useProjectIO', () => ({
   default: () => ({
-    exportPng: vi.fn(), exportJson: vi.fn(), openJson: vi.fn(),
+    exportPng: vi.fn(), exportPdf: vi.fn(), exportJson: vi.fn(), openJson: vi.fn(),
     importInputRef: { current: null }, handleImportFile: vi.fn(),
   }),
 }))
@@ -62,5 +62,10 @@ describe('Toolbar', () => {
     render(<Toolbar />)
     expect(screen.getByTitle('Undo (Ctrl/Cmd+Z)')).toBeInTheDocument()
     expect(screen.getByTitle('Redo (Ctrl/Cmd+Shift+Z)')).toBeInTheDocument()
+  })
+
+  it('renders Export PDF button', () => {
+    render(<Toolbar />)
+    expect(screen.getByText('Export PDF')).toBeInTheDocument()
   })
 })

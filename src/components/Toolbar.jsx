@@ -41,7 +41,7 @@ export default function Toolbar() {
   const select = useStore((s) => s.select)
   const pushToast = useStore((s) => s.pushToast)
   const fileRef = useRef(null)
-  const { exportPng, exportJson, openJson, importInputRef, handleImportFile } = useProjectIO()
+  const { exportPng, exportPdf, exportJson, openJson, importInputRef, handleImportFile } = useProjectIO()
   const { canUndo, canRedo, undo, redo } = useUndoRedo()
 
   async function handleFile(e) {
@@ -111,6 +111,10 @@ export default function Toolbar() {
       <button type="button" onClick={exportPng}
         className="text-xs font-mono px-3 py-1.5 rounded border bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500">
         Export PNG
+      </button>
+      <button type="button" onClick={exportPdf}
+        className="text-xs font-mono px-3 py-1.5 rounded border bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500">
+        Export PDF
       </button>
       <button type="button" onClick={underlayClick}
         className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${

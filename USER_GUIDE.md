@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-21_  <!-- fullscreen 3D, ceilings, 3D furniture drag, zoom-drag fix -->
+_Last updated: 2026-05-21_  <!-- PDF export, 3D opening drop, multi-select room materials -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -210,11 +210,17 @@ You can select more than one item at a time in three ways:
 - **Ctrl/Cmd+A** — selects every visible item at once (walls, furniture,
   openings, underlay — only on layers that are currently shown).
 
-With multiple items selected, the right panel shows a count breakdown
-by type (e.g. "2 walls, 1 furniture"). If all selected items are
-furniture, a shared **Rotation** control appears; rotating it applies to
-every piece relative to its own centre. **`Del`** / **`Backspace`**
-removes all selected items at once.
+With multiple items selected, the right panel shows shared editing controls
+based on what's selected:
+
+- **All furniture** — shared Rotation control (applies to every piece
+  relative to its own centre) and a Material picker (applies to all).
+- **All rooms** — shared **Floor material** and **Ceiling material** pickers
+  that apply to every selected room at once. Swatches show no active
+  selection when the rooms have different materials currently.
+- **Mixed types** — count breakdown only (e.g. "2 walls, 1 furniture").
+
+**`Del`** / **`Backspace`** removes all selected items at once.
 
 Dragging any one selected furniture piece moves **all** selected
 furniture by the same offset (walls and openings are not drag-moved in
@@ -507,6 +513,21 @@ piece shows up correctly when you switch back to 2D. If no floor plane is
 found under the cursor (e.g. dragging over a wall or empty air), the ghost
 disappears and nothing is placed.
 
+### Placing doors and windows directly in 3D
+
+Door and window tiles from the **Openings** group can also be dragged
+straight onto the 3D view:
+
+1. **Drag** a Door or Window tile from the sidebar and move it over the 3D view.
+2. Hover over a wall — a **translucent blue slab** appears on the wall face at
+   the cursor position to show where the opening will land.
+3. **Drop** to place. The opening is cut into the wall exactly as if you had
+   placed it in 2D. Width and sill-height default to catalog values and can be
+   adjusted in the properties panel afterwards.
+
+If you hover over empty space (no wall within cursor range) the ghost
+disappears and a toast tells you to aim at a wall.
+
 ### Selection is bidirectional
 
 Selection is synchronised between the 2D and 3D views:
@@ -715,6 +736,12 @@ The top bar has three save/export buttons:
   at 2× resolution. Includes the dark backdrop, grid, walls, furniture,
   rooms, and the underlay if one is loaded. Filename is
   `interior-studio-{timestamp}.png`.
+- **Export PDF** — exports the floor plan as an A4 landscape PDF. The
+  image fills the page with a 10 mm margin. A **scale bar** at the
+  bottom left shows how many millimetres on the page equal 1 metre in
+  the real world (based on the current zoom level). The date is printed
+  in the footer. jsPDF loads on-demand the first time you click this
+  button.
 
 `.studio.json` files are versioned for future compatibility. The
 current format is version 1; if you open a file from a newer version

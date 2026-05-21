@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { FURNITURE_MATERIALS, resolveFurnitureMaterialId } from './furnitureMaterials'
+import { FLOOR_MATERIALS, resolveFloorMaterialId } from './floorMaterials'
+import { CEILING_MATERIALS, resolveCeilingMaterialId } from './ceilingMaterials'
 import MaterialPicker from './MaterialPicker'
 
 // Properties panel shown when multiple items are selected.
 // If all selected items share the same kind, shows editable common fields.
 // For multiple furniture: rotation (applied to all) + material picker.
-export default function MultiSelectProps({ items, kind, furniture, updateFurniture }) {
+// For multiple rooms: floor + ceiling material pickers (apply to all).
+export default function MultiSelectProps({ items, kind, furniture, updateFurniture, roomMeta, updateRoomMeta }) {
   const count = items.length
 
   if (kind === 'furniture') {
@@ -13,6 +16,14 @@ export default function MultiSelectProps({ items, kind, furniture, updateFurnitu
       ids={items.map((i) => i.id)}
       furniture={furniture}
       updateFurniture={updateFurniture}
+    />
+  }
+
+  if (kind === 'room') {
+    return <MultiRoomProps
+      ids={items.map((i) => i.id)}
+      roomMeta={roomMeta ?? {}}
+      updateRoomMeta={updateRoomMeta ?? (() => {})}
     />
   }
 
@@ -33,6 +44,35 @@ export default function MultiSelectProps({ items, kind, furniture, updateFurnitu
         ))}
       </div>
       <p className="text-gray-600 text-[11px] mt-3">Select items of the same type to edit shared properties.</p>
+    </div>
+  )
+}
+
+function MultiRoomProps({ ids, roomMeta, updateRoomMeta }) {
+  const floorMats = ids.map((id) => roomMeta[id]?.floorMaterial ?? null)
+  const ceilMats  = ids.map((id) => roomMeta[id]?.ceilingMaterial ?? null)
+  const commonFloor = floorMats.every((m) => m === floorMats[0]) ? floorMats[0] : undefined
+  const commonCeil  = ceilMats.every((m)  => m === ceilMats[0])  ? ceilMats[0]  : undefined
+
+  return (
+    <div>
+      <p className="text-gray-400 text-xs mb-3">{ids.length} rooms</p>
+      <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Floor material (all)</div>
+      <MaterialPicker
+        materials={FLOOR_MATERIALS}
+        currentId={commonFloor === undefined ? null : commonFloor}
+        resolveId={resolveFloorMaterialId}
+        onChange={(matId) => ids.forEach((roomId) => updateRoomMeta(roomId, { floorMaterial: matId }))}
+      />
+      <div className="mt-3">
+        <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Ceiling material (all)</div>
+        <MaterialPicker
+          materials={CEILING_MATERIALS}
+          currentId={commonCeil === undefined ? null : commonCeil}
+          resolveId={resolveCeilingMaterialId}
+          onChange={(matId) => ids.forEach((roomId) => updateRoomMeta(roomId, { ceilingMaterial: matId }))}
+        />
+      </div>
     </div>
   )
 }

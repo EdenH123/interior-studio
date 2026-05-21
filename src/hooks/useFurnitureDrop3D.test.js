@@ -1,7 +1,30 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// wallPositionFrom reads walls via useStore.getState() — mock the store.
+vi.mock('../store/useStore', () => ({
+  default: Object.assign(
+    vi.fn((sel) => sel(_storeState)),
+    { getState: () => _storeState },
+  ),
+}))
+vi.mock('../components/Sidebar', () => ({
+  FURNITURE_DRAG_MIME: 'application/x-interior-studio-furniture',
+}))
+vi.mock('../components/canvas/openingsCatalog', () => ({
+  OPENING_DRAG_MIME: 'application/x-interior-studio-opening',
+  getOpeningSpec: vi.fn(),
+}))
+vi.mock('../components/canvas/furnitureCatalog', () => ({
+  getFurnitureSpec: vi.fn(),
+}))
+
+import { wallPositionFrom } from './useFurnitureDrop3D'
 
 // Unit tests for the coordinate-conversion math in useFurnitureDrop3D.
 // The hook uses K2T = 0.02 (1 Konva px = 0.02 Three units, because 50px=1m).
+
+let _storeState = { walls: [] }
+beforeEach(() => { _storeState = { walls: [] } })
 
 const K2T = 0.02
 
@@ -48,5 +71,44 @@ describe('3D drop coordinate conversion', () => {
     const konva = threeToKonva(0.5, 0.5)
     expect(konva.x).toBeCloseTo(25)
     expect(konva.y).toBeCloseTo(25)
+  })
+})
+
+describe('wallPositionFrom — 3D hit point → 0–1 wall position', () => {
+  it('returns 0.5 for midpoint of horizontal wall', () => {
+    // Wall: Konva (0,0)→(100,0) = 2 m at angle 0°.
+    // Hit at Three (1.0, *, 0) = Konva (50, 0) = midpoint.
+    _storeState = { walls: [{ id: 'w1', x1: 0, y1: 0, x2: 100, y2: 0 }] }
+    expect(wallPositionFrom('w1', { x: 1.0, z: 0 })).toBeCloseTo(0.5)
+  })
+
+  it('returns 0.25 for quarter-point along horizontal wall', () => {
+    // Konva x=25 = 25% of 100 px wall → Three x=0.5
+    _storeState = { walls: [{ id: 'w1', x1: 0, y1: 0, x2: 100, y2: 0 }] }
+    expect(wallPositionFrom('w1', { x: 0.5, z: 0 })).toBeCloseTo(0.25)
+  })
+
+  it('returns 0.5 for midpoint of vertical wall', () => {
+    // Wall: Konva (0,0)→(0,100) = 2 m at 90°.
+    // Hit at Three (0, *, 1.0) = Konva (0, 50) = midpoint.
+    _storeState = { walls: [{ id: 'w1', x1: 0, y1: 0, x2: 0, y2: 100 }] }
+    expect(wallPositionFrom('w1', { x: 0, z: 1.0 })).toBeCloseTo(0.5)
+  })
+
+  it('returns 0.5 when wall id is not found', () => {
+    _storeState = { walls: [] }
+    expect(wallPositionFrom('missing', { x: 1, z: 1 })).toBe(0.5)
+  })
+
+  it('clamps hit before wall start to 0.01', () => {
+    _storeState = { walls: [{ id: 'w1', x1: 0, y1: 0, x2: 100, y2: 0 }] }
+    // Three x=-1 → Konva x=-50, before the wall start at x=0
+    expect(wallPositionFrom('w1', { x: -1, z: 0 })).toBe(0.01)
+  })
+
+  it('clamps hit past wall end to 0.99', () => {
+    _storeState = { walls: [{ id: 'w1', x1: 0, y1: 0, x2: 100, y2: 0 }] }
+    // Three x=3 → Konva x=150, past wall end at x=100
+    expect(wallPositionFrom('w1', { x: 3, z: 0 })).toBe(0.99)
   })
 })
