@@ -120,6 +120,93 @@ function merge(parts) {
   return { positions, normals, indices }
 }
 
+// Seat cushion: subdivided top (+Y) face with smooth dome, flat sides.
+// Bump is sin(πu)·sin(πv) so it is exactly 0 at all edges — no seams.
+function cushion(x1, y1, z1, x2, y2, z2, bulge = 0.04, nX = 6, nZ = 4) {
+  const pos = [], nor = [], idx = []
+  const w = x2 - x1, d = z2 - z1
+  const stride = nX + 1
+  // Store each vertex as [x,y,z,nx,ny,nz]
+  const verts = []
+  for (let iz = 0; iz <= nZ; iz++) {
+    for (let ix = 0; ix <= nX; ix++) {
+      const u = ix / nX, v = iz / nZ
+      const b    = bulge * Math.sin(Math.PI * u) * Math.sin(Math.PI * v)
+      const dfdx = bulge * (Math.PI / w) * Math.cos(Math.PI * u) * Math.sin(Math.PI * v)
+      const dfdz = bulge * (Math.PI / d) * Math.sin(Math.PI * u) * Math.cos(Math.PI * v)
+      const ilen = 1 / Math.sqrt(dfdx * dfdx + 1 + dfdz * dfdz)
+      verts.push(x1 + u * w, y2 + b, z1 + v * d, -dfdx * ilen, ilen, -dfdz * ilen)
+    }
+  }
+  const V = (i) => verts.slice(i * 6, i * 6 + 6)
+  for (let iz = 0; iz < nZ; iz++) {
+    for (let ix = 0; ix < nX; ix++) {
+      const i00 = iz * stride + ix, i01 = i00 + 1
+      const i10 = (iz + 1) * stride + ix, i11 = i10 + 1
+      const b = pos.length / 3
+      for (const i of [i00, i01, i11, i10]) {
+        const v = V(i); pos.push(v[0], v[1], v[2]); nor.push(v[3], v[4], v[5])
+      }
+      idx.push(b, b+1, b+2, b, b+2, b+3)
+    }
+  }
+  const flat = (pts, n) => {
+    const b = pos.length / 3
+    pts.forEach(p => pos.push(...p))
+    for (let i = 0; i < 4; i++) nor.push(...n)
+    idx.push(b, b+1, b+2, b, b+2, b+3)
+  }
+  flat([[x2,y1,z1],[x2,y2,z1],[x2,y2,z2],[x2,y1,z2]], [1,0,0])
+  flat([[x1,y1,z2],[x1,y2,z2],[x1,y2,z1],[x1,y1,z1]], [-1,0,0])
+  flat([[x1,y1,z2],[x2,y1,z2],[x2,y1,z1],[x1,y1,z1]], [0,-1,0])
+  flat([[x1,y1,z2],[x2,y1,z2],[x2,y2,z2],[x1,y2,z2]], [0,0,1])
+  flat([[x2,y1,z1],[x1,y1,z1],[x1,y2,z1],[x2,y2,z1]], [0,0,-1])
+  return { positions: pos, normals: nor, indices: idx }
+}
+
+// Back cushion: subdivided front (+Z) face with smooth dome, flat sides.
+// Use for vertically-mounted back cushions that face the viewer.
+function backCushion(x1, y1, z1, x2, y2, z2, bulge = 0.04, nX = 6, nY = 4) {
+  const pos = [], nor = [], idx = []
+  const w = x2 - x1, h = y2 - y1
+  const stride = nX + 1
+  const verts = []
+  for (let iy = 0; iy <= nY; iy++) {
+    for (let ix = 0; ix <= nX; ix++) {
+      const u = ix / nX, v = iy / nY
+      const b    = bulge * Math.sin(Math.PI * u) * Math.sin(Math.PI * v)
+      const dfdx = bulge * (Math.PI / w) * Math.cos(Math.PI * u) * Math.sin(Math.PI * v)
+      const dfdy = bulge * (Math.PI / h) * Math.sin(Math.PI * u) * Math.cos(Math.PI * v)
+      const ilen = 1 / Math.sqrt(dfdx * dfdx + dfdy * dfdy + 1)
+      verts.push(x1 + u * w, y1 + v * h, z2 + b, -dfdx * ilen, -dfdy * ilen, ilen)
+    }
+  }
+  const V = (i) => verts.slice(i * 6, i * 6 + 6)
+  for (let iy = 0; iy < nY; iy++) {
+    for (let ix = 0; ix < nX; ix++) {
+      const i00 = iy * stride + ix, i01 = i00 + 1
+      const i10 = (iy + 1) * stride + ix, i11 = i10 + 1
+      const b = pos.length / 3
+      for (const i of [i00, i01, i11, i10]) {
+        const v = V(i); pos.push(v[0], v[1], v[2]); nor.push(v[3], v[4], v[5])
+      }
+      idx.push(b, b+1, b+2, b, b+2, b+3)
+    }
+  }
+  const flat = (pts, n) => {
+    const b = pos.length / 3
+    pts.forEach(p => pos.push(...p))
+    for (let i = 0; i < 4; i++) nor.push(...n)
+    idx.push(b, b+1, b+2, b, b+2, b+3)
+  }
+  flat([[x2,y1,z2],[x2,y2,z2],[x2,y2,z1],[x2,y1,z1]], [1,0,0])
+  flat([[x1,y1,z1],[x1,y2,z1],[x1,y2,z2],[x1,y1,z2]], [-1,0,0])
+  flat([[x1,y2,z1],[x2,y2,z1],[x2,y2,z2],[x1,y2,z2]], [0,1,0])
+  flat([[x1,y1,z2],[x2,y1,z2],[x2,y1,z1],[x1,y1,z1]], [0,-1,0])
+  flat([[x2,y1,z1],[x1,y1,z1],[x1,y2,z1],[x2,y2,z1]], [0,0,-1])
+  return { positions: pos, normals: nor, indices: idx }
+}
+
 // ─── GLB writer ───────────────────────────────────────────────────────────────
 
 // color = [r, g, b, a] in linear space (0–1).
@@ -209,21 +296,22 @@ console.log('Generating furniture GLBs (v2 — high-detail procedural)…\n')
 console.log('  (chair.glb produced separately by process-sheenchair.mjs)\n')
 
 // ─── SOFA  2.0 × 0.9 × 0.85 ──────────────────────────────────────────────────
-// Three seat cushions + back cushion + two armrests + four stubby block feet.
+// Three domed seat cushions, three domed back cushions, arms, frame, feet.
 writeGLB('sofa', [
-  // three seat cushions (slight gap between each)
-  box(-1.00, 0.09, -0.45,  -0.37, 0.42,  0.45),
-  box(-0.31, 0.09, -0.45,   0.31, 0.42,  0.45),
-  box( 0.37, 0.09, -0.45,   1.00, 0.42,  0.45),
-  // back cushion full width, leaning slightly (simple slab)
-  box(-1.00, 0.42, -0.45,   1.00, 0.85, -0.13),
-  // left arm
-  box(-1.00, 0.09, -0.45,  -0.86, 0.65,  0.45),
-  // right arm
-  box( 0.86, 0.09, -0.45,   1.00, 0.65,  0.45),
   // base platform
-  box(-1.00,    0, -0.45,   1.00, 0.09,  0.45),
-  // four stubby feet (cylinders)
+  box(-1.00, 0, -0.45,  1.00, 0.09, 0.45),
+  // three seat cushions — domed top surfaces, 6px gap between each
+  cushion(-1.00, 0.09, -0.45, -0.38, 0.42, 0.45, 0.034),
+  cushion(-0.32, 0.09, -0.45,  0.32, 0.42, 0.45, 0.034),
+  cushion( 0.38, 0.09, -0.45,  1.00, 0.42, 0.45, 0.034),
+  // three back cushions — domed front faces
+  backCushion(-1.00, 0.42, -0.45, -0.38, 0.85, -0.15, 0.030),
+  backCushion(-0.32, 0.42, -0.45,  0.32, 0.85, -0.15, 0.030),
+  backCushion( 0.38, 0.42, -0.45,  1.00, 0.85, -0.15, 0.030),
+  // armrests
+  box(-1.00, 0.09, -0.45, -0.86, 0.65, 0.45),
+  box( 0.86, 0.09, -0.45,  1.00, 0.65, 0.45),
+  // four stubby cylinder feet
   cyl(-0.88, -0.38, 0, 0.09, 0.055, 8),
   cyl( 0.88, -0.38, 0, 0.09, 0.055, 8),
   cyl(-0.88,  0.38, 0, 0.09, 0.055, 8),
@@ -232,16 +320,15 @@ writeGLB('sofa', [
 
 // ─── ARMCHAIR  0.9 × 0.9 × 0.85 ──────────────────────────────────────────────
 writeGLB('armchair', [
-  // seat cushion
-  box(-0.45, 0.09, -0.45,   0.45, 0.42,  0.45),
-  // back cushion
-  box(-0.45, 0.42, -0.45,   0.45, 0.85, -0.13),
-  // left arm
-  box(-0.45, 0.09, -0.45,  -0.33, 0.65,  0.45),
-  // right arm
-  box( 0.33, 0.09, -0.45,   0.45, 0.65,  0.45),
   // base platform
-  box(-0.45,    0, -0.45,   0.45, 0.09,  0.45),
+  box(-0.45, 0, -0.45, 0.45, 0.09, 0.45),
+  // seat cushion — domed top
+  cushion(-0.45, 0.09, -0.45, 0.45, 0.42, 0.45, 0.030),
+  // back cushion — domed front face
+  backCushion(-0.45, 0.42, -0.45, 0.45, 0.85, -0.13, 0.028),
+  // armrests
+  box(-0.45, 0.09, -0.45, -0.33, 0.65, 0.45),
+  box( 0.33, 0.09, -0.45,  0.45, 0.65, 0.45),
   // four stubby cylinder feet
   cyl(-0.38, -0.38, 0, 0.09, 0.04, 8),
   cyl( 0.38, -0.38, 0, 0.09, 0.04, 8),
@@ -301,18 +388,18 @@ writeGLB('desk', [
 // ─── BED  2.0 × 1.6 × 0.6 ────────────────────────────────────────────────────
 writeGLB('bed', [
   // base frame
-  box(-1.00,    0, -0.80,   1.00, 0.22,  0.80),
-  // mattress (slightly narrower)
-  box(-0.97, 0.22, -0.77,   0.97, 0.46,  0.77),
-  // two pillows at head end
-  box(-0.80, 0.46, -0.76,  -0.05, 0.56, -0.46),
-  box( 0.05, 0.46, -0.76,   0.80, 0.56, -0.46),
+  box(-1.00, 0, -0.80,  1.00, 0.22, 0.80),
+  // mattress — slight dome on top surface
+  cushion(-0.97, 0.22, -0.77,  0.97, 0.46, 0.77, 0.018, 8, 6),
+  // two pillows — more pronounced dome
+  cushion(-0.80, 0.46, -0.76, -0.05, 0.56, -0.46, 0.030, 4, 3),
+  cushion( 0.05, 0.46, -0.76,  0.80, 0.56, -0.46, 0.030, 4, 3),
   // headboard (panelled)
-  box(-1.00, 0.22, -0.80,   1.00, 0.60, -0.74),
-  box(-0.96, 0.25, -0.75,  -0.04, 0.58, -0.74),
-  box( 0.04, 0.25, -0.75,   0.96, 0.58, -0.74),
+  box(-1.00, 0.22, -0.80,  1.00, 0.60, -0.74),
+  box(-0.96, 0.25, -0.75, -0.04, 0.58, -0.74),
+  box( 0.04, 0.25, -0.75,  0.96, 0.58, -0.74),
   // footboard (shorter)
-  box(-1.00, 0.22,  0.74,   1.00, 0.36,  0.80),
+  box(-1.00, 0.22,  0.74,  1.00, 0.36, 0.80),
   // four corner post cylinders
   cyl(-0.98, -0.78, 0, 0.60, 0.045, 8),
   cyl( 0.98, -0.78, 0, 0.60, 0.045, 8),

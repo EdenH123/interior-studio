@@ -81,6 +81,91 @@ function merge(parts) {
   return { positions, normals, indices }
 }
 
+// Seat cushion: subdivided top (+Y) face with smooth dome.
+// Bump = sin(πu)·sin(πv) so it is exactly 0 at all edges — no seams.
+function cushion(x1, y1, z1, x2, y2, z2, bulge = 0.04, nX = 6, nZ = 4) {
+  const pos = [], nor = [], idx = []
+  const w = x2 - x1, d = z2 - z1
+  const stride = nX + 1
+  const verts = []
+  for (let iz = 0; iz <= nZ; iz++) {
+    for (let ix = 0; ix <= nX; ix++) {
+      const u = ix / nX, v = iz / nZ
+      const b    = bulge * Math.sin(Math.PI * u) * Math.sin(Math.PI * v)
+      const dfdx = bulge * (Math.PI / w) * Math.cos(Math.PI * u) * Math.sin(Math.PI * v)
+      const dfdz = bulge * (Math.PI / d) * Math.sin(Math.PI * u) * Math.cos(Math.PI * v)
+      const ilen = 1 / Math.sqrt(dfdx * dfdx + 1 + dfdz * dfdz)
+      verts.push(x1 + u * w, y2 + b, z1 + v * d, -dfdx * ilen, ilen, -dfdz * ilen)
+    }
+  }
+  const V = (i) => verts.slice(i * 6, i * 6 + 6)
+  for (let iz = 0; iz < nZ; iz++) {
+    for (let ix = 0; ix < nX; ix++) {
+      const i00 = iz * stride + ix, i01 = i00 + 1
+      const i10 = (iz + 1) * stride + ix, i11 = i10 + 1
+      const b = pos.length / 3
+      for (const i of [i00, i01, i11, i10]) {
+        const v = V(i); pos.push(v[0], v[1], v[2]); nor.push(v[3], v[4], v[5])
+      }
+      idx.push(b, b+1, b+2, b, b+2, b+3)
+    }
+  }
+  const flat = (pts, n) => {
+    const b = pos.length / 3
+    pts.forEach(p => pos.push(...p))
+    for (let i = 0; i < 4; i++) nor.push(...n)
+    idx.push(b, b+1, b+2, b, b+2, b+3)
+  }
+  flat([[x2,y1,z1],[x2,y2,z1],[x2,y2,z2],[x2,y1,z2]], [1,0,0])
+  flat([[x1,y1,z2],[x1,y2,z2],[x1,y2,z1],[x1,y1,z1]], [-1,0,0])
+  flat([[x1,y1,z2],[x2,y1,z2],[x2,y1,z1],[x1,y1,z1]], [0,-1,0])
+  flat([[x1,y1,z2],[x2,y1,z2],[x2,y2,z2],[x1,y2,z2]], [0,0,1])
+  flat([[x2,y1,z1],[x1,y1,z1],[x1,y2,z1],[x2,y2,z1]], [0,0,-1])
+  return { positions: pos, normals: nor, indices: idx }
+}
+
+// Back cushion: subdivided front (+Z) face with smooth dome.
+function backCushion(x1, y1, z1, x2, y2, z2, bulge = 0.04, nX = 6, nY = 4) {
+  const pos = [], nor = [], idx = []
+  const w = x2 - x1, h = y2 - y1
+  const stride = nX + 1
+  const verts = []
+  for (let iy = 0; iy <= nY; iy++) {
+    for (let ix = 0; ix <= nX; ix++) {
+      const u = ix / nX, v = iy / nY
+      const b    = bulge * Math.sin(Math.PI * u) * Math.sin(Math.PI * v)
+      const dfdx = bulge * (Math.PI / w) * Math.cos(Math.PI * u) * Math.sin(Math.PI * v)
+      const dfdy = bulge * (Math.PI / h) * Math.sin(Math.PI * u) * Math.cos(Math.PI * v)
+      const ilen = 1 / Math.sqrt(dfdx * dfdx + dfdy * dfdy + 1)
+      verts.push(x1 + u * w, y1 + v * h, z2 + b, -dfdx * ilen, -dfdy * ilen, ilen)
+    }
+  }
+  const V = (i) => verts.slice(i * 6, i * 6 + 6)
+  for (let iy = 0; iy < nY; iy++) {
+    for (let ix = 0; ix < nX; ix++) {
+      const i00 = iy * stride + ix, i01 = i00 + 1
+      const i10 = (iy + 1) * stride + ix, i11 = i10 + 1
+      const b = pos.length / 3
+      for (const i of [i00, i01, i11, i10]) {
+        const v = V(i); pos.push(v[0], v[1], v[2]); nor.push(v[3], v[4], v[5])
+      }
+      idx.push(b, b+1, b+2, b, b+2, b+3)
+    }
+  }
+  const flat = (pts, n) => {
+    const b = pos.length / 3
+    pts.forEach(p => pos.push(...p))
+    for (let i = 0; i < 4; i++) nor.push(...n)
+    idx.push(b, b+1, b+2, b, b+2, b+3)
+  }
+  flat([[x2,y1,z2],[x2,y2,z2],[x2,y2,z1],[x2,y1,z1]], [1,0,0])
+  flat([[x1,y1,z1],[x1,y2,z1],[x1,y2,z2],[x1,y1,z2]], [-1,0,0])
+  flat([[x1,y2,z1],[x2,y2,z1],[x2,y2,z2],[x1,y2,z2]], [0,1,0])
+  flat([[x1,y1,z2],[x2,y1,z2],[x2,y1,z1],[x1,y1,z1]], [0,-1,0])
+  flat([[x2,y1,z1],[x1,y1,z1],[x1,y2,z1],[x2,y2,z1]], [0,0,-1])
+  return { positions: pos, normals: nor, indices: idx }
+}
+
 // ─── Multi-material GLB writer ────────────────────────────────────────────────
 // groups: Array of { parts: [...primitives], color: [r,g,b,a], roughness?, metallic? }
 // Each group becomes a separate GLTF mesh primitive with its own material.
@@ -212,11 +297,13 @@ console.log('Generating IKEA GLBs…\n')
 // EKTORP 2-seat sofa  W1.80 × D0.88 × H0.88
 writeGLB('ikea-ektorp-2', [
   { parts: [
-    box(-0.90, 0,    -0.44,  0.90, 0.50,  0.44),    // seat/frame body
-    box(-0.90, 0.50, -0.44, -0.72, 0.80,  0.44),    // left arm
-    box( 0.72, 0.50, -0.44,  0.90, 0.80,  0.44),    // right arm
-    box(-0.72, 0.50, -0.44,  0.72, 0.62,  0.44),    // seat cushion
-    box(-0.72, 0.62, -0.44,  0.72, 0.88, -0.24),    // back cushion
+    box(-0.90, 0,    -0.44,  0.90, 0.50,  0.44),           // seat frame / base
+    box(-0.90, 0.50, -0.44, -0.72, 0.80,  0.44),           // left arm
+    box( 0.72, 0.50, -0.44,  0.90, 0.80,  0.44),           // right arm
+    cushion(-0.90, 0.50, -0.44, -0.02, 0.64, 0.44, 0.030), // left seat cushion
+    cushion( 0.02, 0.50, -0.44,  0.90, 0.64, 0.44, 0.030), // right seat cushion
+    backCushion(-0.72, 0.62, -0.44, -0.02, 0.88, -0.24, 0.026), // left back cushion
+    backCushion( 0.02, 0.62, -0.44,  0.72, 0.88, -0.24, 0.026), // right back cushion
   ], color: C_CREAM, ...FABRIC },
   { parts: [
     cyl(-0.82,  0.36, 0, 0.06, 0.030, 8),
@@ -229,11 +316,15 @@ writeGLB('ikea-ektorp-2', [
 // EKTORP 3-seat sofa  W2.18 × D0.88 × H0.88
 writeGLB('ikea-ektorp-3', [
   { parts: [
-    box(-1.09, 0,    -0.44,  1.09, 0.50,  0.44),
-    box(-1.09, 0.50, -0.44, -0.91, 0.80,  0.44),
-    box( 0.91, 0.50, -0.44,  1.09, 0.80,  0.44),
-    box(-0.91, 0.50, -0.44,  0.91, 0.62,  0.44),
-    box(-0.91, 0.62, -0.44,  0.91, 0.88, -0.24),
+    box(-1.09, 0,    -0.44,  1.09, 0.50,  0.44),           // seat frame
+    box(-1.09, 0.50, -0.44, -0.91, 0.80,  0.44),           // left arm
+    box( 0.91, 0.50, -0.44,  1.09, 0.80,  0.44),           // right arm
+    cushion(-0.91, 0.50, -0.44, -0.32, 0.64, 0.44, 0.030), // left seat cushion
+    cushion(-0.26, 0.50, -0.44,  0.26, 0.64, 0.44, 0.030), // centre seat cushion
+    cushion( 0.32, 0.50, -0.44,  0.91, 0.64, 0.44, 0.030), // right seat cushion
+    backCushion(-0.91, 0.62, -0.44, -0.32, 0.88, -0.24, 0.026),
+    backCushion(-0.26, 0.62, -0.44,  0.26, 0.88, -0.24, 0.026),
+    backCushion( 0.32, 0.62, -0.44,  0.91, 0.88, -0.24, 0.026),
   ], color: C_CREAM, ...FABRIC },
   { parts: [
     cyl(-1.01,  0.36, 0, 0.06, 0.030, 8),
@@ -256,8 +347,8 @@ writeGLB('ikea-poang', [
     box(-0.41, 0.30, -0.41,  0.41, 0.34, -0.36),    // high stretcher
   ], color: C_POANG_WOOD, ...WOOD },
   { parts: [
-    box(-0.35, 0.42, -0.12,  0.35, 0.60,  0.41),    // seat cushion
-    box(-0.35, 0.58, -0.41,  0.35, 1.00, -0.12),    // back cushion
+    cushion(-0.35, 0.42, -0.12, 0.35, 0.60, 0.41, 0.025),       // seat cushion
+    backCushion(-0.35, 0.58, -0.41, 0.35, 1.00, -0.12, 0.022),  // back cushion
   ], color: C_POANG_CUSH, ...FABRIC },
 ])
 
@@ -339,7 +430,7 @@ writeGLB('ikea-malm-bed-140', [
     box( 0.73, 0.24, -0.97,   0.80, 0.26,  0.97),   // right rail
   ], color: C_BIRCH, ...VENEER },
   { parts: [
-    box(-0.73, 0.26, -0.97,   0.73, 0.38,  0.97),   // mattress
+    cushion(-0.73, 0.26, -0.97, 0.73, 0.38, 0.97, 0.016, 8, 6),  // mattress
   ], color: C_MATTRESS, ...{ roughness: 0.85, metallic: 0.0 } },
 ])
 
@@ -353,7 +444,7 @@ writeGLB('ikea-malm-bed-160', [
     box( 0.805, 0.24, -0.97,   0.875, 0.26,  0.97),
   ], color: C_BIRCH, ...VENEER },
   { parts: [
-    box(-0.805, 0.26, -0.97,   0.805, 0.38,  0.97),
+    cushion(-0.805, 0.26, -0.97, 0.805, 0.38, 0.97, 0.016, 8, 6),  // mattress
   ], color: C_MATTRESS, ...{ roughness: 0.85, metallic: 0.0 } },
 ])
 
