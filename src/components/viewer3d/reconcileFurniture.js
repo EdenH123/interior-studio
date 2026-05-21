@@ -147,6 +147,7 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
   for (const [id, group] of meshMap) {
     if (!present.has(id)) {
       group.userData.cancelLoad?.()
+      if (group.userData.modelUrl?.startsWith('blob:')) URL.revokeObjectURL(group.userData.modelUrl)
       scene.remove(group)
       disposeSubtree(group)
       meshMap.delete(id)
