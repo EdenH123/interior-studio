@@ -47,6 +47,7 @@ export const createFurnitureSlice = (set) => ({
             width: spec.width, depth: spec.depth, height: spec.height,
             color: spec.color,
             model: spec.model ?? null,
+            partColors: {},
             levelId: activeLevel,
             ...lightFields,
             ...wallMountFields,

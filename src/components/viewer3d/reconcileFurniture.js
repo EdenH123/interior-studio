@@ -68,6 +68,8 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
     // the GLB's authored materials are left untouched.
     const tintColor    = f.material ? color : null
     const tintMatProps = furnitureMaterialPropsFor(f)  // { roughness, metallic, fabricOnly } | null
+    const partColors   = f.partColors ?? {}
+    const partColorsKey = JSON.stringify(partColors)
 
     let group = meshMap.get(f.id)
     if (!group) {
@@ -79,6 +81,8 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       group.userData.color = color
       group.userData.tintColor    = tintColor
       group.userData.tintMatProps = tintMatProps
+      group.userData.partColors   = partColors
+      group.userData.partColorsKey = partColorsKey
       group.userData.modelUrl = f.model ?? null
       scene.add(group)
       meshMap.set(f.id, group)
@@ -89,10 +93,13 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       const dimsChanged = !d || d.width !== f.width || d.depth !== f.depth || d.height !== f.height
       const tintChanged = group.userData.tintColor !== tintColor
         || group.userData.tintMatProps?.roughness !== tintMatProps?.roughness
+      const partColorsChanged = group.userData.partColorsKey !== partColorsKey
       group.userData.dims = { width: f.width, depth: f.depth, height: f.height }
       group.userData.tintColor    = tintColor
       group.userData.tintMatProps = tintMatProps
-      if (dimsChanged || (tintChanged && group.userData.childKind === 'model')) {
+      group.userData.partColors   = partColors
+      group.userData.partColorsKey = partColorsKey
+      if (dimsChanged || ((tintChanged || partColorsChanged) && group.userData.childKind === 'model')) {
         group.userData.color = color
         rebuildChild(group)
       } else if (group.userData.childKind === 'box') {
@@ -227,7 +234,7 @@ function populateLoadedModel(group) {
   })
   group.add(clone)
   group.userData.childKind = 'model'
-  applyTint(group)
+  applyPartTints(group)
   if (group.userData.highlighted) setObjectEmissive(clone, true)
 }
 
@@ -243,24 +250,28 @@ function clearChildren(group) {
   }
 }
 
-// Tints GLB meshes with the override color (and optionally roughness/metallic).
-// fabricOnly=true → only tint upholstery surfaces (roughness>0.70, metallic<0.1),
-// leaving wood legs and metal hardware at their authored values.
-// No-op when tintColor is null — keeps the GLB's authored multi-material look.
-function applyTint(group) {
-  const color     = group.userData.tintColor
-  if (!color) return
-  const props      = group.userData.tintMatProps   // { roughness, metallic, fabricOnly } | null
-  const fabricOnly = props?.fabricOnly ?? false
+// Applies per-part colors (by material name) and/or a global tint to GLB meshes.
+// Per-part colors take priority. Global tint (from material override) applies to
+// remaining parts (respecting fabricOnly). No color change if neither is set.
+function applyPartTints(group) {
+  const globalColor = group.userData.tintColor       // hex | null
+  const partColors  = group.userData.partColors ?? {} // { [matName]: hex | null }
+  const props       = group.userData.tintMatProps     // { roughness, metallic, fabricOnly } | null
+  const fabricOnly  = props?.fabricOnly ?? false
 
   group.traverse((node) => {
-    if (node === group) return
-    if (node.isMesh) {
-      const mats = Array.isArray(node.material) ? node.material : [node.material]
-      for (const mat of mats) {
-        if (!mat.isMeshStandardMaterial) continue
+    if (node === group || !node.isMesh) return
+    const mats = Array.isArray(node.material) ? node.material : [node.material]
+    for (const mat of mats) {
+      if (!mat.isMeshStandardMaterial) continue
+      const partColor = mat.name ? (partColors[mat.name] ?? null) : null
+      if (partColor) {
+        mat.color.set(partColor)
+        if (props?.roughness != null) mat.roughness = props.roughness
+        if (props?.metallic  != null) mat.metalness = props.metallic
+      } else if (globalColor) {
         if (fabricOnly && (mat.roughness < 0.70 || mat.metalness > 0.1)) continue
-        mat.color.set(color)
+        mat.color.set(globalColor)
         if (props?.roughness != null) mat.roughness = props.roughness
         if (props?.metallic  != null) mat.metalness = props.metallic
       }

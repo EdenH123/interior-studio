@@ -178,7 +178,7 @@ function writeGLB(name, groups) {
   let byteOffset   = 0
   let totalTris    = 0
 
-  for (const { parts, color, roughness = 0.75, metallic = 0.0 } of groups) {
+  for (const { parts, color, roughness = 0.75, metallic = 0.0, name } of groups) {
     const { positions, normals, indices } = merge(Array.isArray(parts) ? parts : [parts])
 
     const posF32 = new Float32Array(positions)
@@ -219,7 +219,8 @@ function writeGLB(name, groups) {
     bufViews.push({ buffer: 0, byteOffset, byteLength: idxBytes, target: 34963 })
     byteOffset += idxBytes + idxPad
 
-    materials.push({ pbrMetallicRoughness: { baseColorFactor: color, metallicFactor: metallic, roughnessFactor: roughness }, doubleSided: false })
+    const matName = name ?? `part${materials.length}`
+    materials.push({ name: matName, pbrMetallicRoughness: { baseColorFactor: color, metallicFactor: metallic, roughnessFactor: roughness }, doubleSided: false })
     primitives.push({ attributes: { POSITION: posAcc, NORMAL: nrmAcc }, indices: idxAcc, material: materials.length - 1, mode: 4 })
     chunks.push({ posF32, nrmF32, idxU16, idxPad })
   }
@@ -304,13 +305,13 @@ writeGLB('ikea-ektorp-2', [
     cushion( 0.02, 0.50, -0.44,  0.90, 0.64, 0.44, 0.030), // right seat cushion
     backCushion(-0.72, 0.62, -0.44, -0.02, 0.88, -0.24, 0.026), // left back cushion
     backCushion( 0.02, 0.62, -0.44,  0.72, 0.88, -0.24, 0.026), // right back cushion
-  ], color: C_CREAM, ...FABRIC },
+  ], color: C_CREAM, ...FABRIC, name: 'fabric' },
   { parts: [
     cyl(-0.82,  0.36, 0, 0.06, 0.030, 8),
     cyl( 0.82,  0.36, 0, 0.06, 0.030, 8),
     cyl(-0.82, -0.36, 0, 0.06, 0.030, 8),
     cyl( 0.82, -0.36, 0, 0.06, 0.030, 8),
-  ], color: C_DARK_LEG, ...WOOD },
+  ], color: C_DARK_LEG, ...WOOD, name: 'legs' },
 ])
 
 // EKTORP 3-seat sofa  W2.18 × D0.88 × H0.88
@@ -325,13 +326,13 @@ writeGLB('ikea-ektorp-3', [
     backCushion(-0.91, 0.62, -0.44, -0.32, 0.88, -0.24, 0.026),
     backCushion(-0.26, 0.62, -0.44,  0.26, 0.88, -0.24, 0.026),
     backCushion( 0.32, 0.62, -0.44,  0.91, 0.88, -0.24, 0.026),
-  ], color: C_CREAM, ...FABRIC },
+  ], color: C_CREAM, ...FABRIC, name: 'fabric' },
   { parts: [
     cyl(-1.01,  0.36, 0, 0.06, 0.030, 8),
     cyl( 1.01,  0.36, 0, 0.06, 0.030, 8),
     cyl(-1.01, -0.36, 0, 0.06, 0.030, 8),
     cyl( 1.01, -0.36, 0, 0.06, 0.030, 8),
-  ], color: C_DARK_LEG, ...WOOD },
+  ], color: C_DARK_LEG, ...WOOD, name: 'legs' },
 ])
 
 // POÄNG armchair  W0.82 × D0.82 × H1.00
@@ -345,37 +346,37 @@ writeGLB('ikea-poang', [
     box( 0.35, 0.42, -0.41,  0.41, 1.00, -0.30),    // right back post
     box(-0.41, 0.10, -0.41,  0.41, 0.14, -0.36),    // low stretcher
     box(-0.41, 0.30, -0.41,  0.41, 0.34, -0.36),    // high stretcher
-  ], color: C_POANG_WOOD, ...WOOD },
+  ], color: C_POANG_WOOD, ...WOOD, name: 'frame' },
   { parts: [
     cushion(-0.35, 0.42, -0.12, 0.35, 0.60, 0.41, 0.025),       // seat cushion
     backCushion(-0.35, 0.58, -0.41, 0.35, 1.00, -0.12, 0.022),  // back cushion
-  ], color: C_POANG_CUSH, ...FABRIC },
+  ], color: C_POANG_CUSH, ...FABRIC, name: 'fabric' },
 ])
 
 // LACK side table  W0.45 × D0.45 × H0.55
 writeGLB('ikea-lack-side', [
   { parts: [
     box(-0.225, 0.52, -0.225, 0.225, 0.55, 0.225),
-  ], color: C_WHITE, ...LACQUER },
+  ], color: C_WHITE, ...LACQUER, name: 'top' },
   { parts: [
     cyl(-0.175, -0.175, 0, 0.52, 0.022, 6),
     cyl( 0.175, -0.175, 0, 0.52, 0.022, 6),
     cyl(-0.175,  0.175, 0, 0.52, 0.022, 6),
     cyl( 0.175,  0.175, 0, 0.52, 0.022, 6),
-  ], color: C_LEGS_WHT, ...LACQUER },
+  ], color: C_LEGS_WHT, ...LACQUER, name: 'legs' },
 ])
 
 // LACK coffee table  W0.90 × D0.55 × H0.45
 writeGLB('ikea-lack-coffee', [
   { parts: [
     box(-0.45, 0.42, -0.275, 0.45, 0.45, 0.275),
-  ], color: C_WHITE, ...LACQUER },
+  ], color: C_WHITE, ...LACQUER, name: 'top' },
   { parts: [
     cyl(-0.38, -0.22, 0, 0.42, 0.022, 6),
     cyl( 0.38, -0.22, 0, 0.42, 0.022, 6),
     cyl(-0.38,  0.22, 0, 0.42, 0.022, 6),
     cyl( 0.38,  0.22, 0, 0.42, 0.022, 6),
-  ], color: C_LEGS_WHT, ...LACQUER },
+  ], color: C_LEGS_WHT, ...LACQUER, name: 'legs' },
 ])
 
 // BESTÅ TV unit 120cm  W1.20 × D0.40 × H0.64
@@ -386,15 +387,15 @@ writeGLB('ikea-besta-120', [
     cyl( 0.52,  0.16, 0, 0.05, 0.025, 6),
     cyl(-0.52, -0.16, 0, 0.05, 0.025, 6),
     cyl( 0.52, -0.16, 0, 0.05, 0.025, 6),
-  ], color: C_WHITE, ...LACQUER },
+  ], color: C_WHITE, ...LACQUER, name: 'body' },
   { parts: [
     box(-0.58, 0.02,  0.19, -0.04, 0.62,  0.21),    // left door
     box( 0.04, 0.02,  0.19,  0.58, 0.62,  0.21),    // right door
-  ], color: C_DOOR, ...DOOR_M },
+  ], color: C_DOOR, ...DOOR_M, name: 'doors' },
   { parts: [
     box(-0.50, 0.30,  0.20, -0.38, 0.32,  0.22),
     box( 0.38, 0.30,  0.20,  0.50, 0.32,  0.22),
-  ], color: C_DARK_HW, ...DARK_HW },
+  ], color: C_DARK_HW, ...DARK_HW, name: 'handles' },
 ])
 
 // BESTÅ TV unit 180cm  W1.80 × D0.40 × H0.64
@@ -405,17 +406,17 @@ writeGLB('ikea-besta-180', [
     cyl( 0.82,  0.16, 0, 0.05, 0.025, 6),
     cyl(-0.82, -0.16, 0, 0.05, 0.025, 6),
     cyl( 0.82, -0.16, 0, 0.05, 0.025, 6),
-  ], color: C_WHITE, ...LACQUER },
+  ], color: C_WHITE, ...LACQUER, name: 'body' },
   { parts: [
     box(-0.88, 0.02,  0.19, -0.34, 0.62,  0.21),
     box(-0.26, 0.02,  0.19,  0.26, 0.62,  0.21),
     box( 0.34, 0.02,  0.19,  0.88, 0.62,  0.21),
-  ], color: C_DOOR, ...DOOR_M },
+  ], color: C_DOOR, ...DOOR_M, name: 'doors' },
   { parts: [
     box(-0.80, 0.30,  0.20, -0.68, 0.32,  0.22),
     box(-0.08, 0.30,  0.20,  0.08, 0.32,  0.22),
     box( 0.68, 0.30,  0.20,  0.80, 0.32,  0.22),
-  ], color: C_DARK_HW, ...DARK_HW },
+  ], color: C_DARK_HW, ...DARK_HW, name: 'handles' },
 ])
 
 // ─── IKEA BEDROOM ─────────────────────────────────────────────────────────────
@@ -428,10 +429,10 @@ writeGLB('ikea-malm-bed-140', [
     box(-0.80, 0,     0.97,   0.80, 0.42,  1.045),  // footboard
     box(-0.80, 0.24, -0.97,  -0.73, 0.26,  0.97),   // left rail
     box( 0.73, 0.24, -0.97,   0.80, 0.26,  0.97),   // right rail
-  ], color: C_BIRCH, ...VENEER },
+  ], color: C_BIRCH, ...VENEER, name: 'frame' },
   { parts: [
     cushion(-0.73, 0.26, -0.97, 0.73, 0.38, 0.97, 0.016, 8, 6),  // mattress
-  ], color: C_MATTRESS, ...{ roughness: 0.85, metallic: 0.0 } },
+  ], color: C_MATTRESS, ...{ roughness: 0.85, metallic: 0.0 }, name: 'mattress' },
 ])
 
 // MALM bed 160cm  W1.75 × D2.09 × H0.90

@@ -46,8 +46,26 @@ export default function FurnitureProps({ item, onUpdate }) {
         </div>
       )}
 
+      {spec?.parts?.length > 0 && (
+        <div className="mt-3">
+          <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-2">Part colors</div>
+          <div className="space-y-1.5">
+            {spec.parts.map(({ key, label }) => (
+              <PartColorRow
+                key={key}
+                label={label}
+                value={item.partColors?.[key] ?? null}
+                onChange={(color) => onUpdate(item.id, {
+                  partColors: { ...(item.partColors ?? {}), [key]: color || null },
+                })}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-3">
-        <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Material</div>
+        <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Global material</div>
         <MaterialPicker
           materials={FURNITURE_MATERIALS}
           currentId={item.material}
@@ -57,7 +75,7 @@ export default function FurnitureProps({ item, onUpdate }) {
       </div>
 
       <p className="text-[10px] text-gray-500 mt-3 leading-snug">
-        Drag on canvas to move · drag the blue handle (or R / Shift+R) to rotate · Del to remove. Material override colors the 2D footprint and all 3D meshes (box fallback and loaded GLB).
+        Part colors override individual sections. Global material sets roughness/finish and tints parts without a color override.
       </p>
     </div>
   )
@@ -89,6 +107,32 @@ function MountHeightField({ item, onUpdate }) {
         className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-sm font-mono focus:border-blue-500 focus:outline-none"
       />
     </label>
+  )
+}
+
+function PartColorRow({ label, value, onChange }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-gray-400 text-[11px]">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <label className="relative cursor-pointer">
+          <div
+            className="w-5 h-5 rounded border border-gray-600"
+            style={{ background: value ?? '#888888' }}
+          />
+          <input
+            type="color"
+            value={value ?? '#888888'}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+          />
+        </label>
+        {value
+          ? <button onClick={() => onChange(null)} className="text-gray-500 hover:text-gray-300 text-[10px] leading-none">✕</button>
+          : <span className="text-gray-600 text-[10px]">default</span>
+        }
+      </div>
+    </div>
   )
 }
 
