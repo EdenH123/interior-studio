@@ -86,6 +86,8 @@ export const createFurnitureSlice = (set) => ({
           height: spec.height,
           color: spec.color ?? '#94a3b8',
           model: spec.model ?? null,
+          customModelId: spec.customModelId ?? null,
+          partColors: {},
           levelId: s.activeLevel ?? null,
         },
       ],

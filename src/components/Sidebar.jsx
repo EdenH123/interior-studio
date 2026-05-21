@@ -1,13 +1,17 @@
+import { useState } from 'react'
 import { CATEGORIES, FURNITURE } from './canvas/furnitureCatalog'
 import { OPENINGS, OPENING_DRAG_MIME } from './canvas/openingsCatalog'
 import useStore from '../store/useStore'
 import LayersPanel from './LayersPanel'
 import LevelsPanel from './LevelsPanel'
 import IkeaProductSearch from './IkeaProductSearch'
+import ImportModelModal from './ImportModelModal'
+import { CUSTOM_MODEL_DRAG_MIME } from '../hooks/useCustomModelDrop'
 
 export const FURNITURE_DRAG_MIME = 'application/x-interior-studio-furniture'
 
 export default function Sidebar() {
+  const [showImport, setShowImport] = useState(false)
   return (
     <aside className="w-60 shrink-0 bg-gray-900 border-r border-gray-700 flex flex-col">
       <LevelsPanel />
@@ -17,6 +21,7 @@ export default function Sidebar() {
       <IkeaProductSearch />
       <div className="flex-1 overflow-y-auto p-2 space-y-3">
         <OpeningsGroup />
+        <MyModelsGroup onImport={() => setShowImport(true)} />
         {CATEGORIES.map((cat) => (
           <CategoryGroup
             key={cat}
@@ -29,7 +34,87 @@ export default function Sidebar() {
       <div className="px-3 py-2 border-t border-gray-700 text-[11px] text-gray-500 font-mono leading-snug">
         drag a tile onto the canvas to place
       </div>
+      {showImport && <ImportModelModal onClose={() => setShowImport(false)} />}
     </aside>
+  )
+}
+
+function MyModelsGroup({ onImport }) {
+  const customModels    = useStore((s) => s.customModels)
+  const removeCustomModel = useStore((s) => s.removeCustomModel)
+  const setDragGhostCustom = useStore((s) => s.setDragGhostCustom)
+  const clearDragGhost    = useStore((s) => s.clearDragGhost)
+
+  return (
+    <div>
+      <div className="px-1 pb-1 flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-widest text-gray-500">My Models</span>
+        <button
+          onClick={onImport}
+          title="Import a .glb file"
+          className="text-gray-500 hover:text-gray-300 transition-colors text-[11px] leading-none px-1"
+        >
+          + Import
+        </button>
+      </div>
+      {customModels.length === 0 ? (
+        <p className="text-[10px] text-gray-600 px-1 pb-1 leading-snug">
+          Import a <span className="font-mono">.glb</span> from any AI 3D generator
+        </p>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {customModels.map((cm) => (
+            <CustomModelTile
+              key={cm.id}
+              model={cm}
+              onRemove={() => removeCustomModel(cm.id)}
+              onDragStart={() => setDragGhostCustom(cm)}
+              onDragEnd={clearDragGhost}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CustomModelTile({ model, onRemove, onDragStart, onDragEnd }) {
+  const aspect = model.width / model.depth
+  const boxW = aspect >= 1 ? 36 : 36 * aspect
+  const boxH = aspect >= 1 ? 36 / aspect : 36
+
+  function handleDragStart(e) {
+    e.dataTransfer.setData(CUSTOM_MODEL_DRAG_MIME, model.id)
+    e.dataTransfer.effectAllowed = 'copy'
+    onDragStart()
+  }
+
+  return (
+    <div
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={onDragEnd}
+      className="relative bg-gray-800 border border-gray-700 rounded p-2 cursor-grab active:cursor-grabbing hover:border-gray-500 transition-colors select-none group"
+      title={`${model.label} — ${model.width.toFixed(2)} × ${model.depth.toFixed(2)} m`}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); onRemove() }}
+        className="absolute top-1 right-1 text-gray-600 hover:text-red-400 text-[10px] leading-none opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Remove from library"
+      >
+        ✕
+      </button>
+      <div className="h-10 flex items-center justify-center">
+        <div
+          style={{ width: boxW, height: boxH, background: model.color }}
+          className="rounded-sm border border-black/30"
+        />
+      </div>
+      <div className="mt-1 text-[11px] text-gray-300 truncate">{model.label}</div>
+      <div className="text-[10px] text-gray-500 font-mono">
+        {model.width.toFixed(2)}×{model.depth.toFixed(2)}m
+      </div>
+    </div>
   )
 }
 

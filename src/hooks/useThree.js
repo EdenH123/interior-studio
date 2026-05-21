@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -16,6 +16,7 @@ import { isLightingType } from '../components/viewer3d/reconcileFurniture'
 import { computeLevelOffsets } from '../store/slices/levelsSlice'
 import { computeStairHolesForRooms } from '../components/viewer3d/stairFloorHoles'
 import { DEFAULT_CEILING_COLOR, getCeilingMaterial } from '../components/canvas/ceilingMaterials'
+import { getCustomModelUrl } from '../utils/customModelUrls'
 
 const CAMERA_FOV = 60
 const FLOOR_SIZE = 100
@@ -64,7 +65,8 @@ export default function useThree(containerRef) {
 
   const walls       = useStore((s) => s.walls)
   const openings    = useStore((s) => s.openings)
-  const furniture   = useStore((s) => s.furniture)
+  const furniture     = useStore((s) => s.furniture)
+  const customModels  = useStore((s) => s.customModels)
   const roomMeta    = useStore((s) => s.roomMeta)
   const selection   = useStore((s) => s.selection)
   const lighting    = useStore((s) => s.lighting)
@@ -231,15 +233,26 @@ export default function useThree(containerRef) {
   }, [walls, openings, levels, activeLevel, solo3d])
 
   // ── furniture + lights ───────────────────────────────────────────────────────
+  // Resolve custom-model blob URLs (created lazily from stored base64).
+  // Stable blob URL strings mean reconcileFurniture sees no change on re-renders.
+  const resolvedFurniture = useMemo(() => {
+    if (!customModels.length) return furniture
+    return furniture.map((f) => {
+      if (!f.customModelId) return f
+      const cm = customModels.find((m) => m.id === f.customModelId)
+      return cm ? { ...f, model: getCustomModelUrl(cm) } : f
+    })
+  }, [furniture, customModels])
+
   useEffect(() => {
     if (!stateRef.current) return
     const levelOffsets = computeLevelOffsets(levels)
     reconcileFurniture(
-      stateRef.current.scene, furniture, furnMeshes.current,
+      stateRef.current.scene, resolvedFurniture, furnMeshes.current,
       lightMap.current, lighting.lightsOn,
       { levelOffsets, activeLevelId: activeLevel, solo: solo3d },
     )
-  }, [furniture, lighting.lightsOn, levels, activeLevel, solo3d])
+  }, [resolvedFurniture, lighting.lightsOn, levels, activeLevel, solo3d])
 
   // ── rooms + ceilings ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -289,7 +302,7 @@ export default function useThree(containerRef) {
   useEffect(() => {
     if (!stateRef.current) return
     applySelectionHighlight(wallMeshes.current, furnMeshes.current, roomMeshes.current, selection)
-  }, [selection, walls, furniture, roomMeta])
+  }, [selection, walls, resolvedFurniture, roomMeta])
 
   // ── time of day → sun position + colour ─────────────────────────────────────
   useEffect(() => {

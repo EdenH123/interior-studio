@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import { FURNITURE_DRAG_MIME } from '../components/Sidebar'
 import { OPENING_DRAG_MIME, getOpeningSpec } from '../components/canvas/openingsCatalog'
 import { getFurnitureSpec } from '../components/canvas/furnitureCatalog'
+import { CUSTOM_MODEL_DRAG_MIME } from './useCustomModelDrop'
 
 // 1 Konva px = 0.02 Three units (50 px = 1 m)
 const K2T = 0.02
@@ -96,10 +97,12 @@ export default function useFurnitureDrop3D(containerRef, stateRef) {
   const ghostRef     = useRef(null)
   const ghostKindRef = useRef(null)  // 'furniture' | 'opening' | null
 
-  const addFurniture = useStore((s) => s.addFurniture)
-  const addOpening   = useStore((s) => s.addOpening)
-  const dragGhost    = useStore((s) => s.dragGhost)
-  const pushToast    = useStore((s) => s.pushToast)
+  const addFurniture         = useStore((s) => s.addFurniture)
+  const addFurnitureWithSpec = useStore((s) => s.addFurnitureWithSpec)
+  const addOpening           = useStore((s) => s.addOpening)
+  const dragGhost            = useStore((s) => s.dragGhost)
+  const customModels         = useStore((s) => s.customModels)
+  const pushToast            = useStore((s) => s.pushToast)
 
   function removeGhost() {
     if (ghostRef.current && stateRef.current) {
@@ -113,19 +116,22 @@ export default function useFurnitureDrop3D(containerRef, stateRef) {
 
   return {
     onDragOver(e) {
-      const isFurniture = e.dataTransfer.types.includes(FURNITURE_DRAG_MIME)
-      const isOpening   = e.dataTransfer.types.includes(OPENING_DRAG_MIME)
-      if (!isFurniture && !isOpening) return
+      const isFurniture   = e.dataTransfer.types.includes(FURNITURE_DRAG_MIME)
+      const isOpening     = e.dataTransfer.types.includes(OPENING_DRAG_MIME)
+      const isCustomModel = e.dataTransfer.types.includes(CUSTOM_MODEL_DRAG_MIME)
+      if (!isFurniture && !isOpening && !isCustomModel) return
       e.preventDefault()
       e.dataTransfer.dropEffect = 'copy'
       if (!stateRef.current) return
 
-      if (isFurniture) {
+      if (isFurniture || isCustomModel) {
         const floorPos = raycastFloor(containerRef, stateRef, e.clientX, e.clientY)
         if (!floorPos) return
         if (ghostKindRef.current !== 'furniture') {
           removeGhost()
-          const spec = dragGhost ? getFurnitureSpec(dragGhost.type) : null
+          const spec = dragGhost
+            ? (getFurnitureSpec(dragGhost.type) ?? dragGhost)
+            : null
           ghostRef.current = createFurnitureGhostMesh(spec)
           ghostKindRef.current = 'furniture'
           stateRef.current.scene.add(ghostRef.current)
@@ -169,8 +175,9 @@ export default function useFurnitureDrop3D(containerRef, stateRef) {
 
     onDrop(e) {
       e.preventDefault()
-      const furnitureType = e.dataTransfer.getData(FURNITURE_DRAG_MIME)
-      const openingType   = e.dataTransfer.getData(OPENING_DRAG_MIME)
+      const furnitureType  = e.dataTransfer.getData(FURNITURE_DRAG_MIME)
+      const openingType    = e.dataTransfer.getData(OPENING_DRAG_MIME)
+      const customModelId  = e.dataTransfer.getData(CUSTOM_MODEL_DRAG_MIME)
       removeGhost()
 
       if (furnitureType) {
@@ -181,6 +188,25 @@ export default function useFurnitureDrop3D(containerRef, stateRef) {
         }
         const { x, y } = threeToKonva(floorPos.x, floorPos.y)
         addFurniture(furnitureType, x, y)
+
+      } else if (customModelId) {
+        const floorPos = raycastFloor(containerRef, stateRef, e.clientX, e.clientY)
+        if (!floorPos) {
+          pushToast('Could not find a floor surface to drop onto.', 'warn')
+          return
+        }
+        const cm = customModels.find((m) => m.id === customModelId)
+        if (!cm) return
+        const { x, y } = threeToKonva(floorPos.x, floorPos.y)
+        addFurnitureWithSpec({
+          type: 'custom',
+          label: cm.label,
+          width: cm.width,
+          depth: cm.depth,
+          height: cm.height,
+          color: cm.color,
+          customModelId: cm.id,
+        }, x, y)
 
       } else if (openingType) {
         const wallHit = raycastWall(containerRef, stateRef, e.clientX, e.clientY)

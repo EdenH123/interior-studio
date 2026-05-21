@@ -38,6 +38,9 @@ export const createUiSlice = (set) => ({
   dragGhost: null,
   setDragGhostType: (type, kind = 'furniture') =>
     set({ dragGhost: { kind, type, x: 0, y: 0, wallId: null, position: null } }),
+  // Used for custom imported models whose dims aren't in the catalog.
+  setDragGhostCustom: ({ width, depth, height, color }) =>
+    set({ dragGhost: { kind: 'furniture', type: 'custom', width, depth, height, color, x: 0, y: 0 } }),
   setDragGhostPos: (x, y, extra = {}) =>
     set((s) => ({ dragGhost: s.dragGhost ? { ...s.dragGhost, x, y, ...extra } : null })),
   clearDragGhost: () => set({ dragGhost: null }),

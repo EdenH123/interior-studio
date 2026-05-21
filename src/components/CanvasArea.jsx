@@ -7,6 +7,7 @@ import useCanvasKeyboard from '../hooks/useCanvasKeyboard'
 import useDrawWalls from '../hooks/useDrawWalls'
 import useFurnitureDrop from '../hooks/useFurnitureDrop'
 import useOpeningDrop from '../hooks/useOpeningDrop'
+import useCustomModelDrop from '../hooks/useCustomModelDrop'
 import useMarquee from '../hooks/useMarquee'
 import useFurnitureMultiDrag from '../hooks/useFurnitureMultiDrag'
 import { isSelected, getSingleItem } from '../store/selectionHelpers'
@@ -80,6 +81,7 @@ export default function CanvasArea() {
   const dragHandlers = combineDragHandlers(
     useFurnitureDrop(containerRef, view),
     useOpeningDrop(containerRef, view),
+    useCustomModelDrop(containerRef, view),
   )
   const { onDragStart: onFurnDragStart, onDragEnd: onFurnDragEnd } = useFurnitureMultiDrag()
   const { marquee, onMouseDown: onMarqueeDown, onMouseMove: onMarqueeMove, onMouseUp: onMarqueeUp }
