@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import useStore from '../store/useStore'
 import {
   reconcileWalls, reconcileFurniture, reconcileRooms, reconcileCeilings, disposeAll,
@@ -41,7 +42,7 @@ function applySunForTime(sunLight, t) {
   const kelvin = 2500 + normalised * 4000
   const { r, g, b } = kelvinToRgb(kelvin)
   sunLight.color.setRGB(r / 255, g / 255, b / 255)
-  sunLight.intensity = Math.max(0, elevation) * 1.2
+  sunLight.intensity = Math.max(0, elevation) * 2.0
 }
 
 // Single owner of the Three.js scene. `containerRef` is a ref pointing at the
@@ -92,19 +93,32 @@ export default function useThree(containerRef) {
     camera.position.set(6, 5, 6)
 
     const renderer = new THREE.WebGLRenderer({ antialias: true })
-    renderer.setPixelRatio(window.devicePixelRatio)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(width, height)
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type    = THREE.PCFSoftShadowMap
+    // Physically-correct tone mapping — ACES Filmic gives the best PBR look.
+    renderer.toneMapping         = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.0
+    renderer.outputColorSpace    = THREE.SRGBColorSpace
     container.appendChild(renderer.domElement)
 
+    // IBL environment map via RoomEnvironment — gives GLB materials realistic
+    // reflections without an HDRI file. Baked into a PMREM cube.
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    pmrem.compileEquirectangularShader()
+    const envTexture = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    scene.environment = envTexture
+    pmrem.dispose()
+
     // Ambient fill — intensity driven by lighting.ambientStrength.
-    const ambient = new THREE.AmbientLight(0xffffff, lighting.ambientStrength * 2.4)
+    // With ACESFilmic + IBL the scene is brighter overall; scale factor reduced.
+    const ambient = new THREE.AmbientLight(0xffffff, lighting.ambientStrength * 1.0)
     ambientRef.current = ambient
     scene.add(ambient)
 
     // Sun / directional light — position driven by lighting.timeOfDay.
-    const sun = new THREE.DirectionalLight(0xffffff, 0.9)
+    const sun = new THREE.DirectionalLight(0xffffff, 1.5)
     sun.castShadow = true
     sun.shadow.mapSize.setScalar(2048)
     sun.shadow.camera.near   = 0.1
@@ -113,6 +127,8 @@ export default function useThree(containerRef) {
     sun.shadow.camera.right  = 30
     sun.shadow.camera.top    = 30
     sun.shadow.camera.bottom = -30
+    sun.shadow.bias       = -0.0003
+    sun.shadow.normalBias =  0.02
     applySunForTime(sun, lighting.timeOfDay)
     sunRef.current = sun
     scene.add(sun)
@@ -120,7 +136,12 @@ export default function useThree(containerRef) {
     // Floor + grid.
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(FLOOR_SIZE, FLOOR_SIZE),
-      new THREE.MeshStandardMaterial({ color: 0x111827, side: THREE.DoubleSide }),
+      new THREE.MeshStandardMaterial({
+        color: 0x111827,
+        roughness: 0.6,
+        metalness: 0.1,
+        side: THREE.DoubleSide,
+      }),
     )
     floor.rotation.x    = -Math.PI / 2
     floor.position.y    = -0.001
@@ -279,7 +300,7 @@ export default function useThree(containerRef) {
   // ── ambient strength ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!ambientRef.current) return
-    ambientRef.current.intensity = lighting.ambientStrength * 2.4
+    ambientRef.current.intensity = lighting.ambientStrength * 1.0
   }, [lighting.ambientStrength])
 
   // ── active-light cap warning ──────────────────────────────────────────────────

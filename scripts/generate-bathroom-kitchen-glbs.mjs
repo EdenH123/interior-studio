@@ -123,61 +123,94 @@ function cushion(x1, y1, z1, x2, y2, z2, bulge = 0.04, nX = 6, nZ = 4) {
   return { positions: pos, normals: nor, indices: idx }
 }
 
-function writeGLB(name, parts, color = [0.72, 0.65, 0.57, 1.0]) {
-  const { positions, normals, indices } = merge(Array.isArray(parts) ? parts : [parts])
+// ─── Multi-material GLB writer ────────────────────────────────────────────────
+// groups: Array of { parts: [...primitives], color: [r,g,b,a], roughness?, metallic?, name? }
+// Legacy single-material: writeGLB(name, parts[], color) is auto-wrapped.
+function writeGLB(name, partsOrGroups, legacyColor) {
+  const groups = (Array.isArray(partsOrGroups) && partsOrGroups[0]?.parts !== undefined)
+    ? partsOrGroups
+    : [{ parts: Array.isArray(partsOrGroups) ? partsOrGroups : [partsOrGroups],
+         color: legacyColor ?? [0.72, 0.65, 0.57, 1.0] }]
 
-  const posF32 = new Float32Array(positions)
-  const nrmF32 = new Float32Array(normals)
-  const idxU16 = new Uint16Array(indices)
+  const primitives = []
+  const materials  = []
+  const accessors  = []
+  const bufViews   = []
+  const chunks     = []
+  let byteOffset   = 0
+  let totalTris    = 0
 
-  const posBytes = posF32.byteLength
-  const nrmBytes = nrmF32.byteLength
-  const idxBytes = idxU16.byteLength
-  const binLen   = posBytes + nrmBytes + idxBytes
+  for (const { parts, color, roughness = 0.70, metallic = 0.0, name: matNameProp } of groups) {
+    const { positions, normals, indices } = merge(Array.isArray(parts) ? parts : [parts])
 
-  const bin = Buffer.alloc(binLen)
-  Buffer.from(posF32.buffer).copy(bin, 0)
-  Buffer.from(nrmF32.buffer).copy(bin, posBytes)
-  Buffer.from(idxU16.buffer).copy(bin, posBytes + nrmBytes)
+    const posF32 = new Float32Array(positions)
+    const nrmF32 = new Float32Array(normals)
+    const idxU16 = new Uint16Array(indices)
 
-  const pMin = [Infinity, Infinity, Infinity]
-  const pMax = [-Infinity, -Infinity, -Infinity]
-  for (let i = 0; i < positions.length; i += 3) {
-    for (let c = 0; c < 3; c++) {
-      pMin[c] = Math.min(pMin[c], positions[i + c])
-      pMax[c] = Math.max(pMax[c], positions[i + c])
+    const posBytes = posF32.byteLength
+    const nrmBytes = nrmF32.byteLength
+    const idxBytes = idxU16.byteLength
+    const idxPad   = (4 - (idxBytes % 4)) % 4
+
+    const pMin = [Infinity, Infinity, Infinity]
+    const pMax = [-Infinity, -Infinity, -Infinity]
+    for (let i = 0; i < positions.length; i += 3) {
+      for (let c = 0; c < 3; c++) {
+        pMin[c] = Math.min(pMin[c], positions[i + c])
+        pMax[c] = Math.max(pMax[c], positions[i + c])
+      }
     }
+    const r4 = (v) => Math.round(v * 10000) / 10000
+    const vc = positions.length / 3
+    const ic = indices.length
+    totalTris += ic / 3
+
+    const posAcc = accessors.length
+    accessors.push({ bufferView: bufViews.length, componentType: 5126, count: vc, type: 'VEC3', min: pMin.map(r4), max: pMax.map(r4) })
+    bufViews.push({ buffer: 0, byteOffset, byteLength: posBytes, target: 34962 })
+    byteOffset += posBytes
+
+    const nrmAcc = accessors.length
+    accessors.push({ bufferView: bufViews.length, componentType: 5126, count: vc, type: 'VEC3' })
+    bufViews.push({ buffer: 0, byteOffset, byteLength: nrmBytes, target: 34962 })
+    byteOffset += nrmBytes
+
+    const idxAcc = accessors.length
+    accessors.push({ bufferView: bufViews.length, componentType: 5123, count: ic, type: 'SCALAR' })
+    bufViews.push({ buffer: 0, byteOffset, byteLength: idxBytes, target: 34963 })
+    byteOffset += idxBytes + idxPad
+
+    const matName = matNameProp ?? `part${materials.length}`
+    materials.push({ name: matName, pbrMetallicRoughness: { baseColorFactor: color, metallicFactor: metallic, roughnessFactor: roughness }, doubleSided: false })
+    primitives.push({ attributes: { POSITION: posAcc, NORMAL: nrmAcc }, indices: idxAcc, material: materials.length - 1, mode: 4 })
+    chunks.push({ posF32, nrmF32, idxU16, idxPad })
   }
-  const r4 = (v) => Math.round(v * 10000) / 10000
-  const vc = positions.length / 3
-  const ic = indices.length
+
+  const bin = Buffer.alloc(byteOffset)
+  let off = 0
+  for (const { posF32, nrmF32, idxU16, idxPad } of chunks) {
+    Buffer.from(posF32.buffer).copy(bin, off); off += posF32.byteLength
+    Buffer.from(nrmF32.buffer).copy(bin, off); off += nrmF32.byteLength
+    Buffer.from(idxU16.buffer).copy(bin, off); off += idxU16.byteLength
+    off += idxPad
+  }
 
   const gltfJson = {
     asset: { version: '2.0', generator: 'interior-studio-bathroom-kitchen' },
-    scenes: [{ nodes: [0] }],
-    scene: 0,
+    scenes: [{ nodes: [0] }], scene: 0,
     nodes: [{ mesh: 0 }],
-    meshes: [{ primitives: [{ attributes: { POSITION: 0, NORMAL: 1 }, indices: 2, material: 0, mode: 4 }] }],
-    materials: [{ pbrMetallicRoughness: { baseColorFactor: color, metallicFactor: 0.0, roughnessFactor: 0.7 }, doubleSided: false }],
-    accessors: [
-      { bufferView: 0, componentType: 5126, count: vc, type: 'VEC3', min: pMin.map(r4), max: pMax.map(r4) },
-      { bufferView: 1, componentType: 5126, count: vc, type: 'VEC3' },
-      { bufferView: 2, componentType: 5123, count: ic, type: 'SCALAR' },
-    ],
-    bufferViews: [
-      { buffer: 0, byteOffset: 0,              byteLength: posBytes, target: 34962 },
-      { buffer: 0, byteOffset: posBytes,        byteLength: nrmBytes, target: 34962 },
-      { buffer: 0, byteOffset: posBytes+nrmBytes, byteLength: idxBytes, target: 34963 },
-    ],
-    buffers: [{ byteLength: binLen }],
+    meshes: [{ primitives }],
+    materials, accessors,
+    bufferViews: bufViews,
+    buffers: [{ byteLength: byteOffset }],
   }
 
-  const jsonBuf  = Buffer.from(JSON.stringify(gltfJson), 'utf8')
-  const jsonPad  = (jsonBuf.length + 3) & ~3
+  const jsonBuf   = Buffer.from(JSON.stringify(gltfJson), 'utf8')
+  const jsonPad   = (jsonBuf.length + 3) & ~3
   const jsonChunk = Buffer.alloc(jsonPad, 0x20)
   jsonBuf.copy(jsonChunk)
 
-  const totalLen = 12 + 8 + jsonPad + 8 + binLen
+  const totalLen = 12 + 8 + jsonPad + 8 + byteOffset
   const out = Buffer.alloc(totalLen)
   let o = 0
   out.writeUInt32LE(0x46546C67, o); o += 4
@@ -186,14 +219,13 @@ function writeGLB(name, parts, color = [0.72, 0.65, 0.57, 1.0]) {
   out.writeUInt32LE(jsonPad,    o); o += 4
   out.writeUInt32LE(0x4E4F534A, o); o += 4
   jsonChunk.copy(out, o); o += jsonPad
-  out.writeUInt32LE(binLen,     o); o += 4
+  out.writeUInt32LE(byteOffset, o); o += 4
   out.writeUInt32LE(0x004E4942, o); o += 4
   bin.copy(out, o)
 
   const path = resolve(OUT, name + '.glb')
   writeFileSync(path, out)
-  const tris = ic / 3
-  console.log(`  ✓  ${(name + '.glb').padEnd(26)}  ${(totalLen / 1024).toFixed(1).padStart(6)} kB  ${tris} tris`)
+  console.log(`  ✓  ${(name + '.glb').padEnd(26)}  ${(totalLen / 1024).toFixed(1).padStart(6)} kB  ${totalTris} tris`)
 }
 
 // ─── Color palette (linear sRGB) ──────────────────────────────────────────────
@@ -212,175 +244,247 @@ console.log('Generating bathroom & kitchen GLBs…\n')
 
 // TOILET  0.38 × 0.70 × 0.80   (-Z = wall / tank side)
 writeGLB('toilet', [
-  cyl(0, 0, 0, 0.36, 0.13, 12),                       // pedestal base
-  box(-0.17, 0.14, -0.05, 0.17, 0.35, 0.32),          // bowl body
-  box(-0.18, 0.33, -0.06, 0.18, 0.36, 0.33),          // seat lid
-  box(-0.15, 0.34, -0.35, 0.15, 0.78, -0.08),         // tank body
-  box(-0.17, 0.76, -0.37, 0.17, 0.80, -0.06),         // tank lid
-], C_WHITE)
+  { parts: [
+    cyl(0, 0, 0, 0.36, 0.13, 12),                       // pedestal base
+    box(-0.17, 0.14, -0.05, 0.17, 0.35, 0.32),          // bowl body
+    box(-0.18, 0.33, -0.06, 0.18, 0.36, 0.33),          // seat lid
+    box(-0.15, 0.34, -0.35, 0.15, 0.78, -0.08),         // tank body
+    box(-0.17, 0.76, -0.37, 0.17, 0.80, -0.06),         // tank lid
+  ], color: C_WHITE, roughness: 0.15, name: 'body' },
+])
 
 // BASIN  0.55 × 0.45 × 0.85
 writeGLB('basin', [
-  cyl(0, 0, 0, 0.65, 0.07, 10),                       // column
-  box(-0.27, 0.75, -0.22, 0.27, 0.85, 0.22),          // basin bowl outer
-  cyl(0, -0.15, 0.83, 0.89, 0.014, 8),                // tap riser (at -Z)
-  box(-0.007, 0.87, -0.15, 0.007, 0.89, -0.04),       // tap spout (toward +Z)
-  box( 0.04, 0.872, -0.18,  0.08, 0.888, -0.13),      // hot handle
-  box(-0.08, 0.872, -0.18, -0.04, 0.888, -0.13),      // cold handle
-], C_WHITE)
+  { parts: [
+    cyl(0, 0, 0, 0.65, 0.07, 10),                       // column
+    box(-0.27, 0.75, -0.22, 0.27, 0.85, 0.22),          // basin bowl outer
+  ], color: C_WHITE, roughness: 0.15, name: 'body' },
+  { parts: [
+    cyl(0, -0.15, 0.83, 0.89, 0.014, 8),                // tap riser
+    box(-0.007, 0.87, -0.15, 0.007, 0.89, -0.04),       // tap spout
+    box( 0.04, 0.872, -0.18,  0.08, 0.888, -0.13),      // hot handle
+    box(-0.08, 0.872, -0.18, -0.04, 0.888, -0.13),      // cold handle
+  ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'taps' },
+])
 
 // BATHTUB  1.70 × 0.75 × 0.55  (-Z = wall side)
 writeGLB('bathtub', [
-  box(-0.85, 0,    -0.375,  0.85, 0.08,  0.375),      // base floor
-  box(-0.85, 0.08, -0.375, -0.79, 0.55,  0.375),      // left wall
-  box( 0.79, 0.08, -0.375,  0.85, 0.55,  0.375),      // right wall
-  box(-0.85, 0.08, -0.375,  0.85, 0.55, -0.31),       // back wall (wall side)
-  box(-0.85, 0.08,  0.31,   0.85, 0.55,  0.375),      // front wall
-  box(-0.85, 0.52, -0.375,  0.85, 0.55,  0.375),      // rim cap
-  cyl( 0.60, -0.30, 0.48, 0.54, 0.018, 8),            // hot tap
-  cyl( 0.40, -0.30, 0.48, 0.54, 0.018, 8),            // cold tap
-], C_WHITE)
+  { parts: [
+    box(-0.85, 0,    -0.375,  0.85, 0.08,  0.375),      // base floor
+    box(-0.85, 0.08, -0.375, -0.79, 0.55,  0.375),      // left wall
+    box( 0.79, 0.08, -0.375,  0.85, 0.55,  0.375),      // right wall
+    box(-0.85, 0.08, -0.375,  0.85, 0.55, -0.31),       // back wall (wall side)
+    box(-0.85, 0.08,  0.31,   0.85, 0.55,  0.375),      // front wall
+    box(-0.85, 0.52, -0.375,  0.85, 0.55,  0.375),      // rim cap
+  ], color: C_WHITE, roughness: 0.15, name: 'body' },
+  { parts: [
+    cyl( 0.60, -0.30, 0.48, 0.54, 0.018, 8),            // hot tap
+    cyl( 0.40, -0.30, 0.48, 0.54, 0.018, 8),            // cold tap
+  ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'taps' },
+])
 
 // SHOWER TRAY  0.90 × 0.90 × 0.15
 writeGLB('shower-tray', [
-  box(-0.45, 0,    -0.45,  0.45, 0.06,  0.45),        // base
-  box(-0.45, 0.06, -0.45, -0.41, 0.15,  0.45),        // left rim
-  box( 0.41, 0.06, -0.45,  0.45, 0.15,  0.45),        // right rim
-  box(-0.45, 0.06, -0.45,  0.45, 0.15, -0.41),        // back rim
-  box(-0.45, 0.06,  0.41,  0.45, 0.15,  0.45),        // front rim
-  cyl(0, 0, 0.06, 0.07, 0.030, 8),                    // drain
-], C_WHITE)
+  { parts: [
+    box(-0.45, 0,    -0.45,  0.45, 0.06,  0.45),        // base
+    box(-0.45, 0.06, -0.45, -0.41, 0.15,  0.45),        // left rim
+    box( 0.41, 0.06, -0.45,  0.45, 0.15,  0.45),        // right rim
+    box(-0.45, 0.06, -0.45,  0.45, 0.15, -0.41),        // back rim
+    box(-0.45, 0.06,  0.41,  0.45, 0.15,  0.45),        // front rim
+  ], color: C_WHITE, roughness: 0.15, name: 'body' },
+  { parts: [
+    cyl(0, 0, 0.06, 0.07, 0.030, 8),                    // drain
+  ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'drain' },
+])
 
 // TOWEL RACK  0.60 × 0.08 × 0.04  wallMounted  (-Z = wall)
 writeGLB('towel-rack', [
-  box(-0.30, 0.005, -0.04, -0.26, 0.035,  0.03),      // left bracket
-  box( 0.26, 0.005, -0.04,  0.30, 0.035,  0.03),      // right bracket
-  box(-0.26, 0.014,  0.024,  0.26, 0.026,  0.038),    // bar
-], C_CHROME)
+  { parts: [
+    box(-0.30, 0.005, -0.04, -0.26, 0.035,  0.03),      // left bracket
+    box( 0.26, 0.005, -0.04,  0.30, 0.035,  0.03),      // right bracket
+    box(-0.26, 0.014,  0.024,  0.26, 0.026,  0.038),    // bar
+  ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'body' },
+])
 
 // BATHROOM MIRROR  0.60 × 0.05 × 0.80  wallMounted  (-Z = wall)
 writeGLB('bathroom-mirror', [
-  box(-0.30, 0, -0.025, 0.30, 0.80,  0.010),          // backing / frame
-  box(-0.27, 0.03, 0.008, 0.27, 0.77, 0.018),         // mirror face
-], C_MIRROR)
+  { parts: [
+    box(-0.30, 0, -0.025, 0.30, 0.80,  0.010),          // backing / frame
+  ], color: C_CHROME, roughness: 0.30, metallic: 0.5, name: 'frame' },
+  { parts: [
+    box(-0.27, 0.03, 0.008, 0.27, 0.77, 0.018),         // mirror face
+  ], color: C_MIRROR, roughness: 0.05, metallic: 0.9, name: 'mirror' },
+])
 
 // VANITY UNIT  0.90 × 0.50 × 0.85
 writeGLB('vanity-unit', [
-  box(-0.45, 0,    -0.25,  0.45, 0.72,  0.25),        // cabinet body
-  box(-0.45, 0.72, -0.25,  0.45, 0.77,  0.25),        // countertop
-  box(-0.20, 0.76, -0.15,  0.20, 0.85,  0.15),        // integrated basin
-  box(-0.43, 0.02,  0.24, -0.03, 0.70,  0.26),        // left door
-  box( 0.03, 0.02,  0.24,  0.43, 0.70,  0.26),        // right door
-  box(-0.45, 0.72, -0.25,  0.45, 0.85, -0.22),        // backsplash
-  box(-0.25, 0.34,  0.25, -0.14, 0.36,  0.27),        // left handle
-  box( 0.14, 0.34,  0.25,  0.25, 0.36,  0.27),        // right handle
-], C_WHITE)
+  { parts: [
+    box(-0.45, 0,    -0.25,  0.45, 0.72,  0.25),        // cabinet body
+    box(-0.45, 0.72, -0.25,  0.45, 0.77,  0.25),        // countertop
+    box(-0.20, 0.76, -0.15,  0.20, 0.85,  0.15),        // integrated basin
+    box(-0.43, 0.02,  0.24, -0.03, 0.70,  0.26),        // left door
+    box( 0.03, 0.02,  0.24,  0.43, 0.70,  0.26),        // right door
+    box(-0.45, 0.72, -0.25,  0.45, 0.85, -0.22),        // backsplash
+  ], color: C_WHITE, roughness: 0.20, name: 'body' },
+  { parts: [
+    box(-0.25, 0.34,  0.25, -0.14, 0.36,  0.27),        // left handle
+    box( 0.14, 0.34,  0.25,  0.25, 0.36,  0.27),        // right handle
+  ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'handles' },
+])
 
 // LAUNDRY BASKET  0.45 × 0.40 × 0.55
 writeGLB('laundry-basket', [
-  box(-0.22, 0,    -0.20,  0.22, 0.50,  0.20),        // body
-  box(-0.23, 0.48, -0.21,  0.23, 0.55,  0.21),        // lid
-  box(-0.22, 0.12,  0.19,  0.22, 0.14,  0.20),        // weave band 1
-  box(-0.22, 0.25,  0.19,  0.22, 0.27,  0.20),        // weave band 2
-  box(-0.22, 0.38,  0.19,  0.22, 0.40,  0.20),        // weave band 3
-], C_WICKER)
+  { parts: [
+    box(-0.22, 0,    -0.20,  0.22, 0.50,  0.20),        // body
+    box(-0.22, 0.12,  0.19,  0.22, 0.14,  0.20),        // weave band 1
+    box(-0.22, 0.25,  0.19,  0.22, 0.27,  0.20),        // weave band 2
+    box(-0.22, 0.38,  0.19,  0.22, 0.40,  0.20),        // weave band 3
+  ], color: C_WICKER, roughness: 0.90, name: 'body' },
+  { parts: [
+    box(-0.23, 0.48, -0.21,  0.23, 0.55,  0.21),        // lid
+  ], color: [0.62, 0.48, 0.32, 1], roughness: 0.90, name: 'lid' },
+])
 
 // ─── KITCHEN ──────────────────────────────────────────────────────────────────
 
 // KITCHEN SINK  0.80 × 0.60 × 0.90
 writeGLB('kitchen-sink', [
-  box(-0.40, 0,    -0.30,  0.40, 0.82,  0.30),        // cabinet body
-  box(-0.38, 0.02,  0.29,  0.38, 0.80,  0.31),        // cabinet door
-  box(-0.16, 0.40,  0.30,  0.16, 0.42,  0.32),        // door handle
-  box(-0.40, 0.82, -0.30,  0.40, 0.86,  0.30),        // countertop
-  box(-0.32, 0.84, -0.22,  0.32, 0.90,  0.18),        // sink basin
-  cyl(0, -0.16, 0.85, 0.93, 0.013, 8),                // tap riser
-  box(-0.007, 0.92, -0.16, 0.007, 0.94, -0.06),       // tap spout
-], C_STAINLESS)
+  { parts: [
+    box(-0.40, 0,    -0.30,  0.40, 0.82,  0.30),        // cabinet body
+    box(-0.38, 0.02,  0.29,  0.38, 0.80,  0.31),        // cabinet door
+    box(-0.40, 0.82, -0.30,  0.40, 0.86,  0.30),        // countertop
+    box(-0.32, 0.84, -0.22,  0.32, 0.90,  0.18),        // sink basin
+  ], color: C_STAINLESS, roughness: 0.30, metallic: 0.6, name: 'body' },
+  { parts: [
+    box(-0.16, 0.40,  0.30,  0.16, 0.42,  0.32),        // door handle
+    cyl(0, -0.16, 0.85, 0.93, 0.013, 8),                // tap riser
+    box(-0.007, 0.92, -0.16, 0.007, 0.94, -0.06),       // tap spout
+  ], color: C_CHROME, roughness: 0.15, metallic: 0.9, name: 'fittings' },
+])
 
 // FRIDGE  0.70 × 0.70 × 1.85
 writeGLB('fridge', [
-  box(-0.35, 0,    -0.35,  0.35, 1.85,  0.35),        // body
-  box(-0.33, 0.02,  0.34,  0.33, 0.85,  0.36),        // lower fridge door
-  box(-0.33, 0.87,  0.34,  0.33, 1.83,  0.36),        // upper freezer door
-  box( 0.18, 0.40,  0.35,  0.22, 0.60,  0.38),        // lower handle
-  box( 0.18, 1.20,  0.35,  0.22, 1.40,  0.38),        // upper handle
-], C_CHROME)
+  { parts: [
+    box(-0.35, 0,    -0.35,  0.35, 1.85,  0.35),        // body
+    box(-0.33, 0.02,  0.34,  0.33, 0.85,  0.36),        // lower fridge door
+    box(-0.33, 0.87,  0.34,  0.33, 1.83,  0.36),        // upper freezer door
+  ], color: C_CHROME, roughness: 0.20, metallic: 0.7, name: 'body' },
+  { parts: [
+    box( 0.18, 0.40,  0.35,  0.22, 0.60,  0.38),        // lower handle
+    box( 0.18, 1.20,  0.35,  0.22, 1.40,  0.38),        // upper handle
+  ], color: C_STAINLESS, roughness: 0.15, metallic: 0.9, name: 'handles' },
+])
 
 // OVEN  0.60 × 0.60 × 0.90
 writeGLB('oven', [
-  box(-0.30, 0,    -0.30,  0.30, 0.90,  0.30),        // body
-  box(-0.28, 0.02,  0.29,  0.28, 0.72,  0.31),        // oven door
-  box(-0.22, 0.08,  0.30,  0.22, 0.60,  0.32),        // glass window
-  box(-0.18, 0.64,  0.30,  0.18, 0.66,  0.33),        // door handle
-  box(-0.28, 0.72,  0.28,  0.28, 0.85,  0.31),        // control panel
-  cyl(-0.12, -0.12, 0.87, 0.90, 0.068, 12),           // hob ring BL
-  cyl( 0.12, -0.12, 0.87, 0.90, 0.068, 12),           // hob ring BR
-  cyl(-0.12,  0.12, 0.87, 0.90, 0.068, 12),           // hob ring FL
-  cyl( 0.12,  0.12, 0.87, 0.90, 0.068, 12),           // hob ring FR
-], C_DARK_GRY)
+  { parts: [
+    box(-0.30, 0,    -0.30,  0.30, 0.90,  0.30),        // body
+    box(-0.28, 0.02,  0.29,  0.28, 0.72,  0.31),        // oven door
+    box(-0.28, 0.72,  0.28,  0.28, 0.85,  0.31),        // control panel
+  ], color: C_DARK_GRY, roughness: 0.40, name: 'body' },
+  { parts: [
+    box(-0.22, 0.08,  0.30,  0.22, 0.60,  0.32),        // glass window
+  ], color: [0.05, 0.05, 0.07, 1], roughness: 0.05, metallic: 0.1, name: 'glass' },
+  { parts: [
+    box(-0.18, 0.64,  0.30,  0.18, 0.66,  0.33),        // door handle
+    cyl(-0.12, -0.12, 0.87, 0.90, 0.068, 12),           // hob ring BL
+    cyl( 0.12, -0.12, 0.87, 0.90, 0.068, 12),           // hob ring BR
+    cyl(-0.12,  0.12, 0.87, 0.90, 0.068, 12),           // hob ring FL
+    cyl( 0.12,  0.12, 0.87, 0.90, 0.068, 12),           // hob ring FR
+  ], color: C_STAINLESS, roughness: 0.25, metallic: 0.7, name: 'accents' },
+])
 
 // DISHWASHER  0.60 × 0.60 × 0.85
 writeGLB('dishwasher', [
-  box(-0.30, 0,    -0.30,  0.30, 0.85,  0.30),        // body
-  box(-0.28, 0.02,  0.29,  0.28, 0.80,  0.31),        // door panel
-  box(-0.28, 0.80,  0.28,  0.28, 0.85,  0.31),        // control strip
-  box(-0.18, 0.74,  0.30,  0.18, 0.76,  0.32),        // handle
-], C_DARK_GRY)
+  { parts: [
+    box(-0.30, 0,    -0.30,  0.30, 0.85,  0.30),        // body
+    box(-0.28, 0.02,  0.29,  0.28, 0.80,  0.31),        // door panel
+    box(-0.28, 0.80,  0.28,  0.28, 0.85,  0.31),        // control strip
+  ], color: C_DARK_GRY, roughness: 0.40, name: 'body' },
+  { parts: [
+    box(-0.18, 0.74,  0.30,  0.18, 0.76,  0.32),        // handle
+  ], color: C_STAINLESS, roughness: 0.20, metallic: 0.8, name: 'handle' },
+])
 
 // MICROWAVE  0.55 × 0.35 × 0.32  wallMounted  (-Z = wall)
 writeGLB('microwave', [
-  box(-0.27, 0,    -0.175, 0.27, 0.32,  0.175),       // body
-  box(-0.25, 0.03,  0.165, 0.07, 0.29,  0.185),       // glass door window
-  box( 0.09, 0.03,  0.165, 0.25, 0.29,  0.185),       // control panel
-  box(-0.23, 0.00,  0.175, 0.05, 0.02,  0.195),       // door handle
-], C_DARK_GRY)
+  { parts: [
+    box(-0.27, 0,    -0.175, 0.27, 0.32,  0.175),       // body
+    box( 0.09, 0.03,  0.165, 0.25, 0.29,  0.185),       // control panel
+  ], color: C_DARK_GRY, roughness: 0.40, name: 'body' },
+  { parts: [
+    box(-0.25, 0.03,  0.165, 0.07, 0.29,  0.185),       // glass door window
+  ], color: [0.05, 0.05, 0.07, 1], roughness: 0.05, metallic: 0.1, name: 'glass' },
+  { parts: [
+    box(-0.23, 0.00,  0.175, 0.05, 0.02,  0.195),       // door handle
+  ], color: C_STAINLESS, roughness: 0.20, metallic: 0.8, name: 'handle' },
+])
 
 // UPPER CABINET  0.60 × 0.35 × 0.70  wallMounted  (-Z = wall)
 writeGLB('upper-cabinet', [
-  box(-0.30, 0,    -0.175, 0.30, 0.70,  0.175),       // body
-  box(-0.28, 0.02,  0.165, 0.28, 0.68,  0.185),       // door
-  box(-0.14, 0.33,  0.175, 0.14, 0.35,  0.195),       // handle
-], C_CABINET)
+  { parts: [
+    box(-0.30, 0,    -0.175, 0.30, 0.70,  0.175),       // body
+    box(-0.28, 0.02,  0.165, 0.28, 0.68,  0.185),       // door
+  ], color: C_CABINET, roughness: 0.35, name: 'body' },
+  { parts: [
+    box(-0.14, 0.33,  0.175, 0.14, 0.35,  0.195),       // handle
+  ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'handle' },
+])
 
 // RANGE HOOD  0.60 × 0.40 × 0.35  wallMounted  (-Z = wall)
 writeGLB('range-hood', [
-  box(-0.30, 0.12, -0.20,  0.30, 0.35,  0.20),        // upper hood box
-  box(-0.24, 0.00, -0.16,  0.24, 0.12,  0.16),        // lower funnel
-  box(-0.28, 0.12,  0.18,  0.28, 0.33,  0.21),        // front panel
-  box(-0.22, 0.01, -0.15,  0.22, 0.03,  0.15),        // filter grille
-], C_STAINLESS)
+  { parts: [
+    box(-0.30, 0.12, -0.20,  0.30, 0.35,  0.20),        // upper hood box
+    box(-0.24, 0.00, -0.16,  0.24, 0.12,  0.16),        // lower funnel
+    box(-0.28, 0.12,  0.18,  0.28, 0.33,  0.21),        // front panel
+  ], color: C_STAINLESS, roughness: 0.25, metallic: 0.7, name: 'body' },
+  { parts: [
+    box(-0.22, 0.01, -0.15,  0.22, 0.03,  0.15),        // filter grille
+  ], color: C_DARK_GRY, roughness: 0.50, name: 'grille' },
+])
 
 // KITCHEN ISLAND  1.50 × 0.80 × 0.90
 writeGLB('kitchen-island', [
-  box(-0.75, 0,    -0.40,  0.75, 0.82,  0.40),        // cabinet body
-  box(-0.77, 0.82, -0.42,  0.77, 0.90,  0.42),        // countertop (slight overhang)
-  box(-0.73, 0.02,  0.39, -0.03, 0.80,  0.41),        // front left door
-  box( 0.03, 0.02,  0.39,  0.73, 0.80,  0.41),        // front right door
-  box(-0.73, 0.02, -0.41, -0.03, 0.80, -0.39),        // back left door
-  box( 0.03, 0.02, -0.41,  0.73, 0.80, -0.39),        // back right door
-  box(-0.60, 0.39,  0.40, -0.50, 0.41,  0.42),        // front handle L
-  box( 0.50, 0.39,  0.40,  0.60, 0.41,  0.42),        // front handle R
-], C_CABINET)
+  { parts: [
+    box(-0.75, 0,    -0.40,  0.75, 0.82,  0.40),        // cabinet body
+    box(-0.77, 0.82, -0.42,  0.77, 0.90,  0.42),        // countertop (slight overhang)
+    box(-0.73, 0.02,  0.39, -0.03, 0.80,  0.41),        // front left door
+    box( 0.03, 0.02,  0.39,  0.73, 0.80,  0.41),        // front right door
+    box(-0.73, 0.02, -0.41, -0.03, 0.80, -0.39),        // back left door
+    box( 0.03, 0.02, -0.41,  0.73, 0.80, -0.39),        // back right door
+  ], color: C_CABINET, roughness: 0.35, name: 'body' },
+  { parts: [
+    box(-0.60, 0.39,  0.40, -0.50, 0.41,  0.42),        // front handle L
+    box( 0.50, 0.39,  0.40,  0.60, 0.41,  0.42),        // front handle R
+  ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'handles' },
+])
 
 // PANTRY UNIT  0.60 × 0.60 × 2.00
 writeGLB('pantry-unit', [
-  box(-0.30, 0,    -0.30,  0.30, 2.00,  0.30),        // carcass
-  box(-0.28, 0.02,  0.29,  0.28, 0.98,  0.31),        // lower door
-  box(-0.28, 1.02,  0.29,  0.28, 1.98,  0.31),        // upper door
-  box(-0.30, 0.98,  0.28,  0.30, 1.02,  0.31),        // middle rail
-  box( 0.15, 0.48,  0.30,  0.23, 0.50,  0.32),        // lower handle
-  box( 0.15, 1.48,  0.30,  0.23, 1.50,  0.32),        // upper handle
-], C_CABINET)
+  { parts: [
+    box(-0.30, 0,    -0.30,  0.30, 2.00,  0.30),        // carcass
+    box(-0.28, 0.02,  0.29,  0.28, 0.98,  0.31),        // lower door
+    box(-0.28, 1.02,  0.29,  0.28, 1.98,  0.31),        // upper door
+    box(-0.30, 0.98,  0.28,  0.30, 1.02,  0.31),        // middle rail
+  ], color: C_CABINET, roughness: 0.35, name: 'body' },
+  { parts: [
+    box( 0.15, 0.48,  0.30,  0.23, 0.50,  0.32),        // lower handle
+    box( 0.15, 1.48,  0.30,  0.23, 1.50,  0.32),        // upper handle
+  ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'handles' },
+])
 
 // BAR STOOL  0.40 × 0.40 × 0.75
 writeGLB('bar-stool', [
-  cushion(-0.185, 0.68, -0.185, 0.185, 0.75, 0.185, 0.018, 6, 6), // seat pad with dome
-  cyl(0, 0, 0.06, 0.68, 0.033,  8),                   // central column
-  box(-0.19, 0,    -0.025, 0.19, 0.055,  0.025),      // base X arm
-  box(-0.025, 0,   -0.19,  0.025, 0.055, 0.19),       // base Z arm
-  box(-0.13, 0.35, -0.018, 0.13, 0.375,  0.018),      // foot-rest X
-  box(-0.018, 0.35,-0.13,  0.018, 0.375, 0.13),       // foot-rest Z
-], C_WOOD_LT)
+  { parts: [
+    cushion(-0.185, 0.68, -0.185, 0.185, 0.75, 0.185, 0.018, 6, 6), // seat pad with dome
+  ], color: [0.72, 0.65, 0.57, 1], roughness: 0.85, name: 'seat' },
+  { parts: [
+    cyl(0, 0, 0.06, 0.68, 0.033,  8),                   // central column
+    box(-0.19, 0,    -0.025, 0.19, 0.055,  0.025),      // base X arm
+    box(-0.025, 0,   -0.19,  0.025, 0.055, 0.19),       // base Z arm
+    box(-0.13, 0.35, -0.018, 0.13, 0.375,  0.018),      // foot-rest X
+    box(-0.018, 0.35,-0.13,  0.018, 0.375, 0.13),       // foot-rest Z
+  ], color: C_WOOD_LT, roughness: 0.65, name: 'base' },
+])
 
 console.log('\nDone — 18 GLBs written.')

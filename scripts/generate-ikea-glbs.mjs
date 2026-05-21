@@ -443,10 +443,10 @@ writeGLB('ikea-malm-bed-160', [
     box(-0.875, 0,     0.97,   0.875, 0.42,  1.045),
     box(-0.875, 0.24, -0.97,  -0.805, 0.26,  0.97),
     box( 0.805, 0.24, -0.97,   0.875, 0.26,  0.97),
-  ], color: C_BIRCH, ...VENEER },
+  ], color: C_BIRCH, ...VENEER, name: 'frame' },
   { parts: [
     cushion(-0.805, 0.26, -0.97, 0.805, 0.38, 0.97, 0.016, 8, 6),  // mattress
-  ], color: C_MATTRESS, ...{ roughness: 0.85, metallic: 0.0 } },
+  ], color: C_MATTRESS, ...{ roughness: 0.85, metallic: 0.0 }, name: 'mattress' },
 ])
 
 // MALM dresser 6-drawer  W0.80 × D0.48 × H1.23
@@ -460,9 +460,9 @@ writeGLB('ikea-malm-dresser', (() => {
     handles.push(box(-0.06, y1 + dH*0.4, 0.24, 0.06, y1 + dH*0.55, 0.26))
   }
   return [
-    { parts: [box(-0.40, 0, -0.24, 0.40, 1.23, 0.24)], color: C_BIRCH, ...VENEER },
-    { parts: drawers, color: C_BIRCH_LITE, ...DOOR_M },
-    { parts: handles,  color: C_SILVER,    ...METAL },
+    { parts: [box(-0.40, 0, -0.24, 0.40, 1.23, 0.24)], color: C_BIRCH, ...VENEER, name: 'body' },
+    { parts: drawers, color: C_BIRCH_LITE, ...DOOR_M, name: 'drawers' },
+    { parts: handles,  color: C_SILVER,    ...METAL,  name: 'handles' },
   ]
 })())
 
@@ -474,10 +474,10 @@ writeGLB('ikea-hemnes-daybed', [
     box(-0.40, 0,    -0.97,  -0.35, 0.55,  0.97),   // left rail
     box( 0.35, 0,    -0.97,   0.40, 0.55,  0.97),   // right rail
     box(-0.40, 0.05, -0.97,   0.40, 0.18,  0.97),   // slats base
-  ], color: C_HEMNES, ...WOOD },
+  ], color: C_HEMNES, ...WOOD, name: 'frame' },
   { parts: [
     box(-0.37, 0.18, -0.97,   0.37, 0.32,  0.97),   // mattress
-  ], color: C_MATTRESS, ...{ roughness: 0.85, metallic: 0.0 } },
+  ], color: C_MATTRESS, ...{ roughness: 0.85, metallic: 0.0 }, name: 'mattress' },
 ])
 
 // ─── IKEA STORAGE ─────────────────────────────────────────────────────────────
@@ -491,7 +491,7 @@ writeGLB('ikea-kallax-2x2', [
     box( 0.349, 0.036, -0.195,  0.385, 0.734, 0.195),  // right side
     box(-0.018, 0.036, -0.195,  0.018, 0.734, 0.195),  // vertical divider
     box(-0.349, 0.367, -0.195,  0.349, 0.403, 0.195),  // horizontal divider
-  ], color: C_WHITE, ...LACQUER },
+  ], color: C_WHITE, ...LACQUER, name: 'body' },
 ])
 
 // KALLAX 4×2  W1.47 × D0.39 × H0.77  (no back panel)
@@ -505,7 +505,7 @@ writeGLB('ikea-kallax-4x2', [
     box(-0.018,  0.036, -0.195,  0.018,  0.734, 0.195),
     box( 0.3405, 0.036, -0.195,  0.3765, 0.734, 0.195),
     box(-0.699, 0.367, -0.195,  0.699, 0.403, 0.195),
-  ], color: C_WHITE, ...LACQUER },
+  ], color: C_WHITE, ...LACQUER, name: 'body' },
 ])
 
 // BILLY bookcase  W0.80 × D0.28 × H2.02  (no back panel)
@@ -519,8 +519,8 @@ writeGLB('ikea-billy', (() => {
       box(-0.40, 1.984, -0.14,  0.40, 2.02,  0.14),   // top
       box(-0.40, 0.036, -0.14, -0.364, 1.984, 0.14),  // left side
       box( 0.364, 0.036,-0.14,  0.40, 1.984, 0.14),   // right side
-    ], color: C_BIRCH, ...VENEER },
-    { parts: shelves, color: C_BIRCH_LITE, ...VENEER },
+    ], color: C_BIRCH, ...VENEER, name: 'body' },
+    { parts: shelves, color: C_BIRCH_LITE, ...VENEER, name: 'shelves' },
   ]
 })())
 
@@ -532,18 +532,18 @@ writeGLB('ikea-pax-100', [
     box(-0.50, 0.036, -0.29, -0.464, 1.974, 0.29),  // left side
     box( 0.464, 0.036,-0.29,  0.50, 1.974, 0.29),   // right side
     box(-0.50, 0,     -0.29,  0.50, 2.01, -0.254),  // back panel
-  ], color: C_WHITE, ...LACQUER },
+  ], color: C_WHITE, ...LACQUER, name: 'body' },
   { parts: [
     box(-0.464, 0.036, 0.28, -0.04, 1.974, 0.30),   // left door
     box( 0.04,  0.036, 0.28,  0.464, 1.974, 0.30),  // right door
-  ], color: C_DOOR, ...DOOR_M },
+  ], color: C_DOOR, ...DOOR_M, name: 'doors' },
   { parts: [
     cyl(0, 0, 0.55, 1.95, 0.012, 8),                // hanging rod
-  ], color: C_SILVER, ...METAL },
+  ], color: C_SILVER, ...METAL, name: 'rod' },
   { parts: [
     box(-0.22, 1.00, 0.29, -0.10, 1.02, 0.31),      // left handle
     box( 0.10, 1.00, 0.29,  0.22, 1.02, 0.31),      // right handle
-  ], color: C_DARK_HW, ...DARK_HW },
+  ], color: C_DARK_HW, ...DARK_HW, name: 'handles' },
 ])
 
 // ALEX drawer unit  W0.36 × D0.58 × H0.70
@@ -557,9 +557,9 @@ writeGLB('ikea-alex', (() => {
     handles.push(box(-0.04, y1 + dH*0.38, 0.29, 0.04, y1 + dH*0.52, 0.31))
   }
   return [
-    { parts: [box(-0.18, 0, -0.29, 0.18, 0.70, 0.29)], color: C_WHITE,    ...LACQUER },
-    { parts: drawers,                                    color: C_DOOR,     ...DOOR_M  },
-    { parts: handles,                                    color: C_SILVER,   ...METAL   },
+    { parts: [box(-0.18, 0, -0.29, 0.18, 0.70, 0.29)], color: C_WHITE,    ...LACQUER, name: 'body'    },
+    { parts: drawers,                                    color: C_DOOR,     ...DOOR_M,  name: 'drawers' },
+    { parts: handles,                                    color: C_SILVER,   ...METAL,   name: 'handles' },
   ]
 })())
 
@@ -573,13 +573,13 @@ writeGLB('ikea-klippan', [
     cushion( 0.00, 0.44, -0.44,  0.76, 0.56, 0.44, 0.028), // right seat cushion
     backCushion(-0.76, 0.54, -0.44,  0.00, 0.66, -0.24, 0.024),
     backCushion( 0.00, 0.54, -0.44,  0.76, 0.66, -0.24, 0.024),
-  ], color: C_CREAM, ...FABRIC },
+  ], color: C_CREAM, ...FABRIC, name: 'fabric' },
   { parts: [
     cyl(-0.82,  0.38, 0, 0.05, 0.028, 8),
     cyl( 0.82,  0.38, 0, 0.05, 0.028, 8),
     cyl(-0.82, -0.38, 0, 0.05, 0.028, 8),
     cyl( 0.82, -0.38, 0, 0.05, 0.028, 8),
-  ], color: C_DARK_LEG, ...WOOD },
+  ], color: C_DARK_LEG, ...WOOD, name: 'legs' },
 ])
 
 // SÖDERHAMN 3-seat  W2.34 × D0.99 × H0.83  (modern low sofa, open base)
@@ -592,13 +592,13 @@ writeGLB('ikea-soderhamn-3', [
     backCushion(-1.10, 0.56, -0.495, -0.40, 0.83, -0.22, 0.026),
     backCushion(-0.34, 0.56, -0.495,  0.34, 0.83, -0.22, 0.026),
     backCushion( 0.40, 0.56, -0.495,  1.10, 0.83, -0.22, 0.026),
-  ], color: [0.74, 0.66, 0.55, 1], ...FABRIC },  // warm linen
+  ], color: [0.74, 0.66, 0.55, 1], ...FABRIC, name: 'fabric' },  // warm linen
   { parts: [
     box(-1.17, 0,    -0.495, -1.07, 0.08, 0.495),          // left end panel
     box( 1.07, 0,    -0.495,  1.17, 0.08, 0.495),          // right end panel
     box(-1.07, 0,    -0.495,  1.07, 0.08, -0.385),         // back base rail
     box(-1.07, 0,     0.385,  1.07, 0.08,  0.495),         // front base rail
-  ], color: C_BIRCH, ...VENEER },
+  ], color: C_BIRCH, ...VENEER, name: 'base' },
 ])
 
 // HEMNES dresser 8-drawer  W1.60 × D0.50 × H0.99
@@ -616,9 +616,9 @@ writeGLB('ikea-hemnes-dresser', (() => {
     handles.push(box( 0.24, y1 + dH*0.38, 0.25,  0.56, y1 + dH*0.52, 0.27))
   }
   return [
-    { parts: [box(-0.80, 0, -0.25, 0.80, 0.99, 0.25)], color: C_HEMNES, ...WOOD },
-    { parts: drawers, color: [0.80, 0.78, 0.74, 1], ...DOOR_M },
-    { parts: handles, color: C_SILVER, ...METAL },
+    { parts: [box(-0.80, 0, -0.25, 0.80, 0.99, 0.25)], color: C_HEMNES, ...WOOD,   name: 'body'    },
+    { parts: drawers, color: [0.80, 0.78, 0.74, 1],    ...DOOR_M,                   name: 'drawers' },
+    { parts: handles, color: C_SILVER,                  ...METAL,                    name: 'handles' },
   ]
 })())
 
@@ -632,14 +632,14 @@ writeGLB('ikea-kallax-1x4', [
     box(-0.159, 0.385, -0.195,  0.159, 0.421, 0.195),  // divider 1
     box(-0.159, 0.735, -0.195,  0.159, 0.771, 0.195),  // divider 2
     box(-0.159, 1.085, -0.195,  0.159, 1.121, 0.195),  // divider 3
-  ], color: C_WHITE, ...LACQUER },
+  ], color: C_WHITE, ...LACQUER, name: 'body' },
 ])
 
 // LISABO desk  W1.40 × D0.65 × H0.74  (ash veneer, distinctive tapered X-legs)
 writeGLB('ikea-lisabo-desk', [
   { parts: [
     box(-0.70, 0.70, -0.325, 0.70, 0.74, 0.325),       // top
-  ], color: [0.78, 0.64, 0.46, 1], ...VENEER },        // ash veneer
+  ], color: [0.78, 0.64, 0.46, 1], ...VENEER, name: 'top' },   // ash veneer
   { parts: [
     // X-frame legs: two diagonal planks crossing at centre per end
     box(-0.68, 0, -0.02,  0.68, 0.06, 0.02),           // horizontal stretcher
@@ -647,7 +647,7 @@ writeGLB('ikea-lisabo-desk', [
     cyl( 0.62, -0.30, 0, 0.70, 0.028, 8),
     cyl(-0.62,  0.30, 0, 0.70, 0.028, 8),
     cyl( 0.62,  0.30, 0, 0.70, 0.028, 8),
-  ], color: C_DARK_HW, ...DARK_HW },
+  ], color: C_DARK_HW, ...DARK_HW, name: 'legs' },
 ])
 
 console.log('\nDone — 21 IKEA GLBs written.')

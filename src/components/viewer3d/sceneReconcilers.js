@@ -41,7 +41,7 @@ export function reconcileWalls(scene, walls, openings, meshMap, opts = {}) {
     if (!mesh) {
       mesh = new THREE.Mesh(
         buildGeometry(length, thickness, own),
-        new THREE.MeshStandardMaterial({ color: new THREE.Color(color) }),
+        new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.75, metalness: 0.0 }),
       )
       mesh.userData.kind = 'wall'
       mesh.userData.id = w.id
@@ -187,7 +187,8 @@ export function reconcileRooms(scene, rooms, meshMap, colorForId, levelOffsets, 
       const mat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(color),
         side: THREE.DoubleSide,
-        roughness: 0.85,
+        roughness: 0.80,
+        metalness: 0.05,
       })
       mesh = new THREE.Mesh(geo, mat)
       // Rotate +π/2 around X: Shape's local Y maps to world Z, matching the
