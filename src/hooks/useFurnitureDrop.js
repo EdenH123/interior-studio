@@ -5,8 +5,6 @@ import { FURNITURE_DRAG_MIME } from '../components/Sidebar'
 import { getFurnitureSpec } from '../components/canvas/furnitureCatalog'
 import { nearestWallSnap, wallMountedPlacement } from '../components/canvas/openingGeometry'
 
-// Same shape as useOpeningDrop — returns { onDragOver, onDragLeave, onDrop }.
-//
 // Wall-mounted catalog items (wallMounted: true) behave like openings on
 // dragover: they snap to the nearest wall within WALL_SNAP_SCREEN_PX and
 // orient perpendicular to it. The ghost carries `wallSnap: bool` so
@@ -15,9 +13,9 @@ import { nearestWallSnap, wallMountedPlacement } from '../components/canvas/open
 const WALL_SNAP_SCREEN_PX = 60
 
 export default function useFurnitureDrop(containerRef, view) {
-  const walls      = useStore((s) => s.walls)
+  const walls       = useStore((s) => s.walls)
   const activeLevel = useStore((s) => s.activeLevel)
-  const dragGhost  = useStore((s) => s.dragGhost)
+  const dragGhost   = useStore((s) => s.dragGhost)
   const addFurniture    = useStore((s) => s.addFurniture)
   const setDragGhostPos = useStore((s) => s.setDragGhostPos)
   const clearDragGhost  = useStore((s) => s.clearDragGhost)
@@ -33,8 +31,7 @@ export default function useFurnitureDrop(containerRef, view) {
   }
 
   function findWallSnap(world) {
-    const worldThreshold = WALL_SNAP_SCREEN_PX / view.scale
-    return nearestWallSnap(world, levelWalls, worldThreshold)
+    return nearestWallSnap(world, levelWalls, WALL_SNAP_SCREEN_PX / view.scale)
   }
 
   return {
@@ -43,6 +40,7 @@ export default function useFurnitureDrop(containerRef, view) {
       e.preventDefault()
       e.dataTransfer.dropEffect = 'copy'
       if (!containerRef.current) return
+
       const world = worldAt(e.clientX, e.clientY)
       // dragGhost.type is set by setDragGhostType in the Sidebar's onDragStart,
       // so it's available here even though dataTransfer.getData is blocked.
@@ -60,13 +58,16 @@ export default function useFurnitureDrop(containerRef, view) {
         setDragGhostPos(p.x, p.y, { wallSnap: undefined, rotation: undefined })
       }
     },
+
     onDragLeave(e) {
       if (!containerRef.current?.contains(e.relatedTarget)) clearDragGhost()
     },
+
     onDrop(e) {
       const type = e.dataTransfer.getData(FURNITURE_DRAG_MIME)
       if (!type) return
       e.preventDefault()
+
       const world = worldAt(e.clientX, e.clientY)
       clearDragGhost()
       const spec = getFurnitureSpec(type)

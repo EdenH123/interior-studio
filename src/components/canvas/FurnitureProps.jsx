@@ -30,6 +30,22 @@ export default function FurnitureProps({ item, onUpdate }) {
       <Row label="Model" value={describeModelStatus(item.model)} />
       {item.wallMounted && <MountHeightField item={item} onUpdate={onUpdate} />}
 
+      {item.wallMounted && (
+        <div className="mt-3">
+          <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Mount height</div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0} max={4} step={0.05}
+              value={(item.mountHeight ?? 1.2).toFixed(2)}
+              onChange={(e) => onUpdate(item.id, { mountHeight: parseFloat(e.target.value) || 0 })}
+              className="w-20 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-gray-200 text-xs font-mono"
+            />
+            <span className="text-gray-500 text-[10px]">m above floor</span>
+          </div>
+        </div>
+      )}
+
       <div className="mt-3">
         <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Material</div>
         <MaterialPicker
