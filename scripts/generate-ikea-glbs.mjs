@@ -2,7 +2,7 @@
 // scripts/generate-ikea-glbs.mjs
 // Generates procedural GLB models for 16 IKEA catalog items.
 //
-// Conventions (same as other generate-*-glbs.mjs scripts):
+// Conventions:
 //   X = [-W/2, W/2]   Y = [0, H]   Z = [-D/2, D/2]
 //   -Z is back (wall-side); origin at floor bottom-centre.
 //
@@ -81,61 +81,90 @@ function merge(parts) {
   return { positions, normals, indices }
 }
 
-function writeGLB(name, parts, color = [0.72, 0.65, 0.57, 1.0]) {
-  const { positions, normals, indices } = merge(Array.isArray(parts) ? parts : [parts])
+// ─── Multi-material GLB writer ────────────────────────────────────────────────
+// groups: Array of { parts: [...primitives], color: [r,g,b,a], roughness?, metallic? }
+// Each group becomes a separate GLTF mesh primitive with its own material.
+function writeGLB(name, groups) {
+  const primitives = []
+  const materials  = []
+  const accessors  = []
+  const bufViews   = []
+  const chunks     = []
+  let byteOffset   = 0
+  let totalTris    = 0
 
-  const posF32 = new Float32Array(positions)
-  const nrmF32 = new Float32Array(normals)
-  const idxU16 = new Uint16Array(indices)
+  for (const { parts, color, roughness = 0.75, metallic = 0.0 } of groups) {
+    const { positions, normals, indices } = merge(Array.isArray(parts) ? parts : [parts])
 
-  const posBytes = posF32.byteLength
-  const nrmBytes = nrmF32.byteLength
-  const idxBytes = idxU16.byteLength
-  const binLen   = posBytes + nrmBytes + idxBytes
+    const posF32 = new Float32Array(positions)
+    const nrmF32 = new Float32Array(normals)
+    const idxU16 = new Uint16Array(indices)
 
-  const bin = Buffer.alloc(binLen)
-  Buffer.from(posF32.buffer).copy(bin, 0)
-  Buffer.from(nrmF32.buffer).copy(bin, posBytes)
-  Buffer.from(idxU16.buffer).copy(bin, posBytes + nrmBytes)
+    const posBytes = posF32.byteLength
+    const nrmBytes = nrmF32.byteLength
+    const idxBytes = idxU16.byteLength
+    // pad indices to 4-byte boundary so next group's positions start aligned
+    const idxPad   = (4 - (idxBytes % 4)) % 4
 
-  const pMin = [Infinity, Infinity, Infinity]
-  const pMax = [-Infinity, -Infinity, -Infinity]
-  for (let i = 0; i < positions.length; i += 3) {
-    for (let c = 0; c < 3; c++) {
-      pMin[c] = Math.min(pMin[c], positions[i + c])
-      pMax[c] = Math.max(pMax[c], positions[i + c])
+    const pMin = [Infinity, Infinity, Infinity]
+    const pMax = [-Infinity, -Infinity, -Infinity]
+    for (let i = 0; i < positions.length; i += 3) {
+      for (let c = 0; c < 3; c++) {
+        pMin[c] = Math.min(pMin[c], positions[i + c])
+        pMax[c] = Math.max(pMax[c], positions[i + c])
+      }
     }
+    const r4 = (v) => Math.round(v * 10000) / 10000
+    const vc = positions.length / 3
+    const ic = indices.length
+    totalTris += ic / 3
+
+    const posAcc = accessors.length
+    accessors.push({ bufferView: bufViews.length, componentType: 5126, count: vc, type: 'VEC3', min: pMin.map(r4), max: pMax.map(r4) })
+    bufViews.push({ buffer: 0, byteOffset, byteLength: posBytes, target: 34962 })
+    byteOffset += posBytes
+
+    const nrmAcc = accessors.length
+    accessors.push({ bufferView: bufViews.length, componentType: 5126, count: vc, type: 'VEC3' })
+    bufViews.push({ buffer: 0, byteOffset, byteLength: nrmBytes, target: 34962 })
+    byteOffset += nrmBytes
+
+    const idxAcc = accessors.length
+    accessors.push({ bufferView: bufViews.length, componentType: 5123, count: ic, type: 'SCALAR' })
+    bufViews.push({ buffer: 0, byteOffset, byteLength: idxBytes, target: 34963 })
+    byteOffset += idxBytes + idxPad
+
+    materials.push({ pbrMetallicRoughness: { baseColorFactor: color, metallicFactor: metallic, roughnessFactor: roughness }, doubleSided: false })
+    primitives.push({ attributes: { POSITION: posAcc, NORMAL: nrmAcc }, indices: idxAcc, material: materials.length - 1, mode: 4 })
+    chunks.push({ posF32, nrmF32, idxU16, idxPad })
   }
-  const r4 = (v) => Math.round(v * 10000) / 10000
-  const vc = positions.length / 3
-  const ic = indices.length
+
+  // Assemble binary buffer
+  const bin = Buffer.alloc(byteOffset)
+  let off = 0
+  for (const { posF32, nrmF32, idxU16, idxPad } of chunks) {
+    Buffer.from(posF32.buffer).copy(bin, off); off += posF32.byteLength
+    Buffer.from(nrmF32.buffer).copy(bin, off); off += nrmF32.byteLength
+    Buffer.from(idxU16.buffer).copy(bin, off); off += idxU16.byteLength
+    off += idxPad
+  }
 
   const gltfJson = {
     asset: { version: '2.0', generator: 'interior-studio-ikea' },
-    scenes: [{ nodes: [0] }],
-    scene: 0,
+    scenes: [{ nodes: [0] }], scene: 0,
     nodes: [{ mesh: 0 }],
-    meshes: [{ primitives: [{ attributes: { POSITION: 0, NORMAL: 1 }, indices: 2, material: 0, mode: 4 }] }],
-    materials: [{ pbrMetallicRoughness: { baseColorFactor: color, metallicFactor: 0.0, roughnessFactor: 0.75 }, doubleSided: false }],
-    accessors: [
-      { bufferView: 0, componentType: 5126, count: vc, type: 'VEC3', min: pMin.map(r4), max: pMax.map(r4) },
-      { bufferView: 1, componentType: 5126, count: vc, type: 'VEC3' },
-      { bufferView: 2, componentType: 5123, count: ic, type: 'SCALAR' },
-    ],
-    bufferViews: [
-      { buffer: 0, byteOffset: 0,                byteLength: posBytes, target: 34962 },
-      { buffer: 0, byteOffset: posBytes,          byteLength: nrmBytes, target: 34962 },
-      { buffer: 0, byteOffset: posBytes+nrmBytes, byteLength: idxBytes, target: 34963 },
-    ],
-    buffers: [{ byteLength: binLen }],
+    meshes: [{ primitives }],
+    materials, accessors,
+    bufferViews: bufViews,
+    buffers: [{ byteLength: byteOffset }],
   }
 
-  const jsonBuf  = Buffer.from(JSON.stringify(gltfJson), 'utf8')
-  const jsonPad  = (jsonBuf.length + 3) & ~3
+  const jsonBuf   = Buffer.from(JSON.stringify(gltfJson), 'utf8')
+  const jsonPad   = (jsonBuf.length + 3) & ~3
   const jsonChunk = Buffer.alloc(jsonPad, 0x20)
   jsonBuf.copy(jsonChunk)
 
-  const totalLen = 12 + 8 + jsonPad + 8 + binLen
+  const totalLen = 12 + 8 + jsonPad + 8 + byteOffset
   const out = Buffer.alloc(totalLen)
   let o = 0
   out.writeUInt32LE(0x46546C67, o); o += 4
@@ -144,233 +173,302 @@ function writeGLB(name, parts, color = [0.72, 0.65, 0.57, 1.0]) {
   out.writeUInt32LE(jsonPad,    o); o += 4
   out.writeUInt32LE(0x4E4F534A, o); o += 4
   jsonChunk.copy(out, o); o += jsonPad
-  out.writeUInt32LE(binLen,     o); o += 4
+  out.writeUInt32LE(byteOffset, o); o += 4
   out.writeUInt32LE(0x004E4942, o); o += 4
   bin.copy(out, o)
 
-  const path = resolve(OUT, name + '.glb')
-  writeFileSync(path, out)
-  const tris = ic / 3
-  console.log(`  ✓  ${(name + '.glb').padEnd(30)}  ${(totalLen / 1024).toFixed(1).padStart(6)} kB  ${tris} tris`)
+  writeFileSync(resolve(OUT, name + '.glb'), out)
+  console.log(`  ✓  ${(name + '.glb').padEnd(30)}  ${(totalLen / 1024).toFixed(1).padStart(6)} kB  ${totalTris} tris`)
 }
 
 // ─── Color palette (linear sRGB) ──────────────────────────────────────────────
-const C_IKEA_CREAM  = [0.65, 0.58, 0.42, 1]   // EKTORP beige
-const C_POANG_WOOD  = [0.55, 0.38, 0.16, 1]   // POÄNG bentwood frame
-const C_POANG_CUSH  = [0.80, 0.74, 0.60, 1]   // POÄNG cushion
-const C_IKEA_WHITE  = [0.91, 0.91, 0.90, 1]   // BESTÅ / KALLAX / PAX / ALEX white
-const C_BIRCH       = [0.72, 0.56, 0.32, 1]   // MALM / BILLY birch effect
-const C_HEMNES      = [0.85, 0.83, 0.80, 1]   // HEMNES white stain
+const C_CREAM      = [0.65, 0.58, 0.42, 1]   // EKTORP sofa fabric (beige)
+const C_DARK_LEG   = [0.28, 0.20, 0.10, 1]   // dark walnut/oak legs
+const C_POANG_WOOD = [0.55, 0.38, 0.16, 1]   // POÄNG bentwood frame
+const C_POANG_CUSH = [0.80, 0.74, 0.60, 1]   // POÄNG cushion (natural)
+const C_WHITE      = [0.91, 0.91, 0.90, 1]   // IKEA white lacquer
+const C_DOOR       = [0.84, 0.84, 0.82, 1]   // door/drawer panel (slightly warm)
+const C_SILVER     = [0.72, 0.72, 0.74, 1]   // brushed steel handles & rods
+const C_DARK_HW    = [0.22, 0.22, 0.24, 1]   // dark metal hardware
+const C_BIRCH      = [0.72, 0.56, 0.32, 1]   // MALM / BILLY birch veneer
+const C_BIRCH_LITE = [0.80, 0.65, 0.40, 1]   // lighter birch highlight
+const C_HEMNES     = [0.85, 0.83, 0.80, 1]   // HEMNES white-stain pine
+const C_MATTRESS   = [0.88, 0.88, 0.86, 1]   // mattress (light grey fabric)
+const C_LEGS_WHT   = [0.82, 0.82, 0.80, 1]   // slightly-grey white for legs
+
+// Material preset shortcuts: { roughness, metallic }
+const FABRIC  = { roughness: 0.90, metallic: 0.0 }
+const WOOD    = { roughness: 0.65, metallic: 0.0 }
+const LACQUER = { roughness: 0.45, metallic: 0.0 }
+const VENEER  = { roughness: 0.55, metallic: 0.0 }
+const DOOR_M  = { roughness: 0.40, metallic: 0.0 }
+const METAL   = { roughness: 0.20, metallic: 0.85 }
+const DARK_HW = { roughness: 0.30, metallic: 0.70 }
 
 console.log('Generating IKEA GLBs…\n')
 
 // ─── IKEA LIVING ──────────────────────────────────────────────────────────────
 
-// EKTORP 2-seat sofa  W1.80 × D0.88 × H0.88  (-Z = back/wall side)
+// EKTORP 2-seat sofa  W1.80 × D0.88 × H0.88
 writeGLB('ikea-ektorp-2', [
-  box(-0.90, 0,    -0.44,  0.90, 0.50,  0.44),    // seat/frame body
-  box(-0.90, 0.50, -0.44, -0.72, 0.80,  0.44),    // left arm
-  box( 0.72, 0.50, -0.44,  0.90, 0.80,  0.44),    // right arm
-  box(-0.72, 0.50, -0.44,  0.72, 0.62,  0.44),    // seat cushion top
-  box(-0.72, 0.62, -0.44,  0.72, 0.88, -0.24),    // back cushion
-  cyl(-0.82, 0.36,  0, 0.06, 0.030, 8),           // front-left leg
-  cyl( 0.82, 0.36,  0, 0.06, 0.030, 8),           // front-right leg
-  cyl(-0.82,-0.36,  0, 0.06, 0.030, 8),           // back-left leg
-  cyl( 0.82,-0.36,  0, 0.06, 0.030, 8),           // back-right leg
-], C_IKEA_CREAM)
+  { parts: [
+    box(-0.90, 0,    -0.44,  0.90, 0.50,  0.44),    // seat/frame body
+    box(-0.90, 0.50, -0.44, -0.72, 0.80,  0.44),    // left arm
+    box( 0.72, 0.50, -0.44,  0.90, 0.80,  0.44),    // right arm
+    box(-0.72, 0.50, -0.44,  0.72, 0.62,  0.44),    // seat cushion
+    box(-0.72, 0.62, -0.44,  0.72, 0.88, -0.24),    // back cushion
+  ], color: C_CREAM, ...FABRIC },
+  { parts: [
+    cyl(-0.82,  0.36, 0, 0.06, 0.030, 8),
+    cyl( 0.82,  0.36, 0, 0.06, 0.030, 8),
+    cyl(-0.82, -0.36, 0, 0.06, 0.030, 8),
+    cyl( 0.82, -0.36, 0, 0.06, 0.030, 8),
+  ], color: C_DARK_LEG, ...WOOD },
+])
 
 // EKTORP 3-seat sofa  W2.18 × D0.88 × H0.88
 writeGLB('ikea-ektorp-3', [
-  box(-1.09, 0,    -0.44,  1.09, 0.50,  0.44),
-  box(-1.09, 0.50, -0.44, -0.91, 0.80,  0.44),    // left arm
-  box( 0.91, 0.50, -0.44,  1.09, 0.80,  0.44),    // right arm
-  box(-0.91, 0.50, -0.44,  0.91, 0.62,  0.44),    // seat cushion top
-  box(-0.91, 0.62, -0.44,  0.91, 0.88, -0.24),    // back cushion
-  cyl(-1.01, 0.36,  0, 0.06, 0.030, 8),
-  cyl( 1.01, 0.36,  0, 0.06, 0.030, 8),
-  cyl(-1.01,-0.36,  0, 0.06, 0.030, 8),
-  cyl( 1.01,-0.36,  0, 0.06, 0.030, 8),
-], C_IKEA_CREAM)
+  { parts: [
+    box(-1.09, 0,    -0.44,  1.09, 0.50,  0.44),
+    box(-1.09, 0.50, -0.44, -0.91, 0.80,  0.44),
+    box( 0.91, 0.50, -0.44,  1.09, 0.80,  0.44),
+    box(-0.91, 0.50, -0.44,  0.91, 0.62,  0.44),
+    box(-0.91, 0.62, -0.44,  0.91, 0.88, -0.24),
+  ], color: C_CREAM, ...FABRIC },
+  { parts: [
+    cyl(-1.01,  0.36, 0, 0.06, 0.030, 8),
+    cyl( 1.01,  0.36, 0, 0.06, 0.030, 8),
+    cyl(-1.01, -0.36, 0, 0.06, 0.030, 8),
+    cyl( 1.01, -0.36, 0, 0.06, 0.030, 8),
+  ], color: C_DARK_LEG, ...WOOD },
+])
 
-// POÄNG armchair  W0.82 × D0.82 × H1.00  (-Z = back/wall side)
-// Bentwood frame: 2 curved arms + 2 front legs + 2 back leg-posts
+// POÄNG armchair  W0.82 × D0.82 × H1.00
 writeGLB('ikea-poang', [
-  // Frame (birch bentwood — modelled as boxes for simplicity)
-  box(-0.41, 0,    -0.41, -0.35, 0.42,  0.41),    // left arm post (front section)
-  box( 0.35, 0,    -0.41,  0.41, 0.42,  0.41),    // right arm post (front section)
-  box(-0.41, 0.42, -0.41, -0.35, 0.46,  0.12),    // left arm rest
-  box( 0.35, 0.42, -0.41,  0.41, 0.46,  0.12),    // right arm rest
-  box(-0.41, 0.42, -0.41, -0.35, 1.00, -0.30),    // left back post
-  box( 0.35, 0.42, -0.41,  0.41, 1.00, -0.30),    // right back post
-  box(-0.41, 0.10, -0.41,  0.41, 0.14, -0.36),    // rear stretcher low
-  box(-0.41, 0.30, -0.41,  0.41, 0.34, -0.36),    // rear stretcher high
-  // Seat & back cushions (cream)
-  box(-0.35, 0.42, -0.12,  0.35, 0.60,  0.41),    // seat cushion
-  box(-0.35, 0.58, -0.41,  0.35, 1.00, -0.12),    // back cushion
-], C_POANG_WOOD)
+  { parts: [
+    box(-0.41, 0,    -0.41, -0.35, 0.42,  0.41),    // left front post
+    box( 0.35, 0,    -0.41,  0.41, 0.42,  0.41),    // right front post
+    box(-0.41, 0.42, -0.41, -0.35, 0.46,  0.12),    // left arm rest
+    box( 0.35, 0.42, -0.41,  0.41, 0.46,  0.12),    // right arm rest
+    box(-0.41, 0.42, -0.41, -0.35, 1.00, -0.30),    // left back post
+    box( 0.35, 0.42, -0.41,  0.41, 1.00, -0.30),    // right back post
+    box(-0.41, 0.10, -0.41,  0.41, 0.14, -0.36),    // low stretcher
+    box(-0.41, 0.30, -0.41,  0.41, 0.34, -0.36),    // high stretcher
+  ], color: C_POANG_WOOD, ...WOOD },
+  { parts: [
+    box(-0.35, 0.42, -0.12,  0.35, 0.60,  0.41),    // seat cushion
+    box(-0.35, 0.58, -0.41,  0.35, 1.00, -0.12),    // back cushion
+  ], color: C_POANG_CUSH, ...FABRIC },
+])
 
 // LACK side table  W0.45 × D0.45 × H0.55
 writeGLB('ikea-lack-side', [
-  box(-0.225, 0.52, -0.225, 0.225, 0.55, 0.225),  // tabletop
-  cyl(-0.175, -0.175, 0, 0.52, 0.022, 6),         // leg FL
-  cyl( 0.175, -0.175, 0, 0.52, 0.022, 6),         // leg FR
-  cyl(-0.175,  0.175, 0, 0.52, 0.022, 6),         // leg BL
-  cyl( 0.175,  0.175, 0, 0.52, 0.022, 6),         // leg BR
-], C_IKEA_WHITE)
+  { parts: [
+    box(-0.225, 0.52, -0.225, 0.225, 0.55, 0.225),
+  ], color: C_WHITE, ...LACQUER },
+  { parts: [
+    cyl(-0.175, -0.175, 0, 0.52, 0.022, 6),
+    cyl( 0.175, -0.175, 0, 0.52, 0.022, 6),
+    cyl(-0.175,  0.175, 0, 0.52, 0.022, 6),
+    cyl( 0.175,  0.175, 0, 0.52, 0.022, 6),
+  ], color: C_LEGS_WHT, ...LACQUER },
+])
 
 // LACK coffee table  W0.90 × D0.55 × H0.45
 writeGLB('ikea-lack-coffee', [
-  box(-0.45, 0.42, -0.275, 0.45, 0.45, 0.275),    // tabletop
-  cyl(-0.38, -0.22, 0, 0.42, 0.022, 6),           // leg FL
-  cyl( 0.38, -0.22, 0, 0.42, 0.022, 6),           // leg FR
-  cyl(-0.38,  0.22, 0, 0.42, 0.022, 6),           // leg BL
-  cyl( 0.38,  0.22, 0, 0.42, 0.022, 6),           // leg BR
-], C_IKEA_WHITE)
+  { parts: [
+    box(-0.45, 0.42, -0.275, 0.45, 0.45, 0.275),
+  ], color: C_WHITE, ...LACQUER },
+  { parts: [
+    cyl(-0.38, -0.22, 0, 0.42, 0.022, 6),
+    cyl( 0.38, -0.22, 0, 0.42, 0.022, 6),
+    cyl(-0.38,  0.22, 0, 0.42, 0.022, 6),
+    cyl( 0.38,  0.22, 0, 0.42, 0.022, 6),
+  ], color: C_LEGS_WHT, ...LACQUER },
+])
 
 // BESTÅ TV unit 120cm  W1.20 × D0.40 × H0.64
 writeGLB('ikea-besta-120', [
-  box(-0.60, 0,    -0.20,  0.60, 0.64,  0.20),    // carcass
-  box(-0.58, 0.02,  0.19, -0.04, 0.62,  0.21),    // left door
-  box( 0.04, 0.02,  0.19,  0.58, 0.62,  0.21),    // right door
-  box(-0.50, 0.30,  0.20, -0.38, 0.32,  0.22),    // left handle
-  box( 0.38, 0.30,  0.20,  0.50, 0.32,  0.22),    // right handle
-  cyl(-0.52,  0.16, 0, 0.05, 0.025, 6),           // leg FL
-  cyl( 0.52,  0.16, 0, 0.05, 0.025, 6),           // leg FR
-  cyl(-0.52, -0.16, 0, 0.05, 0.025, 6),           // leg BL
-  cyl( 0.52, -0.16, 0, 0.05, 0.025, 6),           // leg BR
-], C_IKEA_WHITE)
+  { parts: [
+    box(-0.60, 0,    -0.20,  0.60, 0.64,  0.20),    // carcass
+    cyl(-0.52,  0.16, 0, 0.05, 0.025, 6),
+    cyl( 0.52,  0.16, 0, 0.05, 0.025, 6),
+    cyl(-0.52, -0.16, 0, 0.05, 0.025, 6),
+    cyl( 0.52, -0.16, 0, 0.05, 0.025, 6),
+  ], color: C_WHITE, ...LACQUER },
+  { parts: [
+    box(-0.58, 0.02,  0.19, -0.04, 0.62,  0.21),    // left door
+    box( 0.04, 0.02,  0.19,  0.58, 0.62,  0.21),    // right door
+  ], color: C_DOOR, ...DOOR_M },
+  { parts: [
+    box(-0.50, 0.30,  0.20, -0.38, 0.32,  0.22),
+    box( 0.38, 0.30,  0.20,  0.50, 0.32,  0.22),
+  ], color: C_DARK_HW, ...DARK_HW },
+])
 
 // BESTÅ TV unit 180cm  W1.80 × D0.40 × H0.64
 writeGLB('ikea-besta-180', [
-  box(-0.90, 0,    -0.20,  0.90, 0.64,  0.20),
-  box(-0.88, 0.02,  0.19, -0.34, 0.62,  0.21),    // left door
-  box(-0.26, 0.02,  0.19,  0.26, 0.62,  0.21),    // centre door
-  box( 0.34, 0.02,  0.19,  0.88, 0.62,  0.21),    // right door
-  box(-0.80, 0.30,  0.20, -0.68, 0.32,  0.22),
-  box(-0.08, 0.30,  0.20,  0.08, 0.32,  0.22),
-  box( 0.68, 0.30,  0.20,  0.80, 0.32,  0.22),
-  cyl(-0.82,  0.16, 0, 0.05, 0.025, 6),
-  cyl( 0.82,  0.16, 0, 0.05, 0.025, 6),
-  cyl(-0.82, -0.16, 0, 0.05, 0.025, 6),
-  cyl( 0.82, -0.16, 0, 0.05, 0.025, 6),
-], C_IKEA_WHITE)
+  { parts: [
+    box(-0.90, 0,    -0.20,  0.90, 0.64,  0.20),
+    cyl(-0.82,  0.16, 0, 0.05, 0.025, 6),
+    cyl( 0.82,  0.16, 0, 0.05, 0.025, 6),
+    cyl(-0.82, -0.16, 0, 0.05, 0.025, 6),
+    cyl( 0.82, -0.16, 0, 0.05, 0.025, 6),
+  ], color: C_WHITE, ...LACQUER },
+  { parts: [
+    box(-0.88, 0.02,  0.19, -0.34, 0.62,  0.21),
+    box(-0.26, 0.02,  0.19,  0.26, 0.62,  0.21),
+    box( 0.34, 0.02,  0.19,  0.88, 0.62,  0.21),
+  ], color: C_DOOR, ...DOOR_M },
+  { parts: [
+    box(-0.80, 0.30,  0.20, -0.68, 0.32,  0.22),
+    box(-0.08, 0.30,  0.20,  0.08, 0.32,  0.22),
+    box( 0.68, 0.30,  0.20,  0.80, 0.32,  0.22),
+  ], color: C_DARK_HW, ...DARK_HW },
+])
 
 // ─── IKEA BEDROOM ─────────────────────────────────────────────────────────────
 
-// MALM bed 140cm  W1.60 × D2.09 × H0.90  (-Z = headboard / wall side)
+// MALM bed 140cm  W1.60 × D2.09 × H0.90
 writeGLB('ikea-malm-bed-140', [
-  box(-0.80, 0,    -1.045,  0.80, 0.26,  1.045),  // base platform
-  box(-0.80, 0,    -1.045,  0.80, 0.90, -0.97),   // headboard slab
-  box(-0.80, 0,     0.97,   0.80, 0.42,  1.045),  // footboard
-  box(-0.80, 0.24, -0.97,  -0.73, 0.26,  0.97),   // left side rail
-  box( 0.73, 0.24, -0.97,   0.80, 0.26,  0.97),   // right side rail
-  box(-0.73, 0.26, -0.97,   0.73, 0.38,  0.97),   // mattress
-], C_BIRCH)
+  { parts: [
+    box(-0.80, 0,    -1.045,  0.80, 0.26,  1.045),  // base platform
+    box(-0.80, 0,    -1.045,  0.80, 0.90, -0.97),   // headboard
+    box(-0.80, 0,     0.97,   0.80, 0.42,  1.045),  // footboard
+    box(-0.80, 0.24, -0.97,  -0.73, 0.26,  0.97),   // left rail
+    box( 0.73, 0.24, -0.97,   0.80, 0.26,  0.97),   // right rail
+  ], color: C_BIRCH, ...VENEER },
+  { parts: [
+    box(-0.73, 0.26, -0.97,   0.73, 0.38,  0.97),   // mattress
+  ], color: C_MATTRESS, ...{ roughness: 0.85, metallic: 0.0 } },
+])
 
 // MALM bed 160cm  W1.75 × D2.09 × H0.90
 writeGLB('ikea-malm-bed-160', [
-  box(-0.875, 0,    -1.045,  0.875, 0.26,  1.045),
-  box(-0.875, 0,    -1.045,  0.875, 0.90, -0.97),
-  box(-0.875, 0,     0.97,   0.875, 0.42,  1.045),
-  box(-0.875, 0.24, -0.97,  -0.805, 0.26,  0.97),
-  box( 0.805, 0.24, -0.97,   0.875, 0.26,  0.97),
-  box(-0.805, 0.26, -0.97,   0.805, 0.38,  0.97),
-], C_BIRCH)
+  { parts: [
+    box(-0.875, 0,    -1.045,  0.875, 0.26,  1.045),
+    box(-0.875, 0,    -1.045,  0.875, 0.90, -0.97),
+    box(-0.875, 0,     0.97,   0.875, 0.42,  1.045),
+    box(-0.875, 0.24, -0.97,  -0.805, 0.26,  0.97),
+    box( 0.805, 0.24, -0.97,   0.875, 0.26,  0.97),
+  ], color: C_BIRCH, ...VENEER },
+  { parts: [
+    box(-0.805, 0.26, -0.97,   0.805, 0.38,  0.97),
+  ], color: C_MATTRESS, ...{ roughness: 0.85, metallic: 0.0 } },
+])
 
 // MALM dresser 6-drawer  W0.80 × D0.48 × H1.23
 writeGLB('ikea-malm-dresser', (() => {
-  const parts = [box(-0.40, 0, -0.24, 0.40, 1.23, 0.24)]  // carcass
-  const dH = (1.23 - 0.04) / 6  // drawer height
+  const dH = (1.23 - 0.04) / 6
+  const drawers = [], handles = []
   for (let i = 0; i < 6; i++) {
     const y1 = 0.02 + i * dH
     const y2 = y1 + dH - 0.01
-    parts.push(box(-0.38, y1, 0.23, 0.38, y2, 0.25))        // drawer face
-    parts.push(box(-0.06, y1 + dH*0.4, 0.24, 0.06, y1 + dH*0.55, 0.26)) // handle
+    drawers.push(box(-0.38, y1, 0.23, 0.38, y2, 0.25))
+    handles.push(box(-0.06, y1 + dH*0.4, 0.24, 0.06, y1 + dH*0.55, 0.26))
   }
-  return parts
-})(), C_BIRCH)
+  return [
+    { parts: [box(-0.40, 0, -0.24, 0.40, 1.23, 0.24)], color: C_BIRCH, ...VENEER },
+    { parts: drawers, color: C_BIRCH_LITE, ...DOOR_M },
+    { parts: handles,  color: C_SILVER,    ...METAL },
+  ]
+})())
 
-// HEMNES daybed  W0.80 × D2.05 × H0.83  (-Z = headboard / wall side)
+// HEMNES daybed  W0.80 × D2.05 × H0.83
 writeGLB('ikea-hemnes-daybed', [
-  box(-0.40, 0,    -1.025,  0.40, 0.83, -0.97),   // headboard
-  box(-0.40, 0,     0.97,   0.40, 0.55,  1.025),  // footboard
-  box(-0.40, 0,    -0.97,  -0.35, 0.55,  0.97),   // left side rail
-  box( 0.35, 0,    -0.97,   0.40, 0.55,  0.97),   // right side rail
-  box(-0.40, 0.05, -0.97,   0.40, 0.18,  0.97),   // base slats
-  box(-0.37, 0.18, -0.97,   0.37, 0.32,  0.97),   // mattress
-], C_HEMNES)
+  { parts: [
+    box(-0.40, 0,    -1.025,  0.40, 0.83, -0.97),   // headboard
+    box(-0.40, 0,     0.97,   0.40, 0.55,  1.025),  // footboard
+    box(-0.40, 0,    -0.97,  -0.35, 0.55,  0.97),   // left rail
+    box( 0.35, 0,    -0.97,   0.40, 0.55,  0.97),   // right rail
+    box(-0.40, 0.05, -0.97,   0.40, 0.18,  0.97),   // slats base
+  ], color: C_HEMNES, ...WOOD },
+  { parts: [
+    box(-0.37, 0.18, -0.97,   0.37, 0.32,  0.97),   // mattress
+  ], color: C_MATTRESS, ...{ roughness: 0.85, metallic: 0.0 } },
+])
 
 // ─── IKEA STORAGE ─────────────────────────────────────────────────────────────
 
-// KALLAX 2×2  W0.77 × D0.39 × H0.77  (open front = +Z, no back panel so
-// compartments appear dark/open — makes the 2×2 grid clearly visible in 3D)
+// KALLAX 2×2  W0.77 × D0.39 × H0.77  (no back panel — open compartments show dark)
 writeGLB('ikea-kallax-2x2', [
-  box(-0.385, 0,     -0.195,  0.385, 0.036, 0.195),  // bottom
-  box(-0.385, 0.734, -0.195,  0.385, 0.770, 0.195),  // top
-  box(-0.385, 0.036, -0.195, -0.349, 0.734, 0.195),  // left side
-  box( 0.349, 0.036, -0.195,  0.385, 0.734, 0.195),  // right side
-  box(-0.018, 0.036, -0.195,  0.018, 0.734, 0.195),  // vertical mid-divider
-  box(-0.349, 0.367, -0.195,  0.349, 0.403, 0.195),  // horizontal mid-divider
-], C_IKEA_WHITE)
+  { parts: [
+    box(-0.385, 0,     -0.195,  0.385, 0.036, 0.195),  // bottom
+    box(-0.385, 0.734, -0.195,  0.385, 0.770, 0.195),  // top
+    box(-0.385, 0.036, -0.195, -0.349, 0.734, 0.195),  // left side
+    box( 0.349, 0.036, -0.195,  0.385, 0.734, 0.195),  // right side
+    box(-0.018, 0.036, -0.195,  0.018, 0.734, 0.195),  // vertical divider
+    box(-0.349, 0.367, -0.195,  0.349, 0.403, 0.195),  // horizontal divider
+  ], color: C_WHITE, ...LACQUER },
+])
 
-// KALLAX 4×2  W1.47 × D0.39 × H0.77
+// KALLAX 4×2  W1.47 × D0.39 × H0.77  (no back panel)
 writeGLB('ikea-kallax-4x2', [
-  box(-0.735, 0,     -0.195,  0.735, 0.036, 0.195),  // bottom
-  box(-0.735, 0.734, -0.195,  0.735, 0.770, 0.195),  // top
-  box(-0.735, 0.036, -0.195, -0.699, 0.734, 0.195),  // left side
-  box( 0.699, 0.036, -0.195,  0.735, 0.734, 0.195),  // right side
-  // 3 vertical dividers — 4 equal columns across 1.47 m
-  box(-0.3765, 0.036, -0.195, -0.3405, 0.734, 0.195),
-  box(-0.018,  0.036, -0.195,  0.018,  0.734, 0.195),
-  box( 0.3405, 0.036, -0.195,  0.3765, 0.734, 0.195),
-  // horizontal mid-divider
-  box(-0.699, 0.367, -0.195,  0.699, 0.403, 0.195),
-], C_IKEA_WHITE)
+  { parts: [
+    box(-0.735, 0,     -0.195,  0.735, 0.036, 0.195),
+    box(-0.735, 0.734, -0.195,  0.735, 0.770, 0.195),
+    box(-0.735, 0.036, -0.195, -0.699, 0.734, 0.195),
+    box( 0.699, 0.036, -0.195,  0.735, 0.734, 0.195),
+    box(-0.3765, 0.036, -0.195, -0.3405, 0.734, 0.195),
+    box(-0.018,  0.036, -0.195,  0.018,  0.734, 0.195),
+    box( 0.3405, 0.036, -0.195,  0.3765, 0.734, 0.195),
+    box(-0.699, 0.367, -0.195,  0.699, 0.403, 0.195),
+  ], color: C_WHITE, ...LACQUER },
+])
 
-// BILLY bookcase  W0.80 × D0.28 × H2.02  (open front = +Z, no back panel)
+// BILLY bookcase  W0.80 × D0.28 × H2.02  (no back panel)
 writeGLB('ikea-billy', (() => {
-  const parts = [
-    box(-0.40, 0,     -0.14,  0.40, 0.036, 0.14),   // bottom (36mm)
-    box(-0.40, 1.984, -0.14,  0.40, 2.02,  0.14),   // top (36mm)
-    box(-0.40, 0.036, -0.14, -0.364, 1.984, 0.14),  // left side (36mm)
-    box( 0.364, 0.036,-0.14,  0.40, 1.984, 0.14),   // right side (36mm)
+  const shelves = [0.38, 0.76, 1.14, 1.52].map(
+    y => box(-0.364, y, -0.14, 0.364, y + 0.018, 0.14)
+  )
+  return [
+    { parts: [
+      box(-0.40, 0,     -0.14,  0.40, 0.036, 0.14),   // bottom
+      box(-0.40, 1.984, -0.14,  0.40, 2.02,  0.14),   // top
+      box(-0.40, 0.036, -0.14, -0.364, 1.984, 0.14),  // left side
+      box( 0.364, 0.036,-0.14,  0.40, 1.984, 0.14),   // right side
+    ], color: C_BIRCH, ...VENEER },
+    { parts: shelves, color: C_BIRCH_LITE, ...VENEER },
   ]
-  // 4 shelves spanning full depth (visible from front and back)
-  const shelfY = [0.38, 0.76, 1.14, 1.52]
-  for (const y of shelfY) {
-    parts.push(box(-0.364, y, -0.14, 0.364, y + 0.018, 0.14))
-  }
-  return parts
-})(), C_BIRCH)
+})())
 
 // PAX wardrobe 100cm  W1.00 × D0.58 × H2.01
 writeGLB('ikea-pax-100', [
-  box(-0.50, 0,     -0.29,  0.50, 0.036, 0.29),   // bottom (36mm)
-  box(-0.50, 1.974, -0.29,  0.50, 2.01,  0.29),   // top (36mm)
-  box(-0.50, 0.036, -0.29, -0.464, 1.974, 0.29),  // left side (36mm)
-  box( 0.464, 0.036,-0.29,  0.50, 1.974, 0.29),   // right side (36mm)
-  box(-0.50, 0,     -0.29,  0.50, 2.01, -0.254),  // back panel (36mm)
-  // hanging rod
-  cyl(0, 0, 0.55, 1.95, 0.012, 8),
-  // 2 doors (full-height)
-  box(-0.464, 0.036, 0.28, -0.04, 1.974, 0.30),   // left door
-  box( 0.04,  0.036, 0.28,  0.464, 1.974, 0.30),  // right door
-  box(-0.22, 1.00,  0.29, -0.10, 1.02,  0.31),    // left handle
-  box( 0.10, 1.00,  0.29,  0.22, 1.02,  0.31),    // right handle
-], C_IKEA_WHITE)
+  { parts: [
+    box(-0.50, 0,     -0.29,  0.50, 0.036, 0.29),   // bottom
+    box(-0.50, 1.974, -0.29,  0.50, 2.01,  0.29),   // top
+    box(-0.50, 0.036, -0.29, -0.464, 1.974, 0.29),  // left side
+    box( 0.464, 0.036,-0.29,  0.50, 1.974, 0.29),   // right side
+    box(-0.50, 0,     -0.29,  0.50, 2.01, -0.254),  // back panel
+  ], color: C_WHITE, ...LACQUER },
+  { parts: [
+    box(-0.464, 0.036, 0.28, -0.04, 1.974, 0.30),   // left door
+    box( 0.04,  0.036, 0.28,  0.464, 1.974, 0.30),  // right door
+  ], color: C_DOOR, ...DOOR_M },
+  { parts: [
+    cyl(0, 0, 0.55, 1.95, 0.012, 8),                // hanging rod
+  ], color: C_SILVER, ...METAL },
+  { parts: [
+    box(-0.22, 1.00, 0.29, -0.10, 1.02, 0.31),      // left handle
+    box( 0.10, 1.00, 0.29,  0.22, 1.02, 0.31),      // right handle
+  ], color: C_DARK_HW, ...DARK_HW },
+])
 
 // ALEX drawer unit  W0.36 × D0.58 × H0.70
 writeGLB('ikea-alex', (() => {
-  const parts = [box(-0.18, 0, -0.29, 0.18, 0.70, 0.29)]  // carcass
-  // 5 drawers, equal spacing
   const dH = (0.70 - 0.04) / 5
+  const drawers = [], handles = []
   for (let i = 0; i < 5; i++) {
     const y1 = 0.02 + i * dH
     const y2 = y1 + dH - 0.008
-    parts.push(box(-0.16, y1, 0.28, 0.16, y2, 0.30))         // drawer face
-    parts.push(box(-0.04, y1 + dH*0.38, 0.29, 0.04, y1 + dH*0.52, 0.31)) // handle
+    drawers.push(box(-0.16, y1, 0.28, 0.16, y2, 0.30))
+    handles.push(box(-0.04, y1 + dH*0.38, 0.29, 0.04, y1 + dH*0.52, 0.31))
   }
-  return parts
-})(), C_IKEA_WHITE)
+  return [
+    { parts: [box(-0.18, 0, -0.29, 0.18, 0.70, 0.29)], color: C_WHITE,    ...LACQUER },
+    { parts: drawers,                                    color: C_DOOR,     ...DOOR_M  },
+    { parts: handles,                                    color: C_SILVER,   ...METAL   },
+  ]
+})())
 
 console.log('\nDone — 16 IKEA GLBs written.')
