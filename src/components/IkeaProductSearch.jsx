@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import useStore from '../store/useStore'
 import { searchIkeaCatalog } from '../utils/ikeaCatalog'
-import { normalizeArticleNumber, fetchIkeaProduct, templateFromProduct } from '../utils/ikeaApi'
+import { normalizeArticleNumber, fetchIkeaProduct } from '../utils/ikeaApi'
+import { getFurnitureSpec } from './canvas/furnitureCatalog'
 import { TEMPLATES, generateModelBlobUrl } from '../utils/glbGenerator'
 
 export default function IkeaProductSearch() {
@@ -35,53 +36,58 @@ export default function IkeaProductSearch() {
   )
 }
 
-// Returns true when the input looks like an IKEA article number.
 function looksLikeCode(v) {
   return /^\d{3}[\s.]?\d{3}[\s.]?\d{2}$/.test(v.trim()) ||
     /^\d{7,8}$/.test(v.replace(/[\s.]/g, ''))
 }
 
+// Build the placement spec for a selected item.
+// Prefers the catalog GLB of fType (exact furniture shape), then falls
+// back to generating a browser-side blob from the generic template.
+function buildModelUrl(fType, templateKey, w, d, h) {
+  if (fType) {
+    const spec = getFurnitureSpec(fType)
+    if (spec?.model) return spec.model
+  }
+  return generateModelBlobUrl(templateKey, w, d, h)
+}
+
 function SearchForm() {
   const setPendingPlacement = useStore((s) => s.setPendingPlacement)
 
-  // ── shared state ──────────────────────────────────────────────────────────
-  const [query,     setQuery]     = useState('')     // text field value
-  const [selected,  setSelected]  = useState(null)   // { name, w, d, h, t } from catalog OR fetched
-  const [dropOpen,  setDropOpen]  = useState(false)
-
-  // ── article-code fetch state ──────────────────────────────────────────────
-  const [fetching,  setFetching]  = useState(false)
-  const [fetchErr,  setFetchErr]  = useState(null)
+  const [query,    setQuery]    = useState('')
+  const [selected, setSelected] = useState(null)
+  const [dropOpen, setDropOpen] = useState(false)
+  const [fetching, setFetching] = useState(false)
+  const [fetchErr, setFetchErr] = useState(null)
 
   const isCode    = looksLikeCode(query)
   const results   = !isCode && query.trim() ? searchIkeaCatalog(query, 10) : []
   const showDrop  = dropOpen && results.length > 0
 
-  // ── pick from catalog dropdown ────────────────────────────────────────────
   function pick(item) {
-    setSelected({ name: item.n, w: item.w, d: item.d, h: item.h, t: item.t })
+    setSelected(item)
     setQuery(item.n)
     setDropOpen(false)
     setFetchErr(null)
   }
 
-  // ── fetch by article code ─────────────────────────────────────────────────
   async function handleLookup() {
     setFetching(true)
     setFetchErr(null)
     setSelected(null)
     try {
       const p = await fetchIkeaProduct(query)
-      // If dimensions are missing (API didn't return them), surface that to the user.
       if (!p.width || !p.depth || !p.height) {
-        setFetchErr(`Found "${p.name}" but dimensions are unavailable. Try searching by name instead.`)
+        setFetchErr(`Found "${p.name}" but dimensions weren't returned. Search by name instead.`)
       } else {
         setSelected({
-          name: p.name,
+          n: p.name,
           w: Math.round(p.width),
           d: Math.round(p.depth),
           h: Math.round(p.height),
           t: p.template,
+          fType: null,   // fetched items have no pre-built catalog GLB
         })
         setQuery(p.name)
       }
@@ -92,19 +98,24 @@ function SearchForm() {
     }
   }
 
-  // ── place ─────────────────────────────────────────────────────────────────
   function handlePlace() {
     if (!selected) return
     const w = selected.w / 100
     const d = selected.d / 100
     const h = selected.h / 100
-    const tmpl = TEMPLATES[selected.t] ?? TEMPLATES.sofa
+    const tmpl     = TEMPLATES[selected.t] ?? TEMPLATES.sofa
+    const modelUrl = buildModelUrl(selected.fType, selected.t, w, d, h)
+    // Use the catalog spec color when reusing an existing GLB.
+    const color = selected.fType
+      ? (getFurnitureSpec(selected.fType)?.color ?? tmpl.hex)
+      : tmpl.hex
+
     setPendingPlacement({
       type:  `custom-${selected.t}-${Date.now()}`,
-      label: selected.name,
+      label: selected.n,
       width: w, depth: d, height: h,
-      color: tmpl.hex,
-      model: generateModelBlobUrl(selected.t, w, d, h),
+      color,
+      model: modelUrl,
     })
   }
 
@@ -158,24 +169,20 @@ function SearchForm() {
         )}
       </div>
 
-      {/* Article code hint */}
-      {isCode && !selected && !fetchErr && !fetching && (
-        <p className="text-[9px] text-gray-500 leading-snug">
-          Paste any 8-digit IKEA article number and click Look up.
-        </p>
-      )}
-
       {/* Fetch error */}
       {fetchErr && (
-        <p className="text-[9px] text-red-400 leading-snug">{fetchErr}</p>
+        <p className="text-[9px] text-amber-400 leading-snug">{fetchErr}</p>
       )}
 
       {/* Selected item summary */}
       {selected && (
         <div className="bg-gray-800 rounded px-2.5 py-2 space-y-0.5">
-          <p className="text-xs text-gray-200 font-medium leading-snug">{selected.name}</p>
+          <p className="text-xs text-gray-200 font-medium leading-snug">{selected.n}</p>
           <p className="text-[10px] text-gray-400">
-            {selected.w} × {selected.d} × {selected.h} cm &nbsp;·&nbsp; {TEMPLATES[selected.t]?.label}
+            {selected.w} × {selected.d} × {selected.h} cm
+            {selected.fType && (
+              <span className="text-green-500"> · 3D model ready</span>
+            )}
           </p>
         </div>
       )}
