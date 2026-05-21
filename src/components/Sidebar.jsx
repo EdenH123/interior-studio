@@ -3,6 +3,7 @@ import { OPENINGS, OPENING_DRAG_MIME } from './canvas/openingsCatalog'
 import useStore from '../store/useStore'
 import LayersPanel from './LayersPanel'
 import LevelsPanel from './LevelsPanel'
+import IkeaProductSearch from './IkeaProductSearch'
 
 export const FURNITURE_DRAG_MIME = 'application/x-interior-studio-furniture'
 
@@ -13,6 +14,7 @@ export default function Sidebar() {
       <div className="px-4 py-2 border-b border-gray-700">
         <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Elements</span>
       </div>
+      <IkeaProductSearch />
       <div className="flex-1 overflow-y-auto p-2 space-y-3">
         <OpeningsGroup />
         {CATEGORIES.map((cat) => (

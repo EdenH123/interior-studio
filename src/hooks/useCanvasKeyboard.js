@@ -20,6 +20,7 @@ export default function useCanvasKeyboard() {
   const rotateFurniture = useStore((s) => s.rotateFurniture)
   const cancelCalibration = useStore((s) => s.cancelCalibration)
   const selectAll = useStore((s) => s.selectAll)
+  const clearPendingPlacement = useStore((s) => s.clearPendingPlacement)
 
   useEffect(() => {
     const down = (e) => {
@@ -27,6 +28,7 @@ export default function useCanvasKeyboard() {
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
       if (e.code === 'Space' && !e.repeat) { e.preventDefault(); setSpaceDown(true) }
       if (e.code === 'Escape') {
+        clearPendingPlacement()
         if (calibration) cancelCalibration()
         else { setDrawStart(null); clearSelection() }
       }
@@ -63,7 +65,7 @@ export default function useCanvasKeyboard() {
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
-  }, [selection, calibration, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration, selectAll])
+  }, [selection, calibration, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement])
 
   return spaceDown
 }

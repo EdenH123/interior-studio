@@ -48,6 +48,28 @@ export const FURNITURE = [
   { type: 'pantry-unit',    label: 'Pantry unit',    category: 'Kitchen', width: 0.60, depth: 0.60, height: 2.00, color: '#c4b49a', model: glb('pantry-unit.glb') },
   { type: 'bar-stool',      label: 'Bar stool',      category: 'Kitchen', width: 0.40, depth: 0.40, height: 0.75, color: '#a16207', model: glb('bar-stool.glb') },
 
+  // ── IKEA Living ───────────────────────────────────────────────────────────
+  { type: 'ikea-ektorp-2',   label: 'EKTORP 2-seat',   category: 'IKEA Living', width: 1.80, depth: 0.88, height: 0.88, color: '#d4c5a0', model: glb('ikea-ektorp-2.glb') },
+  { type: 'ikea-ektorp-3',   label: 'EKTORP 3-seat',   category: 'IKEA Living', width: 2.18, depth: 0.88, height: 0.88, color: '#d4c5a0', model: glb('ikea-ektorp-3.glb') },
+  { type: 'ikea-poang',      label: 'POÄNG armchair',  category: 'IKEA Living', width: 0.82, depth: 0.82, height: 1.00, color: '#c4a882', model: glb('ikea-poang.glb') },
+  { type: 'ikea-lack-side',  label: 'LACK side table', category: 'IKEA Living', width: 0.45, depth: 0.45, height: 0.55, color: '#f0ede8', model: glb('ikea-lack-side.glb') },
+  { type: 'ikea-lack-coffee',label: 'LACK coffee table',category: 'IKEA Living',width: 0.90, depth: 0.55, height: 0.45, color: '#f0ede8', model: glb('ikea-lack-coffee.glb') },
+  { type: 'ikea-besta-120',  label: 'BESTÅ 120 TV unit',category: 'IKEA Living',width: 1.20, depth: 0.40, height: 0.64, color: '#f0ede8', model: glb('ikea-besta-120.glb') },
+  { type: 'ikea-besta-180',  label: 'BESTÅ 180 TV unit',category: 'IKEA Living',width: 1.80, depth: 0.40, height: 0.64, color: '#f0ede8', model: glb('ikea-besta-180.glb') },
+
+  // ── IKEA Bedroom ──────────────────────────────────────────────────────────
+  { type: 'ikea-malm-bed-140', label: 'MALM bed 140',    category: 'IKEA Bedroom', width: 1.60, depth: 2.09, height: 0.90, color: '#c8b899', model: glb('ikea-malm-bed-140.glb') },
+  { type: 'ikea-malm-bed-160', label: 'MALM bed 160',    category: 'IKEA Bedroom', width: 1.75, depth: 2.09, height: 0.90, color: '#c8b899', model: glb('ikea-malm-bed-160.glb') },
+  { type: 'ikea-malm-dresser', label: 'MALM dresser 6-drawer', category: 'IKEA Bedroom', width: 0.80, depth: 0.48, height: 1.23, color: '#c8b899', model: glb('ikea-malm-dresser.glb') },
+  { type: 'ikea-hemnes-daybed',label: 'HEMNES daybed',   category: 'IKEA Bedroom', width: 0.80, depth: 2.05, height: 0.83, color: '#e0dbd0', model: glb('ikea-hemnes-daybed.glb') },
+
+  // ── IKEA Storage ──────────────────────────────────────────────────────────
+  { type: 'ikea-kallax-2x2', label: 'KALLAX 2×2',        category: 'IKEA Storage', width: 0.77, depth: 0.39, height: 0.77, color: '#f5f4f0', model: glb('ikea-kallax-2x2.glb') },
+  { type: 'ikea-kallax-4x2', label: 'KALLAX 4×2',        category: 'IKEA Storage', width: 1.47, depth: 0.39, height: 0.77, color: '#f5f4f0', model: glb('ikea-kallax-4x2.glb') },
+  { type: 'ikea-billy',      label: 'BILLY bookcase',    category: 'IKEA Storage', width: 0.80, depth: 0.28, height: 2.02, color: '#c8b899', model: glb('ikea-billy.glb') },
+  { type: 'ikea-pax-100',    label: 'PAX wardrobe 100',  category: 'IKEA Storage', width: 1.00, depth: 0.58, height: 2.01, color: '#f5f4f0', model: glb('ikea-pax-100.glb') },
+  { type: 'ikea-alex',       label: 'ALEX drawer unit',  category: 'IKEA Storage', width: 0.36, depth: 0.58, height: 0.70, color: '#f5f4f0', model: glb('ikea-alex.glb') },
+
   { type: 'rug',          label: 'Rug',          category: 'Decor',   width: 2.0,  depth: 1.4,  height: 0.01, color: '#b45309', model: glb('rug.glb') },
   { type: 'lamp',         label: 'Lamp',         category: 'Decor',   width: 0.4,  depth: 0.4,  height: 1.5,  color: '#facc15', model: glb('lamp.glb') },
   { type: 'tv',           label: 'TV',           category: 'Decor',   width: 1.2,  depth: 0.15, height: 0.7,  color: '#0f172a', model: glb('tv.glb') },
@@ -89,7 +111,7 @@ export const FURNITURE = [
   },
 ]
 
-export const CATEGORIES = ['Architecture', 'Seating', 'Tables', 'Bedroom', 'Storage', 'Bathroom', 'Kitchen', 'Decor', 'Lighting']
+export const CATEGORIES = ['Architecture', 'Seating', 'Tables', 'Bedroom', 'Storage', 'Bathroom', 'Kitchen', 'IKEA Living', 'IKEA Bedroom', 'IKEA Storage', 'Decor', 'Lighting']
 
 const BY_TYPE = Object.fromEntries(FURNITURE.map((f) => [f.type, f]))
 

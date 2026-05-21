@@ -19,7 +19,7 @@ export default function FurnitureProps({ item, onUpdate }) {
   useEffect(() => onCacheChange(() => bump((v) => v + 1)), [])
   return (
     <div>
-      <h3 className="text-gray-200 text-xs uppercase tracking-widest mb-2">{spec?.label ?? item.type}</h3>
+      <h3 className="text-gray-200 text-xs uppercase tracking-widest mb-2">{spec?.label ?? item.label ?? item.type}</h3>
       <Row label="ID" value={item.id} />
       <Row label="Type" value={item.type} />
       <Row label="Width" value={`${item.width.toFixed(2)} m`} />

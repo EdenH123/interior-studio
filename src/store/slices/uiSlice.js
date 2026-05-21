@@ -47,6 +47,13 @@ export const createUiSlice = (set) => ({
     set({ toast: { id: nanoid(4), message, kind } }),
   dismissToast: () => set({ toast: null }),
 
+  // pendingPlacement is set when the user clicks "Place on canvas" in the
+  // IKEA search UI. It holds the spec for the item to drop. The canvas shows
+  // a footprint ghost following the cursor; clicking places the item.
+  pendingPlacement: null,
+  setPendingPlacement: (spec) => set({ pendingPlacement: spec }),
+  clearPendingPlacement: () => set({ pendingPlacement: null }),
+
   // AI panel takes over the right-hand slot when open (replaces
   // PropertiesPanel). Not persisted — opening on each fresh session is fine.
   aiPanelOpen: false,
