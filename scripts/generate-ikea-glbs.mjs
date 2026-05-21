@@ -562,4 +562,91 @@ writeGLB('ikea-alex', (() => {
   ]
 })())
 
-console.log('\nDone — 16 IKEA GLBs written.')
+// KLIPPAN loveseat  W1.80 × D0.88 × H0.66  (low-profile, chunky slab look)
+writeGLB('ikea-klippan', [
+  { parts: [
+    box(-0.90, 0,    -0.44,  0.90, 0.44,  0.44),           // combined base+seat frame
+    box(-0.90, 0.44, -0.44, -0.76, 0.66,  0.44),           // left arm (low)
+    box( 0.76, 0.44, -0.44,  0.90, 0.66,  0.44),           // right arm (low)
+    cushion(-0.76, 0.44, -0.44,  0.00, 0.56, 0.44, 0.028), // left seat cushion
+    cushion( 0.00, 0.44, -0.44,  0.76, 0.56, 0.44, 0.028), // right seat cushion
+    backCushion(-0.76, 0.54, -0.44,  0.00, 0.66, -0.24, 0.024),
+    backCushion( 0.00, 0.54, -0.44,  0.76, 0.66, -0.24, 0.024),
+  ], color: C_CREAM, ...FABRIC },
+  { parts: [
+    cyl(-0.82,  0.38, 0, 0.05, 0.028, 8),
+    cyl( 0.82,  0.38, 0, 0.05, 0.028, 8),
+    cyl(-0.82, -0.38, 0, 0.05, 0.028, 8),
+    cyl( 0.82, -0.38, 0, 0.05, 0.028, 8),
+  ], color: C_DARK_LEG, ...WOOD },
+])
+
+// SÖDERHAMN 3-seat  W2.34 × D0.99 × H0.83  (modern low sofa, open base)
+writeGLB('ikea-soderhamn-3', [
+  { parts: [
+    box(-1.17, 0.08, -0.495,  1.17, 0.44,  0.495),         // seat platform
+    cushion(-1.10, 0.44, -0.475, -0.40, 0.58, 0.475, 0.032),
+    cushion(-0.34, 0.44, -0.475,  0.34, 0.58, 0.475, 0.032),
+    cushion( 0.40, 0.44, -0.475,  1.10, 0.58, 0.475, 0.032),
+    backCushion(-1.10, 0.56, -0.495, -0.40, 0.83, -0.22, 0.026),
+    backCushion(-0.34, 0.56, -0.495,  0.34, 0.83, -0.22, 0.026),
+    backCushion( 0.40, 0.56, -0.495,  1.10, 0.83, -0.22, 0.026),
+  ], color: [0.74, 0.66, 0.55, 1], ...FABRIC },  // warm linen
+  { parts: [
+    box(-1.17, 0,    -0.495, -1.07, 0.08, 0.495),          // left end panel
+    box( 1.07, 0,    -0.495,  1.17, 0.08, 0.495),          // right end panel
+    box(-1.07, 0,    -0.495,  1.07, 0.08, -0.385),         // back base rail
+    box(-1.07, 0,     0.385,  1.07, 0.08,  0.495),         // front base rail
+  ], color: C_BIRCH, ...VENEER },
+])
+
+// HEMNES dresser 8-drawer  W1.60 × D0.50 × H0.99
+writeGLB('ikea-hemnes-dresser', (() => {
+  const dH = (0.99 - 0.05) / 4   // 4 rows, each with 2 drawers
+  const drawers = [], handles = []
+  for (let row = 0; row < 4; row++) {
+    const y1 = 0.025 + row * dH
+    const y2 = y1 + dH - 0.012
+    // left drawer
+    drawers.push(box(-0.78, y1, 0.24, -0.02, y2, 0.26))
+    handles.push(box(-0.56, y1 + dH*0.38, 0.25, -0.24, y1 + dH*0.52, 0.27))
+    // right drawer
+    drawers.push(box( 0.02, y1, 0.24,  0.78, y2, 0.26))
+    handles.push(box( 0.24, y1 + dH*0.38, 0.25,  0.56, y1 + dH*0.52, 0.27))
+  }
+  return [
+    { parts: [box(-0.80, 0, -0.25, 0.80, 0.99, 0.25)], color: C_HEMNES, ...WOOD },
+    { parts: drawers, color: [0.80, 0.78, 0.74, 1], ...DOOR_M },
+    { parts: handles, color: C_SILVER, ...METAL },
+  ]
+})())
+
+// KALLAX 1×4 tall  W0.39 × D0.39 × H1.47  (vertical tower variant)
+writeGLB('ikea-kallax-1x4', [
+  { parts: [
+    box(-0.195, 0,     -0.195,  0.195, 0.036, 0.195),  // bottom
+    box(-0.195, 1.434, -0.195,  0.195, 1.470, 0.195),  // top
+    box(-0.195, 0.036, -0.195, -0.159, 1.434, 0.195),  // left side
+    box( 0.159, 0.036, -0.195,  0.195, 1.434, 0.195),  // right side
+    box(-0.159, 0.385, -0.195,  0.159, 0.421, 0.195),  // divider 1
+    box(-0.159, 0.735, -0.195,  0.159, 0.771, 0.195),  // divider 2
+    box(-0.159, 1.085, -0.195,  0.159, 1.121, 0.195),  // divider 3
+  ], color: C_WHITE, ...LACQUER },
+])
+
+// LISABO desk  W1.40 × D0.65 × H0.74  (ash veneer, distinctive tapered X-legs)
+writeGLB('ikea-lisabo-desk', [
+  { parts: [
+    box(-0.70, 0.70, -0.325, 0.70, 0.74, 0.325),       // top
+  ], color: [0.78, 0.64, 0.46, 1], ...VENEER },        // ash veneer
+  { parts: [
+    // X-frame legs: two diagonal planks crossing at centre per end
+    box(-0.68, 0, -0.02,  0.68, 0.06, 0.02),           // horizontal stretcher
+    cyl(-0.62, -0.30, 0, 0.70, 0.028, 8),
+    cyl( 0.62, -0.30, 0, 0.70, 0.028, 8),
+    cyl(-0.62,  0.30, 0, 0.70, 0.028, 8),
+    cyl( 0.62,  0.30, 0, 0.70, 0.028, 8),
+  ], color: C_DARK_HW, ...DARK_HW },
+])
+
+console.log('\nDone — 21 IKEA GLBs written.')
