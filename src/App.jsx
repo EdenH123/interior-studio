@@ -21,11 +21,12 @@ export default function App() {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <div className="flex flex-1 overflow-hidden">
-          <CanvasArea />
-          {show3d && (
+          {show3d ? (
             <Suspense fallback={<ViewerFallback />}>
               <Viewer3D />
             </Suspense>
+          ) : (
+            <CanvasArea />
           )}
         </div>
         {aiPanelOpen ? <AiPanel /> : <PropertiesPanel />}

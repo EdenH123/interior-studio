@@ -52,10 +52,10 @@ describe('Toolbar', () => {
     expect(screen.getByText('Walk')).toBeInTheDocument()
   })
 
-  it('shows 3D button labelled "3D · on" when active', () => {
+  it('shows "← 2D" button when 3D is active', () => {
     vi.mocked(useStore).mockImplementation((sel) => sel({ ...base, show3d: true }))
     render(<Toolbar />)
-    expect(screen.getByText('3D · on')).toBeInTheDocument()
+    expect(screen.getByText('← 2D')).toBeInTheDocument()
   })
 
   it('renders undo and redo buttons', () => {

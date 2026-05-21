@@ -445,6 +445,33 @@ interior-studio/
   - **`stairFloorHoles.test.js`** (new) — 13 tests covering all three exported functions: corner positions at rotation=0, center invariant, 90° CW swap of width/depth extents, center-after-rotation, `holesFp` stability + order-independence, `computeStairHolesForRooms` inside/outside/multi-room/empty cases.
   - Total: 373 tests, all green. Build green.
 
+- [x] Bathroom and Kitchen fixture categories — wall-mounted item system (session 29, 2026-05-21)
+  - **18 new catalog items**: Bathroom (8: toilet, basin, bathtub, shower-tray, towel-rack, bathroom-mirror, vanity-unit, laundry-basket) + Kitchen (10: kitchen-sink, fridge, oven, dishwasher, microwave, upper-cabinet, range-hood, kitchen-island, pantry-unit, bar-stool). All `model: null` (box fallback).
+  - **Wall-mounted items**: towel-rack, bathroom-mirror, upper-cabinet, range-hood carry `wallMounted: true` and a `mountHeight` (meters above floor). `addFurniture` snapshots both fields onto new pieces.
+  - **`wallMountedPlacement(snap, depthMetres, worldPoint)`** exported from `openingGeometry.js` — uses wall normal + drop-side detection to compute x/y/rotation when a wall-mounted item is dropped against a wall.
+  - **`useFurnitureDrop.js`** updated — wall-mounted items snap to nearest wall within 60 screen px during dragover (same threshold as openings), orient perpendicular, and show a red-X ghost when no wall is in range. Non-wall-mounted items still grid-snap as before.
+  - **`DragGhost.jsx`** — FurnitureGhost shows red X when `ghost.wallSnap === false`; applies `rotation` from ghost extra data.
+  - **`reconcileFurniture.js`** — `yOff = f.wallMounted ? (f.mountHeight ?? 0) : lightYOffset(f.type, f.height)` positions wall-mounted items at their mount height.
+  - **`FurnitureProps.jsx`** — adds `MountHeightField` (number input 0–4 m, Enter/Esc/blur commit) visible when `item.wallMounted`.
+  - CATEGORIES updated to include `'Bathroom'` and `'Kitchen'`.
+  - Tests: new `furnitureCatalog.test.js` (12 tests: category counts, wall-mounted fields, required fields); expanded `openingGeometry.test.js` (+4 tests for `wallMountedPlacement`). Build green.
+
+- [x] Gemini Flash API migration (session 29b, 2026-05-21)
+  - **`src/services/claudeApi.js`** — complete replacement with a Google Gemini streaming implementation. Calls `generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=…`. Internally converts Anthropic-format messages to Gemini `contents` + `system_instruction` (including `inline_data` for vision messages used by the floor-plan tracer). Kept `streamClaude` function name and file path so callers and test mocks need no changes.
+  - **`AiPanel.jsx`**: `MODEL = 'gemini-2.0-flash'`.
+  - **`traceFloorPlan.js`**: `TRACE_MODEL = 'gemini-2.0-flash'`; error messages de-branded.
+  - **`useApiKey.js`**: storage key changed to `'interior-studio:gemini-api-key'`.
+  - **`AiSettings.jsx`**: label/placeholder/warning updated for Google Gemini; links to `aistudio.google.com/app/apikey`. Key is free-tier (15 RPM / 1500 RPD at no cost).
+
+- [x] UX overhaul — fullscreen 3D, ceilings, drag-into-3D, zoom-drag fix, controls sensitivity, LevelsPanel (session 30, 2026-05-21)
+  - **2D drag jump fix**: `Furniture.jsx` now tracks a `dragOffset` ref (world coords delta between pointer and item origin) using `stage.getRelativePointerPosition()`. `onDragMove` corrects the Konva node's world position on every move; `onDragEnd` reports the correct final world position. Fixes the scale-dependent "jump" where Konva's internal drag computed positions in screen-space without dividing by Stage scale. Regression test in `furnitureDrag.test.js` (5 tests across scale 1/2/3 and pan offset).
+  - **Fullscreen 3D**: `App.jsx` now renders EITHER `<CanvasArea />` OR `<Viewer3D />` (not both simultaneously). The 3D toolbar button changes to `← 2D` when 3D is active, providing a clear back affordance. Sidebar and PropertiesPanel remain visible in both modes.
+  - **3D drag-drop** (`useFurnitureDrop3D.js` new hook; `Viewer3D.jsx` wired): sidebar tiles can be dragged directly onto the 3D canvas. `onDragOver` raycasts from cursor through camera onto the floor plane (y=0), shows a translucent blue ghost box at the snapped floor position (0.5 m grid). `onDrop` converts Three XZ → Konva XY coords and calls `addFurniture`. Ghost mesh is managed in scene directly (not React state); removed on leave or drop. Coordinate conversion tests in `useFurnitureDrop3D.test.js` (5 tests).
+  - **OrbitControls sensitivity tuned**: `zoomSpeed = 0.8`, `panSpeed = 0.8`, `minDistance = 1.5`, `maxDistance = 80` (mirrors 2D 20%–500% zoom feel).
+  - **Ceiling support**: each 3D room gets a ceiling plane at `levelOffset + levelHeight`. `reconcileCeilings()` in `sceneReconcilers.js` mirrors `reconcileRooms` but positions at the top of the level and cuts stair holes for stairs that DEPART the level (going up through the ceiling). Ceiling material stored in `roomMeta[id].ceilingMaterial` (defaults to near-white `#F0F0EE`). `ceilingMaterials.js` exports 7 options. PropertiesPanel `RoomProps` gains a ceiling material picker. LightingToolbar gains a `Ceilings ON/OFF` toggle (`ceilingsVisible` flag in levelsSlice). Tests in `ceilingReconciler.test.js` (6 ceiling tests + 1 stair-hole reciprocity test).
+  - **LevelsPanel relocated**: moved to the top of the sidebar (above the Elements header) so it's the first visible element. Added a tooltip and a single-floor empty-state hint ("Single floor · press + to add a level").
+  - Total: 389 tests, all green. Build green.
+
 ### 🚧 In Progress
 - (nothing active)
 

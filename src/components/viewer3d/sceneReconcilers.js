@@ -239,6 +239,89 @@ function buildRoomShape(r) {
   return shape
 }
 
+const CEILING_OFFSET_Y = -0.01  // slight below-surface offset to avoid z-fighting with walls
+
+// Add / update / remove ceiling meshes. Mirrors reconcileRooms but positioned
+// at the top of each level (levelOffset + levelHeight) and uses ceilingMaterial.
+//
+// Stair holes cut into the ceiling at the level the stairs DEPART FROM
+// (the stairs go up through the ceiling, so r.ceilingStairHoles is used).
+//
+// `colorForId(id)` resolves ceiling color from the store.
+// opts: { solo?, activeLevelId?, visible? }
+export function reconcileCeilings(scene, rooms, meshMap, colorForId, levelOffsets, levels, opts = {}) {
+  const present = new Set()
+  if (opts.visible === false) {
+    removeMissing(scene, meshMap, present)
+    return
+  }
+
+  // Build level height map
+  const levelHeightMap = new Map()
+  for (const lv of (levels ?? [])) levelHeightMap.set(lv.id, lv.height ?? 2.7)
+
+  for (const r of rooms) {
+    const ceilId = `ceil:${r.id}`
+    present.add(ceilId)
+    const color = colorForId(r.id)
+    const yOffset = levelOffsets?.get(r.levelId) ?? 0
+    const levelHeight = levelHeightMap.get(r.levelId) ?? 2.7
+    const fp = holesFp(r.ceilingStairHoles)
+
+    let mesh = meshMap.get(ceilId)
+    if (!mesh) {
+      const shape = buildRoomShapeWithHoles(r, 'ceilingStairHoles')
+      const geo = new THREE.ShapeGeometry(shape)
+      const mat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(color),
+        side: THREE.DoubleSide,
+        roughness: 0.9,
+      })
+      mesh = new THREE.Mesh(geo, mat)
+      mesh.rotation.x = Math.PI / 2
+      mesh.userData.kind = 'ceiling'
+      mesh.userData.id = ceilId
+      mesh.userData.color = color
+      mesh.userData.holesFp = fp
+      scene.add(mesh)
+      meshMap.set(ceilId, mesh)
+    } else {
+      if (mesh.userData.holesFp !== fp) {
+        mesh.geometry.dispose()
+        mesh.geometry = new THREE.ShapeGeometry(buildRoomShapeWithHoles(r, 'ceilingStairHoles'))
+        mesh.userData.holesFp = fp
+      }
+      if (mesh.userData.color !== color) {
+        mesh.material.color.set(color)
+        mesh.userData.color = color
+      }
+    }
+    mesh.position.y = yOffset + levelHeight + CEILING_OFFSET_Y
+    mesh.visible = !opts.solo || !r.levelId || r.levelId === opts.activeLevelId
+  }
+  removeMissing(scene, meshMap, present)
+}
+
+// Variant of buildRoomShape that uses a configurable holes field name.
+function buildRoomShapeWithHoles(r, holesField) {
+  const shape = new THREE.Shape()
+  shape.moveTo(r.verts[0].x * KONVA_TO_THREE, r.verts[0].y * KONVA_TO_THREE)
+  for (let i = 1; i < r.verts.length; i++) {
+    shape.lineTo(r.verts[i].x * KONVA_TO_THREE, r.verts[i].y * KONVA_TO_THREE)
+  }
+  const holes = r[holesField]
+  if (holes?.length) {
+    for (const corners of holes) {
+      const hole = new THREE.Path()
+      hole.moveTo(corners[0].x, corners[0].y)
+      for (let i = 1; i < corners.length; i++) hole.lineTo(corners[i].x, corners[i].y)
+      hole.closePath()
+      shape.holes.push(hole)
+    }
+  }
+  return shape
+}
+
 function removeMissing(scene, meshMap, present) {
   for (const [id, obj] of meshMap) {
     if (!present.has(id)) {

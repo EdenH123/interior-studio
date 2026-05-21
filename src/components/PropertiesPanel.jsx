@@ -3,6 +3,7 @@ import useStore from '../store/useStore'
 import { getSingleItem, selectionItems, commonKind } from '../store/selectionHelpers'
 import { detectRooms, polygonAreaM2 } from './canvas/roomDetection'
 import { FLOOR_MATERIALS, resolveFloorMaterialId } from './canvas/floorMaterials'
+import { CEILING_MATERIALS, resolveCeilingMaterialId } from './canvas/ceilingMaterials'
 import UnderlayProps from './canvas/UnderlayProps'
 import WallProps from './canvas/WallProps'
 import FurnitureProps from './canvas/FurnitureProps'
@@ -116,6 +117,15 @@ function RoomProps({ room, meta, onUpdate }) {
           currentId={meta.floorMaterial}
           resolveId={resolveFloorMaterialId}
           onChange={(id) => onUpdate(room.id, { floorMaterial: id })}
+        />
+      </div>
+      <div className="mt-3">
+        <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Ceiling material</div>
+        <MaterialPicker
+          materials={CEILING_MATERIALS}
+          currentId={meta.ceilingMaterial}
+          resolveId={resolveCeilingMaterialId}
+          onChange={(id) => onUpdate(room.id, { ceilingMaterial: id })}
         />
       </div>
       <div className="mt-3">

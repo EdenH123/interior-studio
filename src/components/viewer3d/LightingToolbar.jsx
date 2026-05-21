@@ -15,10 +15,12 @@ export default function LightingToolbar() {
   const setLightsOn      = useStore((s) => s.setLightsOn)
   const setTimeOfDay     = useStore((s) => s.setTimeOfDay)
   const setAmbientStrength = useStore((s) => s.setAmbientStrength)
-  const solo3d      = useStore((s) => s.solo3d)
-  const xrayCeiling = useStore((s) => s.xrayCeiling)
-  const setSolo3d      = useStore((s) => s.setSolo3d)
-  const setXrayCeiling = useStore((s) => s.setXrayCeiling)
+  const solo3d          = useStore((s) => s.solo3d)
+  const xrayCeiling     = useStore((s) => s.xrayCeiling)
+  const ceilingsVisible = useStore((s) => s.ceilingsVisible)
+  const setSolo3d          = useStore((s) => s.setSolo3d)
+  const setXrayCeiling     = useStore((s) => s.setXrayCeiling)
+  const setCeilingsVisible = useStore((s) => s.setCeilingsVisible)
 
   return (
     <div className="pointer-events-auto absolute top-2 right-2 w-44 bg-gray-900/90 border border-gray-700 rounded p-2.5 space-y-2.5 text-[11px] text-gray-300 font-mono select-none">
@@ -46,6 +48,22 @@ export default function LightingToolbar() {
           title="Make upper levels 30% transparent"
         >
           X-Ray
+        </button>
+      </div>
+
+      {/* Ceiling visibility */}
+      <div className="flex items-center justify-between">
+        <span className="uppercase tracking-wider text-gray-400">Ceilings</span>
+        <button
+          onClick={() => setCeilingsVisible(!ceilingsVisible)}
+          className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-colors ${
+            ceilingsVisible
+              ? 'bg-gray-500/20 border-gray-500/50 text-gray-300'
+              : 'bg-gray-800 border-gray-600 text-gray-500'
+          }`}
+          title="Show or hide ceiling planes"
+        >
+          {ceilingsVisible ? 'ON' : 'OFF'}
         </button>
       </div>
 

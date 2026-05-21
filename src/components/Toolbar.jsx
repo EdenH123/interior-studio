@@ -122,7 +122,7 @@ export default function Toolbar() {
         className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
           show3d ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
         }`}>
-        {show3d ? '3D · on' : '3D'}
+        {show3d ? '← 2D' : '3D'}
       </button>
       {show3d && (
         <button type="button" onClick={toggleWalkthrough} aria-pressed={walkthrough}
