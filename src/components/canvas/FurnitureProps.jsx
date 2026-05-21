@@ -17,9 +17,9 @@ export default function FurnitureProps({ item, onUpdate }) {
       <h3 className="text-gray-200 text-xs uppercase tracking-widest mb-2">{spec?.label ?? item.label ?? item.type}</h3>
       <Row label="ID" value={item.id} />
       <Row label="Type" value={item.type} />
-      <DimField label="Width"  dim="width"  item={item} onUpdate={onUpdate} />
-      <DimField label="Depth"  dim="depth"  item={item} onUpdate={onUpdate} />
-      <DimField label="Height" dim="height" item={item} onUpdate={onUpdate} />
+      <DimField label="Width"  dim="width"  item={item} onCommit={(v) => onUpdate(item.id, scaleDims(item, 'width',  v))} />
+      <DimField label="Depth"  dim="depth"  item={item} onCommit={(v) => onUpdate(item.id, scaleDims(item, 'depth',  v))} />
+      <DimField label="Height" dim="height" item={item} onCommit={(v) => onUpdate(item.id, scaleDims(item, 'height', v))} />
       <Row label="Rotation" value={`${item.rotation}°`} />
       <Row label="Position" value={`${formatMeters(item.x)}, ${formatMeters(item.y)}`} />
       <Row label="Model" value={describeModelStatus(item.model ?? item.customModelId)} />
@@ -76,7 +76,13 @@ export default function FurnitureProps({ item, onUpdate }) {
   )
 }
 
-function DimField({ label, dim, item, onUpdate }) {
+function scaleDims(item, changedDim, newVal) {
+  const factor = newVal / item[changedDim]
+  const r = (v) => Math.round(v * factor * 100) / 100
+  return { width: r(item.width), depth: r(item.depth), height: r(item.height) }
+}
+
+function DimField({ label, dim, item, onCommit }) {
   const [val, setVal] = useState(item[dim].toFixed(2))
   useEffect(() => { setVal(item[dim].toFixed(2)) }, [item[dim]])
 
@@ -84,7 +90,7 @@ function DimField({ label, dim, item, onUpdate }) {
     const m = parseFloat(val)
     if (!isFinite(m) || m <= 0) { setVal(item[dim].toFixed(2)); return }
     const rounded = Math.round(m * 100) / 100
-    onUpdate(item.id, { [dim]: rounded })
+    onCommit(rounded)
     setVal(rounded.toFixed(2))
   }
 
