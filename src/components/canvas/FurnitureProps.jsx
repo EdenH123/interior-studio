@@ -11,15 +11,33 @@ import MaterialPicker from './MaterialPicker'
 export default function FurnitureProps({ item, onUpdate }) {
   const spec = getFurnitureSpec(item.type)
   const [, bump] = useState(0)
+  const [locked, setLocked] = useState(true)
   useEffect(() => onCacheChange(() => bump((v) => v + 1)), [])
+
+  function commitDim(dim, newVal) {
+    onUpdate(item.id, locked ? scaleDims(item, dim, newVal) : { [dim]: newVal })
+  }
+
   return (
     <div>
       <h3 className="text-gray-200 text-xs uppercase tracking-widest mb-2">{spec?.label ?? item.label ?? item.type}</h3>
       <Row label="ID" value={item.id} />
       <Row label="Type" value={item.type} />
-      <DimField label="Width"  dim="width"  item={item} onCommit={(v) => onUpdate(item.id, scaleDims(item, 'width',  v))} />
-      <DimField label="Depth"  dim="depth"  item={item} onCommit={(v) => onUpdate(item.id, scaleDims(item, 'depth',  v))} />
-      <DimField label="Height" dim="height" item={item} onCommit={(v) => onUpdate(item.id, scaleDims(item, 'height', v))} />
+      <div className="flex justify-between items-center py-1 border-b border-gray-800">
+        <span className="text-gray-500 text-[11px] uppercase tracking-wider">Dimensions</span>
+        <label className="flex items-center gap-1.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={locked}
+            onChange={(e) => setLocked(e.target.checked)}
+            className="w-3 h-3 accent-blue-500"
+          />
+          <span className="text-gray-500 text-[10px]">lock ratio</span>
+        </label>
+      </div>
+      <DimField label="W" dim="width"  item={item} onCommit={(v) => commitDim('width',  v)} />
+      <DimField label="D" dim="depth"  item={item} onCommit={(v) => commitDim('depth',  v)} />
+      <DimField label="H" dim="height" item={item} onCommit={(v) => commitDim('height', v)} />
       <Row label="Rotation" value={`${item.rotation}°`} />
       <Row label="Position" value={`${formatMeters(item.x)}, ${formatMeters(item.y)}`} />
       <Row label="Model" value={describeModelStatus(item.model ?? item.customModelId)} />
