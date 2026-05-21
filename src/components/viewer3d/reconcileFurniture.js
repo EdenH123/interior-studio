@@ -8,7 +8,7 @@ import { setObjectEmissive } from './selectionHighlight'
 import { furnitureColorFor, furnitureMaterialPropsFor } from '../canvas/furnitureMaterials'
 import { kelvinToRgb } from '../../utils/colorTemp'
 import { buildStairsGeometry } from './stairsGeometry'
-import { buildRailingGeometry } from './railingGeometry'
+import { buildRailingGeometry, buildStairRailingGeometry, buildSpiralRailingGeometry } from './railingGeometry'
 
 const WALL_HEIGHT = 2.4  // metres — matches sceneReconcilers
 const MAX_LIGHTS  = 8    // hard cap on active Three.js lights for performance
@@ -87,6 +87,8 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       group.userData.modelUrl = f.model ?? null
       group.userData.stairStyle   = f.stairStyle   ?? null
       group.userData.railingStyle = f.railingStyle ?? null
+      group.userData.addRailing   = f.addRailing   ?? false
+      group.userData.railingType  = f.railingType  ?? 'wood'
       scene.add(group)
       meshMap.set(f.id, group)
       if (group.userData.modelUrl) populateModelOrSchedule(group)
@@ -99,12 +101,18 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
         || group.userData.tintMatProps?.roughness !== tintMatProps?.roughness
         || glassChanged
       const partColorsChanged = group.userData.partColorsKey !== partColorsKey
+      const stairStyleChanged = group.userData.stairStyle !== (f.stairStyle ?? null)
+      const railingChanged    = group.userData.addRailing  !== (f.addRailing  ?? false)
+                             || group.userData.railingType !== (f.railingType  ?? 'wood')
       group.userData.dims = { width: f.width, depth: f.depth, height: f.height }
       group.userData.tintColor    = tintColor
       group.userData.tintMatProps = tintMatProps
       group.userData.partColors   = partColors
       group.userData.partColorsKey = partColorsKey
-      if (dimsChanged || ((tintChanged || partColorsChanged) && group.userData.childKind === 'model')) {
+      group.userData.stairStyle   = f.stairStyle  ?? null
+      group.userData.addRailing   = f.addRailing  ?? false
+      group.userData.railingType  = f.railingType ?? 'wood'
+      if (dimsChanged || stairStyleChanged || railingChanged || ((tintChanged || partColorsChanged) && group.userData.childKind === 'model')) {
         group.userData.color = color
         rebuildChild(group)
       } else if (group.userData.childKind === 'box') {
@@ -188,11 +196,16 @@ function buildSpotLight(scene) {
   return light
 }
 
+// Colors and material properties per railing type.
+const RAILING_COLOR = { wood: '#8b6914', metal: '#374151', cable: '#374151', glass: '#b8d4e8' }
+
 function populateBoxFallback(group) {
   clearChildren(group)
   const { width, depth, height } = group.userData.dims
   const stairStyle   = group.userData.stairStyle
   const railingStyle = group.userData.railingStyle
+  const addRailing   = group.userData.addRailing
+  const railingType  = group.userData.railingType ?? 'wood'
   const isStairs     = stairStyle != null
   const isRailing    = railingStyle != null
 
@@ -229,7 +242,45 @@ function populateBoxFallback(group) {
   mesh.receiveShadow = true
   mesh.renderOrder   = isGlass ? 1 : 0
   group.add(mesh)
+
+  // Stair railing — second child mesh with its own material.
+  if (isStairs && addRailing) {
+    addStairRailingMesh(group, width, depth, height, stairStyle, railingType)
+  }
+
   group.userData.childKind = 'box'
+}
+
+function addStairRailingMesh(group, W, D, H, stairStyle, railType) {
+  const NUM_STEPS = 12
+  const railGeo = stairStyle === 'spiral'
+    ? buildSpiralRailingGeometry(W, D, H, NUM_STEPS, railType)
+    : buildStairRailingGeometry(W, D, H, NUM_STEPS, railType)
+
+  const color = RAILING_COLOR[railType] ?? '#888888'
+  let railMat
+  if (railType === 'glass') {
+    railMat = new THREE.MeshPhysicalMaterial({
+      color:        new THREE.Color(color),
+      transmission: 0.88,
+      roughness:    0.04,
+      metalness:    0.02,
+      transparent:  true,
+      opacity:      0.20,
+      depthWrite:   false,
+    })
+  } else {
+    railMat = new THREE.MeshStandardMaterial({
+      color:     new THREE.Color(color),
+      roughness: railType === 'wood' ? 0.85 : 0.30,
+      metalness: (railType === 'metal' || railType === 'cable') ? 0.55 : 0.0,
+    })
+  }
+  const railMesh = new THREE.Mesh(railGeo, railMat)
+  railMesh.castShadow    = railType !== 'glass'
+  railMesh.receiveShadow = true
+  if (railType === 'glass') railMesh.renderOrder = 1
+  group.add(railMesh)
 }
 
 function populateModelOrSchedule(group) {
