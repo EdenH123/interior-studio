@@ -1,23 +1,22 @@
-// Fetches basic product info from IKEA's CDN-backed search API.
-// Falls back gracefully on CORS/network errors — callers always get a
-// well-defined shape back, with an `error` field on failure.
+// Fetches basic product info from IKEA's search API.
+// In dev (npm run dev) requests route through Vite's proxy — no CORS issues.
+// In production the direct request is tried, then corsproxy.io as fallback.
 
-const SEARCH_BASE = 'https://sik.search.blue.cdtapps.com'
+const SEARCH_CDN  = 'https://sik.search.blue.cdtapps.com'
+const PROXY_PATH  = '/api/ikea-search'          // Vite dev-server proxy
+const CORS_PROXY  = 'https://corsproxy.io/?'    // fallback for production
 
-// Strip dots and spaces to get a raw 8-digit string.
 export function normalizeArticleNumber(raw) {
   return String(raw ?? '').replace(/[\s.]/g, '')
 }
 
-// Format as the canonical IKEA display format: XXX.XXX.XX
 export function formatArticleNumber(raw) {
   const clean = normalizeArticleNumber(raw)
   if (clean.length !== 8) return raw
   return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6)}`
 }
 
-// Parse "77x77 cm", "60x38x64 cm" style strings → metres.
-// IKEA uses WxH for 2 numbers and WxDxH for 3.
+// Parse "77x77 cm", "60x38x64 cm" → metres. IKEA uses WxH (2 nums) or WxDxH (3 nums).
 export function parseDimensions(str) {
   if (!str) return {}
   const m = str.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)(?:\s*[x×]\s*(\d+(?:\.\d+)?))?\s*cm/i)
@@ -27,14 +26,8 @@ export function parseDimensions(str) {
   return { width: w / 100, height: b / 100 }
 }
 
-// Try gb/en first, then us/en — IKEA article numbers are global.
-const LOCALES = ['gb/en', 'us/en']
-
-// corsproxy.io passes the response through unchanged — no API key needed.
-const CORS_PROXY = 'https://corsproxy.io/?'
-
-async function fetchJson(url) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(6000) })
+async function tryFetch(url) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
   if (!res.ok) return null
   return res.json()
 }
@@ -51,6 +44,8 @@ function parseHit(hit, clean) {
   }
 }
 
+const LOCALES = ['gb/en', 'us/en']
+
 export async function fetchIkeaProduct(articleNumber) {
   const clean = normalizeArticleNumber(articleNumber)
   if (!/^\d{8}$/.test(clean)) {
@@ -58,18 +53,21 @@ export async function fetchIkeaProduct(articleNumber) {
   }
 
   for (const locale of LOCALES) {
-    const searchUrl = `${SEARCH_BASE}/${locale}/search?q=${clean}&types=PRODUCT&size=5`
+    const path   = `/${locale}/search?q=${clean}&types=PRODUCT&size=5`
+    const direct = `${SEARCH_CDN}${path}`
+    const proxy  = `${PROXY_PATH}${path}`
+    const cors   = `${CORS_PROXY}${encodeURIComponent(direct)}`
 
-    // Try direct first; if CORS blocks it, retry through the proxy.
-    for (const url of [searchUrl, CORS_PROXY + encodeURIComponent(searchUrl)]) {
+    // Order: Vite proxy (dev) → direct → corsproxy.io (production fallback)
+    for (const url of [proxy, direct, cors]) {
       try {
-        const data = await fetchJson(url)
+        const data = await tryFetch(url)
         const products = data?.searchResultPage?.productWindow ?? []
         const hit = products.find((p) => normalizeArticleNumber(p.id ?? '') === clean) ?? products[0]
         const result = parseHit(hit, clean)
         if (result) return result
       } catch {
-        // continue to next attempt
+        // try next
       }
     }
   }
