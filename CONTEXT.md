@@ -87,7 +87,7 @@ interior-studio/
 │   │   │   ├── DrawPreview.jsx     # the dashed-blue preview wall + start/end dots + live dimension label
 │   │   │   ├── Underlay.jsx        # Konva.Image with drag-when-unlocked + selection
 │   │   │   ├── UnderlayProps.jsx   # PropertiesPanel editor for the underlay (opacity, calibrate, remove, AI trace)
-│   │   │   ├── WallProps.jsx       # PropertiesPanel editor for a selected wall — editable Length (m) input
+│   │   │   ├── WallProps.jsx       # PropertiesPanel editor for a selected wall — editable Length (m), Height (m), Thickness (m) inputs + material picker
 │   │   │   ├── RotationHandle.jsx  # blue circle on a stick — click-drag to rotate selected furniture
 │   │   │   ├── CalibrationOverlay.jsx  # invisible capture rect + cyan calibration markers (top of stage)
 │   │   │   ├── CalibrationPrompt.jsx   # HTML modal asking for real-world distance
@@ -503,6 +503,10 @@ interior-studio/
   - **`useFurnitureDrop.js`**: `onDragOver` and `onDrop` now call `findWallSnap` for non-wall-mounted floor items after grid-snap. Ghost updates with `rotation: wallSnap.rotation` for preview; `addFurniture` places with snap rotation. Wall-mounted items continue to use the existing `nearestWallSnap` + `wallMountedPlacement` path unchanged.
   - **`Furniture.jsx`**: `onDragMove` calls `findWallSnap` for non-wall-mounted items; overrides Konva node position and stores snap rotation in `pendingRotation.current`. `onDragEnd` commits `{ x, y, rotation }` — rotation is the pending snap value or the original item rotation if no snap was active.
 
+- [x] Per-wall height and thickness controls (branch claude/features-batch-WE8lC, 2026-05-22)
+  - **`WallProps.jsx`**: Two new `NumField` inputs below Length — **Height (m)** (step 0.1, min 0.5, max 6.0, default 2.4) and **Thickness (m)** (step 0.05, min 0.05, max 1.0, default 0.2). Both dispatch `updateWall(id, { height: n })` / `updateWall(id, { thickness: n })` on Enter/blur; Esc reverts. `NumField` reusable helper component keeps the component under 150 lines.
+  - **`sceneReconcilers.js`**: `reconcileWalls` now reads `w.height ?? WALL_HEIGHT` and `w.thickness ?? thickness` per-wall inside the loop. Both `buildGeometry` and `buildWallMaterial` accept `wallHeight` as a parameter (with `WALL_HEIGHT` default so call sites without per-wall overrides are unaffected). `syncOverlay` also updated to receive and use `wallHeight`. `texFp` fingerprint extended with `wallHeight` and `wallThick` so geometry + material rebuild when dimensions change. Defaults (`WALL_HEIGHT=2.4`, `WALL_THICKNESS*KONVA_TO_THREE`) unchanged — existing designs look identical.
+
 ### 🚧 In Progress
 - (nothing active)
 
@@ -520,7 +524,10 @@ interior-studio/
 // GROUND_FLOOR_ID = 'L00000' — fixed; used by persist migration.
 
 // Wall — levelId added in session 28; items without it treated as ground floor.
-{ id, x1, y1, x2, y2, levelId: string, material?: string | null }
+// height (metres) and thickness (metres) are optional per-wall overrides;
+// 3D reconciler falls back to WALL_HEIGHT=2.4 and WALL_THICKNESS*0.02 when absent.
+{ id, x1, y1, x2, y2, levelId: string, material?: string | null,
+  height?: number, thickness?: number }
 
 // Furniture item — levelId + optional stair fields added in session 28.
 // x, y are world pixels (centroid); width/depth/height are meters;
