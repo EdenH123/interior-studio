@@ -486,6 +486,18 @@ interior-studio/
   - `StairProps.jsx` (new): Properties panel for stair items — Style buttons (Standard / Floating / Spiral), read-only dims, "Add railing" checkbox, and Railing type buttons (Wood / Metal / Cable / Glass) with a one-line hint.
   - `PropertiesPanel.jsx`: routes `f.stairStyle != null` furniture to `StairProps` instead of `FurnitureProps`.
 
+- [x] Material textures in 3D — procedural PBR textures for walls and floors (branch claude/features-batch-WE8lC, 2026-05-22)
+  - **`proceduralTextures.js`** (new): canvas-based texture generator. Wall textures: `struct-brick` (offset brick rows + mortar), `struct-stone` (irregular blocks), `wood-panel` (grain + plank joints), `struct-concrete` (deterministic noise). Floor textures: wood plank, tile (grout grid + highlight), marble (quadratic-curve veining), concrete, carpet (weave). Module-level `_cache` Map; `.clone()` per mesh shares GPU source.
+  - **`wallMaterials.js`**: new `Structural` category prepended — `struct-brick`, `struct-stone`, `struct-concrete` available in the wall material picker.
+  - **`sceneReconcilers.js`**: `buildWallMaterial()` / `buildFloorMaterial()` helpers; change detection via `texFp` / `matFp` fingerprints. `reconcileCeilings` gets `buildCeilingMaterial` with `ceilingMatIdFor` — `ceiling-wood` maps to wood plank texture.
+  - **`useThree.js`**: `floorMatIdFor` and `ceilingMatIdFor` closures added; passed to reconcilers as optional parameters.
+
+- [x] More door/window styles — 4 new opening types (branch claude/features-batch-WE8lC, 2026-05-22)
+  - **`openingsCatalog.js`**: 7 opening types total — `door` (hinged), `door-double` (French/double, 1.6m), `door-sliding` (1.2m), `window`, `window-fixed` (1.5m), `window-casement` (1.0m), `window-arched` (1.0m).
+  - **`openingsSlice.js`**: `open: false` default and `toggleDoorOpen` now match `type.startsWith('door')` to cover all door variants.
+  - **`OpeningGlyphs.jsx`** (new): all 7 2D glyph components extracted from `Opening.jsx` — `DoubleDoorGlyph` (dual swing arcs), `SlidingDoorGlyph` (panel + directional arrow), `FixedWindowGlyph` (solid frame + centre divider), `CasementGlyph` (diagonal hinge line), `ArchedWindowGlyph` (SVG arc top).
+  - **`reconcileDoors.js`**: `buildDoubleDoor()` (two half-width panels sharing hinged animation), `buildSlidingDoor()` (static panel offset to side). All `window-*` types share `buildWindowFrame()`.
+
 - [x] Furniture snap-to-wall — non-wall-mounted items snap flush to nearest wall face (branch claude/features-batch-WE8lC)
   - **`wallSnapGeometry.js`** (new pure utility): `findWallSnap(item, walls, scale, thresholdScreen=60)` — projects item centroid onto each wall segment, clamps to the segment, measures distance. If within threshold (60 screen px, zoom-adjusted via `scale`), picks the correct side via `sign(dot(normal, centroid−wallPoint))`, returns `{ x, y, rotation }` snapped flush against the wall face with `halfDepth + WALL_HALF_THICK + 1 px` offset. Rotation = wall angle ± 90° so the item face is flush. `normalizeAngle(deg)` wraps to 0–359. 7 unit tests in `wallSnapGeometry.test.js`.
   - **`useFurnitureDrop.js`**: `onDragOver` and `onDrop` now call `findWallSnap` for non-wall-mounted floor items after grid-snap. Ghost updates with `rotation: wallSnap.rotation` for preview; `addFurniture` places with snap rotation. Wall-mounted items continue to use the existing `nearestWallSnap` + `wallMountedPlacement` path unchanged.
