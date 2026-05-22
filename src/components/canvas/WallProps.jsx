@@ -53,6 +53,16 @@ export default function WallProps({ wall, onUpdate }) {
           className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-sm font-mono focus:border-blue-500 focus:outline-none"
         />
       </label>
+      <NumField
+        label="Height (m)" step={0.1} min={0.5} max={6.0}
+        initial={(wall.height ?? 2.4).toFixed(1)}
+        onCommit={(v) => onUpdate(wall.id, { height: v })}
+      />
+      <NumField
+        label="Thickness (m)" step={0.05} min={0.05} max={1.0}
+        initial={(wall.thickness ?? 0.2).toFixed(2)}
+        onCommit={(v) => onUpdate(wall.id, { thickness: v })}
+      />
       <p className="text-[10px] text-gray-500 mt-2 leading-snug">
         Keeps the first endpoint fixed and moves the second along the wall's direction. Enter to apply · Esc to revert.
       </p>
@@ -70,6 +80,34 @@ export default function WallProps({ wall, onUpdate }) {
         <Row label="To" value={`${formatMeters(wall.x2)}, ${formatMeters(wall.y2)}`} />
       </div>
     </div>
+  )
+}
+
+// Reusable controlled number input. `initial` sets the display value on mount;
+// Enter/blur commits (clamped to [min, max]); Esc reverts to `initial`.
+function NumField({ label, step, min, max, initial, onCommit }) {
+  const [val, setVal] = useState(initial)
+  const commit = () => {
+    const n = parseFloat(val)
+    if (!isFinite(n) || n < min || n > max) { setVal(initial); return }
+    onCommit(n)
+    setVal(n.toFixed(step < 0.1 ? 2 : 1))
+  }
+  return (
+    <label className="block mt-2">
+      <span className="text-gray-500 text-[11px] uppercase tracking-wider">{label}</span>
+      <input
+        type="number" step={step} min={min} max={max}
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { e.preventDefault(); commit() }
+          if (e.key === 'Escape') { e.preventDefault(); setVal(initial); e.currentTarget.blur() }
+        }}
+        className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-sm font-mono focus:border-blue-500 focus:outline-none"
+      />
+    </label>
   )
 }
 
