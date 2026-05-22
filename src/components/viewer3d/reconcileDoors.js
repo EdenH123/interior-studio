@@ -51,6 +51,41 @@ function buildWindowFrame(w, h) {
   return group
 }
 
+function buildDoubleDoor(w, h) {
+  const group = new THREE.Group()
+  const panelMat = new THREE.MeshStandardMaterial({ color: 0xc8a97e, roughness: 0.8, metalness: 0 })
+
+  const makePanel = (hinge, openSign) => {
+    const panel = new THREE.Group()
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w / 2, h - 0.01, DOOR_THICKNESS), panelMat)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    mesh.position.set(openSign * w / 4, (h - 0.01) / 2, 0)
+    panel.add(mesh)
+    panel.position.x = hinge
+    return panel
+  }
+
+  const leftPanel  = makePanel(-w / 2, 1)
+  const rightPanel = makePanel( w / 2, -1)
+  group.add(leftPanel, rightPanel)
+  group.userData.leftPanel  = leftPanel
+  group.userData.rightPanel = rightPanel
+  return group
+}
+
+function buildSlidingDoor(w, h) {
+  const group = new THREE.Group()
+  const panelMat = new THREE.MeshStandardMaterial({
+    color: 0xc8a97e, roughness: 0.8, metalness: 0, transparent: true, opacity: 0.85,
+  })
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h - 0.01, DOOR_THICKNESS), panelMat)
+  mesh.castShadow = true
+  mesh.position.set(w * 0.35, (h - 0.01) / 2, 0)
+  group.add(mesh)
+  return group
+}
+
 function disposeMeshes(group) {
   group.traverse((n) => {
     n.geometry?.dispose?.()
@@ -68,7 +103,7 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
   const present = new Set()
 
   for (const o of openings) {
-    if (o.type !== 'door' && o.type !== 'window') continue
+    if (!o.type.startsWith('door') && !o.type.startsWith('window')) continue
     const wall = walls.find((w) => w.id === o.wallId)
     if (!wall) continue
 
@@ -125,8 +160,57 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
       group.position.set(hingeWX, yOffset, hingeWZ)
       group.visible = visible
 
+    } else if (o.type === 'door-double') {
+      // Double door: two panels, each half-width, animated together like a hinged door.
+      const hingeLX = (o.position - 0.5) * length - o.width / 2
+      const hingeWX = wallCX + hingeLX * Math.cos(wallYaw)
+      const hingeWZ = wallCZ - hingeLX * Math.sin(wallYaw)
+      const closedAngle = wallYaw
+      const openAngle   = wallYaw + Math.PI / 2
+      const targetAngle = o.open ? openAngle : closedAngle
+
+      let group = meshMap.get(o.id)
+      if (!group) {
+        group = buildDoubleDoor(o.width, o.height)
+        group.userData.kind = 'door'
+        group.userData.id = o.id
+        group.rotation.y = targetAngle
+        group.userData.targetAngle = targetAngle
+        scene.add(group)
+        meshMap.set(o.id, group)
+      } else {
+        const prev = group.userData.targetAngle
+        if (prev !== targetAngle) {
+          doorAnims.set(o.id, { group, startAngle: group.rotation.y, targetAngle, startTime: performance.now() })
+          group.userData.targetAngle = targetAngle
+        }
+      }
+      group.position.set(hingeWX, yOffset, hingeWZ)
+      group.visible = visible
+
+    } else if (o.type === 'door-sliding') {
+      // Sliding door: static panel shown partially slid open, no animation.
+      const centerLX = (o.position - 0.5) * length
+      const doorWX   = wallCX + centerLX * Math.cos(wallYaw)
+      const doorWZ   = wallCZ - centerLX * Math.sin(wallYaw)
+
+      let group = meshMap.get(o.id)
+      if (!group || group.userData.width !== o.width || group.userData.height !== o.height) {
+        if (group) { scene.remove(group); disposeMeshes(group) }
+        group = buildSlidingDoor(o.width, o.height)
+        group.userData.kind   = 'door'
+        group.userData.id     = o.id
+        group.userData.width  = o.width
+        group.userData.height = o.height
+        scene.add(group)
+        meshMap.set(o.id, group)
+      }
+      group.position.set(doorWX, yOffset, doorWZ)
+      group.rotation.y = wallYaw
+      group.visible    = visible
+
     } else {
-      // Window: centered on o.position along the wall, raised by sill height.
+      // All window-* types: centered on o.position along the wall, raised by sill height.
       const centerLX = (o.position - 0.5) * length
       const winWX    = wallCX + centerLX * Math.cos(wallYaw)
       const winWZ    = wallCZ - centerLX * Math.sin(wallYaw)
