@@ -39,14 +39,17 @@ export function reconcileWalls(scene, walls, openings, meshMap, opts = {}) {
     const own = openingsByWall.get(w.id) ?? []
     const fp = wallFingerprint(length, own)
 
+    const wallHeight = w.height    ?? WALL_HEIGHT
+    const wallThick  = w.thickness ?? thickness
+
     const resolvedMat = resolveWallMaterialId(w.material)
-    const texFp = `${color}:${resolvedMat ?? ''}:${length.toFixed(3)}`
+    const texFp = `${color}:${resolvedMat ?? ''}:${length.toFixed(3)}:${wallHeight.toFixed(2)}:${wallThick.toFixed(3)}`
 
     let mesh = meshMap.get(w.id)
     if (!mesh) {
       mesh = new THREE.Mesh(
-        buildGeometry(length, thickness, own),
-        buildWallMaterial(color, resolvedMat, length),
+        buildGeometry(length, wallThick, own, wallHeight),
+        buildWallMaterial(color, resolvedMat, length, wallHeight),
       )
       mesh.userData.kind = 'wall'
       mesh.userData.id = w.id
@@ -59,18 +62,18 @@ export function reconcileWalls(scene, walls, openings, meshMap, opts = {}) {
     } else {
       if (mesh.userData.fp !== fp) {
         mesh.geometry.dispose()
-        mesh.geometry = buildGeometry(length, thickness, own)
+        mesh.geometry = buildGeometry(length, wallThick, own, wallHeight)
         mesh.userData.fp = fp
       }
       if (mesh.userData.texFp !== texFp) {
         mesh.material.dispose()
-        mesh.material = buildWallMaterial(color, resolvedMat, length)
+        mesh.material = buildWallMaterial(color, resolvedMat, length, wallHeight)
         mesh.userData.texFp = texFp
       }
     }
 
     const yOffset = opts.levelOffsets?.get(w.levelId) ?? 0
-    mesh.position.set((a.x + b.x) / 2, yOffset + WALL_HEIGHT / 2, (a.z + b.z) / 2)
+    mesh.position.set((a.x + b.x) / 2, yOffset + wallHeight / 2, (a.z + b.z) / 2)
     mesh.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x)
 
     // Solo / x-ray visibility — reset first so toggling off restores defaults.
@@ -88,25 +91,25 @@ export function reconcileWalls(scene, walls, openings, meshMap, opts = {}) {
       }
     }
 
-    syncOverlay(mesh, length, thickness, own)
+    syncOverlay(mesh, length, wallThick, own, wallHeight)
   }
   removeMissing(scene, meshMap, present)
 }
 
-function buildGeometry(length, thickness, openings) {
+function buildGeometry(length, thickness, openings, wallHeight = WALL_HEIGHT) {
   if (openings.length === 0) {
-    return new THREE.BoxGeometry(length, WALL_HEIGHT, thickness)
+    return new THREE.BoxGeometry(length, wallHeight, thickness)
   }
   try {
-    return buildWallWithHoles(length, WALL_HEIGHT, thickness, openings)
+    return buildWallWithHoles(length, wallHeight, thickness, openings)
   } catch (err) {
     console.warn('CSG hole cut failed — falling back to painted overlay', err)
-    return new THREE.BoxGeometry(length, WALL_HEIGHT, thickness)
+    return new THREE.BoxGeometry(length, wallHeight, thickness)
   }
 }
 
-function buildWallMaterial(color, resolvedMaterialId, lengthM) {
-  const texInfo = getWallTexture(resolvedMaterialId, lengthM, WALL_HEIGHT)
+function buildWallMaterial(color, resolvedMaterialId, lengthM, heightM = WALL_HEIGHT) {
+  const texInfo = getWallTexture(resolvedMaterialId, lengthM, heightM)
   if (!texInfo) {
     return new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.75, metalness: 0.0 })
   }
@@ -153,7 +156,7 @@ function wallFingerprint(length, openings) {
 // the overlay regardless; if CSG succeeded, the painted rect just sits
 // flush on the surface and reads as a faint marker — better than nothing.
 // Held as children of the wall mesh in local space.
-function syncOverlay(wallMesh, length, thickness, openings) {
+function syncOverlay(wallMesh, length, thickness, openings, wallHeight = WALL_HEIGHT) {
   // Remove any previous overlay children.
   const oldOverlay = wallMesh.children.find((c) => c.userData.kind === 'wall-overlay')
   if (oldOverlay) {
@@ -178,7 +181,7 @@ function syncOverlay(wallMesh, length, thickness, openings) {
     const hM = o.height
     const sill = o.type === 'window' ? (o.sillHeight ?? 0) : 0
     const cx = (o.position - 0.5) * length
-    const cy = sill + hM / 2 - WALL_HEIGHT / 2
+    const cy = sill + hM / 2 - wallHeight / 2
     const color = o.type === 'door' ? 0x1f2937 : 0x60a5fa
     for (const side of [1, -1]) {
       const plane = new THREE.Mesh(
