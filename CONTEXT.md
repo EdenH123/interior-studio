@@ -486,6 +486,11 @@ interior-studio/
   - `StairProps.jsx` (new): Properties panel for stair items — Style buttons (Standard / Floating / Spiral), read-only dims, "Add railing" checkbox, and Railing type buttons (Wood / Metal / Cable / Glass) with a one-line hint.
   - `PropertiesPanel.jsx`: routes `f.stairStyle != null` furniture to `StairProps` instead of `FurnitureProps`.
 
+- [x] Furniture snap-to-wall — non-wall-mounted items snap flush to nearest wall face (branch claude/features-batch-WE8lC)
+  - **`wallSnapGeometry.js`** (new pure utility): `findWallSnap(item, walls, scale, thresholdScreen=60)` — projects item centroid onto each wall segment, clamps to the segment, measures distance. If within threshold (60 screen px, zoom-adjusted via `scale`), picks the correct side via `sign(dot(normal, centroid−wallPoint))`, returns `{ x, y, rotation }` snapped flush against the wall face with `halfDepth + WALL_HALF_THICK + 1 px` offset. Rotation = wall angle ± 90° so the item face is flush. `normalizeAngle(deg)` wraps to 0–359. 7 unit tests in `wallSnapGeometry.test.js`.
+  - **`useFurnitureDrop.js`**: `onDragOver` and `onDrop` now call `findWallSnap` for non-wall-mounted floor items after grid-snap. Ghost updates with `rotation: wallSnap.rotation` for preview; `addFurniture` places with snap rotation. Wall-mounted items continue to use the existing `nearestWallSnap` + `wallMountedPlacement` path unchanged.
+  - **`Furniture.jsx`**: `onDragMove` calls `findWallSnap` for non-wall-mounted items; overrides Konva node position and stores snap rotation in `pendingRotation.current`. `onDragEnd` commits `{ x, y, rotation }` — rotation is the pending snap value or the original item rotation if no snap was active.
+
 ### 🚧 In Progress
 - (nothing active)
 
