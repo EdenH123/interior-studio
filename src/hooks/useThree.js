@@ -295,12 +295,16 @@ export default function useThree(containerRef) {
       const mat = matId ? getCeilingMaterial(matId) : null
       return mat?.color ?? DEFAULT_CEILING_COLOR
     }
+    const ceilingMatIdFor = (id) => {
+      const fp = id.includes(':') ? id.split(':').slice(1).join(':') : id
+      return resolveCeilingMaterialId(roomMeta[fp]?.ceilingMaterial)
+    }
 
     reconcileRooms(stateRef.current.scene, allRooms, roomMeshes.current,
       floorColorFor, levelOffsets, { solo: solo3d, activeLevelId: activeLevel }, floorMatIdFor)
     reconcileCeilings(stateRef.current.scene, allRooms, ceilingMeshes.current,
       ceilingColorFor, levelOffsets, levels,
-      { solo: solo3d, activeLevelId: activeLevel, visible: ceilingsVisible })
+      { solo: solo3d, activeLevelId: activeLevel, visible: ceilingsVisible }, ceilingMatIdFor)
   }, [walls, roomMeta, furniture, levels, activeLevel, solo3d, ceilingsVisible])
 
   // ── selection highlight ──────────────────────────────────────────────────────
