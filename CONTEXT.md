@@ -507,6 +507,11 @@ interior-studio/
   - **`WallProps.jsx`**: Two new `NumField` inputs below Length — **Height (m)** (step 0.1, min 0.5, max 6.0, default 2.4) and **Thickness (m)** (step 0.05, min 0.05, max 1.0, default 0.2). Both dispatch `updateWall(id, { height: n })` / `updateWall(id, { thickness: n })` on Enter/blur; Esc reverts. `NumField` reusable helper component keeps the component under 150 lines.
   - **`sceneReconcilers.js`**: `reconcileWalls` now reads `w.height ?? WALL_HEIGHT` and `w.thickness ?? thickness` per-wall inside the loop. Both `buildGeometry` and `buildWallMaterial` accept `wallHeight` as a parameter (with `WALL_HEIGHT` default so call sites without per-wall overrides are unaffected). `syncOverlay` also updated to receive and use `wallHeight`. `texFp` fingerprint extended with `wallHeight` and `wallThick` so geometry + material rebuild when dimensions change. Defaults (`WALL_HEIGHT=2.4`, `WALL_THICKNESS*KONVA_TO_THREE`) unchanged — existing designs look identical.
 
+- [x] Copy/paste (branch claude/features-batch-WE8lC, 2026-05-22)
+  - **`uiSlice.js`**: `clipboard: null` (session-only, not persisted) + `setClipboard(items)` / `clearClipboard()`. Clipboard shape: `[{ kind: 'furniture'|'wall'|'opening', item }]`.
+  - **`useStore.js`**: `pasteClipboard` cross-slice action — single `set()` call so undo reverts the entire paste as one step. Walls offset +50 px on both axes; furniture offset +50 px; openings pasted only when their parent wall was also in the clipboard (orphaned openings skipped). Pasted items become the new selection. `nanoid` imported at top.
+  - **`useCanvasKeyboard.js`**: `Ctrl/Cmd+C` builds clipboard from current selection (walls include their openings automatically); `Ctrl/Cmd+V` calls `pasteClipboard`. Both respect the existing `INPUT`/`TEXTAREA` guard. Toast confirms "Copied N item(s)". Subscribes to `furniture`, `walls`, `openings`, `setClipboard`, `pasteClipboard`, `pushToast` from the store.
+
 ### 🚧 In Progress
 - (nothing active)
 
