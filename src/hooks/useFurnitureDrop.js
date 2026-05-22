@@ -4,12 +4,13 @@ import { clientToWorld, snapToGrid } from './useViewport'
 import { FURNITURE_DRAG_MIME } from '../components/Sidebar'
 import { getFurnitureSpec } from '../components/canvas/furnitureCatalog'
 import { nearestWallSnap, wallMountedPlacement } from '../components/canvas/openingGeometry'
+import { findWallSnap } from '../components/canvas/wallSnapGeometry'
 
 // Wall-mounted catalog items (wallMounted: true) behave like openings on
 // dragover: they snap to the nearest wall within WALL_SNAP_SCREEN_PX and
 // orient perpendicular to it. The ghost carries `wallSnap: bool` so
 // DragGhost can render a red-X when no wall is in range. Non-wall-mounted
-// items continue to snap to the grid as before.
+// items snap flush to the nearest wall face when within WALL_SNAP_SCREEN_PX.
 const WALL_SNAP_SCREEN_PX = 60
 
 export default function useFurnitureDrop(containerRef, view) {
@@ -30,7 +31,7 @@ export default function useFurnitureDrop(containerRef, view) {
     return clientToWorld(clientX, clientY, rect, view)
   }
 
-  function findWallSnap(world) {
+  function findWallMountSnap(world) {
     return nearestWallSnap(world, levelWalls, WALL_SNAP_SCREEN_PX / view.scale)
   }
 
@@ -46,7 +47,7 @@ export default function useFurnitureDrop(containerRef, view) {
       // so it's available here even though dataTransfer.getData is blocked.
       const spec = dragGhost ? getFurnitureSpec(dragGhost.type) : null
       if (spec?.wallMounted) {
-        const snap = findWallSnap(world)
+        const snap = findWallMountSnap(world)
         if (snap) {
           const p = wallMountedPlacement(snap, spec.depth, world)
           setDragGhostPos(p.x, p.y, { wallSnap: true, rotation: p.rotation })
@@ -55,7 +56,14 @@ export default function useFurnitureDrop(containerRef, view) {
         }
       } else {
         const p = snapToGrid(world, GRID_SIZE)
-        setDragGhostPos(p.x, p.y, { wallSnap: undefined, rotation: undefined })
+        const floorSnap = spec
+          ? findWallSnap({ x: p.x, y: p.y, width: spec.width, depth: spec.depth }, levelWalls, view.scale, WALL_SNAP_SCREEN_PX)
+          : null
+        if (floorSnap) {
+          setDragGhostPos(floorSnap.x, floorSnap.y, { wallSnap: undefined, rotation: floorSnap.rotation })
+        } else {
+          setDragGhostPos(p.x, p.y, { wallSnap: undefined, rotation: undefined })
+        }
       }
     },
 
@@ -72,7 +80,7 @@ export default function useFurnitureDrop(containerRef, view) {
       clearDragGhost()
       const spec = getFurnitureSpec(type)
       if (spec?.wallMounted) {
-        const snap = findWallSnap(world)
+        const snap = findWallMountSnap(world)
         if (!snap) {
           pushToast('Drop wall-mounted items against a wall.', 'warn')
           return
@@ -81,7 +89,14 @@ export default function useFurnitureDrop(containerRef, view) {
         addFurniture(type, p.x, p.y, { rotation: p.rotation })
       } else {
         const p = snapToGrid(world, GRID_SIZE)
-        addFurniture(type, p.x, p.y)
+        const floorSnap = spec
+          ? findWallSnap({ x: p.x, y: p.y, width: spec.width, depth: spec.depth }, levelWalls, view.scale, WALL_SNAP_SCREEN_PX)
+          : null
+        if (floorSnap) {
+          addFurniture(type, floorSnap.x, floorSnap.y, { rotation: floorSnap.rotation })
+        } else {
+          addFurniture(type, p.x, p.y)
+        }
       }
     },
   }
