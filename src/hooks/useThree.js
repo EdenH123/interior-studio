@@ -10,12 +10,12 @@ import { reconcileDoors, tickDoorAnims } from '../components/viewer3d/reconcileD
 import { applySelectionHighlight } from '../components/viewer3d/selectionHighlight'
 import { attachPicking } from '../components/viewer3d/picking'
 import { detectRooms } from '../components/canvas/roomDetection'
-import { getFloorMaterial } from '../components/canvas/floorMaterials'
+import { getFloorMaterial, resolveFloorMaterialId } from '../components/canvas/floorMaterials'
 import { kelvinToRgb } from '../utils/colorTemp'
 import { isLightingType } from '../components/viewer3d/reconcileFurniture'
 import { computeLevelOffsets } from '../store/slices/levelsSlice'
 import { computeStairHolesForRooms } from '../components/viewer3d/stairFloorHoles'
-import { DEFAULT_CEILING_COLOR, getCeilingMaterial } from '../components/canvas/ceilingMaterials'
+import { DEFAULT_CEILING_COLOR, getCeilingMaterial, resolveCeilingMaterialId } from '../components/canvas/ceilingMaterials'
 import { getCustomModelUrl } from '../utils/customModelUrls'
 
 const CAMERA_FOV = 60
@@ -285,6 +285,10 @@ export default function useThree(containerRef) {
       const mat = matId ? getFloorMaterial(matId) : null
       return mat?.color ?? DEFAULT_FLOOR_COLOR
     }
+    const floorMatIdFor = (id) => {
+      const fp = id.includes(':') ? id.split(':').slice(1).join(':') : id
+      return resolveFloorMaterialId(roomMeta[fp]?.floorMaterial) ?? null
+    }
     const ceilingColorFor = (id) => {
       const fp = id.includes(':') ? id.split(':').slice(1).join(':') : id
       const matId = roomMeta[fp]?.ceilingMaterial
@@ -293,7 +297,7 @@ export default function useThree(containerRef) {
     }
 
     reconcileRooms(stateRef.current.scene, allRooms, roomMeshes.current,
-      floorColorFor, levelOffsets, { solo: solo3d, activeLevelId: activeLevel })
+      floorColorFor, levelOffsets, { solo: solo3d, activeLevelId: activeLevel }, floorMatIdFor)
     reconcileCeilings(stateRef.current.scene, allRooms, ceilingMeshes.current,
       ceilingColorFor, levelOffsets, levels,
       { solo: solo3d, activeLevelId: activeLevel, visible: ceilingsVisible })

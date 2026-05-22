@@ -1,9 +1,11 @@
 import * as THREE from 'three'
 import { KONVA_TO_THREE, konvaToFloor } from './threeMath'
 import { WALL_THICKNESS } from '../canvas/constants'
-import { wallColorFor } from '../canvas/wallMaterials'
+import { wallColorFor, resolveWallMaterialId } from '../canvas/wallMaterials'
+import { resolveFloorMaterialId } from '../canvas/floorMaterials'
 import { buildWallWithHoles } from './wallCSG'
 import { holesFp } from './stairFloorHoles'
+import { getWallTexture, getFloorTexture } from './proceduralTextures'
 
 // reconcileFurniture lives in its own module because the GLB upgrade
 // pipeline + Group-wrapped scene objects are substantial enough that they
@@ -37,16 +39,19 @@ export function reconcileWalls(scene, walls, openings, meshMap, opts = {}) {
     const own = openingsByWall.get(w.id) ?? []
     const fp = wallFingerprint(length, own)
 
+    const resolvedMat = resolveWallMaterialId(w.material)
+    const texFp = `${color}:${resolvedMat ?? ''}:${length.toFixed(3)}`
+
     let mesh = meshMap.get(w.id)
     if (!mesh) {
       mesh = new THREE.Mesh(
         buildGeometry(length, thickness, own),
-        new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.75, metalness: 0.0 }),
+        buildWallMaterial(color, resolvedMat, length),
       )
       mesh.userData.kind = 'wall'
       mesh.userData.id = w.id
-      mesh.userData.color = color
       mesh.userData.fp = fp
+      mesh.userData.texFp = texFp
       mesh.castShadow    = true
       mesh.receiveShadow = true
       scene.add(mesh)
@@ -57,9 +62,10 @@ export function reconcileWalls(scene, walls, openings, meshMap, opts = {}) {
         mesh.geometry = buildGeometry(length, thickness, own)
         mesh.userData.fp = fp
       }
-      if (mesh.userData.color !== color) {
-        mesh.material.color.set(color)
-        mesh.userData.color = color
+      if (mesh.userData.texFp !== texFp) {
+        mesh.material.dispose()
+        mesh.material = buildWallMaterial(color, resolvedMat, length)
+        mesh.userData.texFp = texFp
       }
     }
 
@@ -97,6 +103,40 @@ function buildGeometry(length, thickness, openings) {
     console.warn('CSG hole cut failed — falling back to painted overlay', err)
     return new THREE.BoxGeometry(length, WALL_HEIGHT, thickness)
   }
+}
+
+function buildWallMaterial(color, resolvedMaterialId, lengthM) {
+  const texInfo = getWallTexture(resolvedMaterialId, lengthM, WALL_HEIGHT)
+  if (!texInfo) {
+    return new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.75, metalness: 0.0 })
+  }
+  return new THREE.MeshStandardMaterial({
+    map: texInfo.map,
+    color: new THREE.Color(texInfo.selfColored ? '#ffffff' : color),
+    roughness: texInfo.roughness,
+    metalness: 0.0,
+  })
+}
+
+function buildFloorMaterial(color, floorMatId) {
+  const texInfo = getFloorTexture(floorMatId)
+  return new THREE.MeshStandardMaterial({
+    map: texInfo?.map ?? null,
+    color: new THREE.Color(texInfo?.selfColored ? '#ffffff' : color),
+    side: THREE.DoubleSide,
+    roughness: texInfo?.roughness ?? 0.9,
+  })
+}
+
+function buildCeilingMaterial(color, ceilingMatId) {
+  // ceiling-wood gets the floor wood texture applied to the ceiling surface
+  const texInfo = ceilingMatId === 'ceiling-wood' ? getFloorTexture('_wood') : null
+  return new THREE.MeshStandardMaterial({
+    map: texInfo?.map ?? null,
+    color: new THREE.Color(texInfo?.selfColored ? '#ffffff' : color),
+    side: THREE.DoubleSide,
+    roughness: texInfo?.roughness ?? 0.9,
+  })
 }
 
 function wallFingerprint(length, openings) {
@@ -173,23 +213,20 @@ const FLOOR_OFFSET_Y = 0.01
 // opts: { solo?: bool, activeLevelId?: string }
 // Rooms may carry an optional `stairHoles` array — each element is an array
 // of {x,y} corners (in shape-space metres) for a stair footprint to cut out.
-export function reconcileRooms(scene, rooms, meshMap, colorForId, levelOffsets, opts = {}) {
+export function reconcileRooms(scene, rooms, meshMap, colorForId, levelOffsets, opts = {}, floorMatIdFor = null) {
   const present = new Set()
   for (const r of rooms) {
     present.add(r.id)
     const color = colorForId(r.id)
+    const floorMatId = floorMatIdFor?.(r.id) ?? null
+    const matFp = `${color}:${floorMatId ?? ''}`
     const yOffset = levelOffsets?.get(r.levelId) ?? 0
     const fp = holesFp(r.stairHoles)
 
     let mesh = meshMap.get(r.id)
     if (!mesh) {
       const geo = new THREE.ShapeGeometry(buildRoomShape(r))
-      const mat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(color),
-        side: THREE.DoubleSide,
-        roughness: 0.80,
-        metalness: 0.05,
-      })
+      const mat = buildFloorMaterial(color, floorMatId)
       mesh = new THREE.Mesh(geo, mat)
       // Rotate +π/2 around X: Shape's local Y maps to world Z, matching the
       // Konva→Three coord rule (Konva-y → Three-z). Face normal points down
@@ -197,7 +234,7 @@ export function reconcileRooms(scene, rooms, meshMap, colorForId, levelOffsets, 
       mesh.rotation.x = Math.PI / 2
       mesh.userData.kind = 'room'
       mesh.userData.id = r.id
-      mesh.userData.color = color
+      mesh.userData.matFp = matFp
       mesh.userData.holesFp = fp
       mesh.receiveShadow = true
       scene.add(mesh)
@@ -208,9 +245,10 @@ export function reconcileRooms(scene, rooms, meshMap, colorForId, levelOffsets, 
         mesh.geometry = new THREE.ShapeGeometry(buildRoomShape(r))
         mesh.userData.holesFp = fp
       }
-      if (mesh.userData.color !== color) {
-        mesh.material.color.set(color)
-        mesh.userData.color = color
+      if (mesh.userData.matFp !== matFp) {
+        mesh.material.dispose()
+        mesh.material = buildFloorMaterial(color, floorMatId)
+        mesh.userData.matFp = matFp
       }
     }
     // Always update Y — handles level height changes without a full rebuild.
@@ -250,7 +288,7 @@ const CEILING_OFFSET_Y = -0.01  // slight below-surface offset to avoid z-fighti
 //
 // `colorForId(id)` resolves ceiling color from the store.
 // opts: { solo?, activeLevelId?, visible? }
-export function reconcileCeilings(scene, rooms, meshMap, colorForId, levelOffsets, levels, opts = {}) {
+export function reconcileCeilings(scene, rooms, meshMap, colorForId, levelOffsets, levels, opts = {}, ceilingMatIdFor = null) {
   const present = new Set()
   if (opts.visible === false) {
     removeMissing(scene, meshMap, present)
@@ -265,6 +303,8 @@ export function reconcileCeilings(scene, rooms, meshMap, colorForId, levelOffset
     const ceilId = `ceil:${r.id}`
     present.add(ceilId)
     const color = colorForId(r.id)
+    const ceilMatId = ceilingMatIdFor?.(r.id) ?? null
+    const matFp = `${color}:${ceilMatId ?? ''}`
     const yOffset = levelOffsets?.get(r.levelId) ?? 0
     const levelHeight = levelHeightMap.get(r.levelId) ?? 2.7
     const fp = holesFp(r.ceilingStairHoles)
@@ -273,16 +313,12 @@ export function reconcileCeilings(scene, rooms, meshMap, colorForId, levelOffset
     if (!mesh) {
       const shape = buildRoomShapeWithHoles(r, 'ceilingStairHoles')
       const geo = new THREE.ShapeGeometry(shape)
-      const mat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(color),
-        side: THREE.DoubleSide,
-        roughness: 0.9,
-      })
+      const mat = buildCeilingMaterial(color, ceilMatId)
       mesh = new THREE.Mesh(geo, mat)
       mesh.rotation.x = Math.PI / 2
       mesh.userData.kind = 'ceiling'
       mesh.userData.id = ceilId
-      mesh.userData.color = color
+      mesh.userData.matFp = matFp
       mesh.userData.holesFp = fp
       scene.add(mesh)
       meshMap.set(ceilId, mesh)
@@ -292,9 +328,10 @@ export function reconcileCeilings(scene, rooms, meshMap, colorForId, levelOffset
         mesh.geometry = new THREE.ShapeGeometry(buildRoomShapeWithHoles(r, 'ceilingStairHoles'))
         mesh.userData.holesFp = fp
       }
-      if (mesh.userData.color !== color) {
-        mesh.material.color.set(color)
-        mesh.userData.color = color
+      if (mesh.userData.matFp !== matFp) {
+        mesh.material.dispose()
+        mesh.material = buildCeilingMaterial(color, ceilMatId)
+        mesh.userData.matFp = matFp
       }
     }
     mesh.position.y = yOffset + levelHeight + CEILING_OFFSET_Y
