@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { temporal } from 'zundo'
+import { nanoid } from 'nanoid/non-secure'
 import { createWallsSlice } from './slices/wallsSlice'
 import { createFurnitureSlice } from './slices/furnitureSlice'
 import { createOpeningsSlice } from './slices/openingsSlice'
@@ -140,6 +141,52 @@ const useStore = create(persist(
           calibration: null,
           dragGhost: null,
           aiProposal: null,
+        }
+      }),
+
+    // Paste clipboard items in one `set` call so undo reverts the entire
+    // paste as a single step. Walls are offset +50 px on both axes; openings
+    // are only pasted when their source wall was also in the clipboard
+    // (otherwise they'd be orphaned). Pasted items become the new selection.
+    pasteClipboard: () =>
+      set((s) => {
+        if (!s.clipboard || s.clipboard.length === 0) return s
+        const wallIdMap = {} // oldId → newId for walls in the clipboard
+        const newFurniture = []
+        const newWalls = []
+        const newOpenings = []
+
+        // First pass: create walls (needed to build the id map before openings).
+        for (const { kind, item } of s.clipboard) {
+          if (kind === 'wall') {
+            const newId = nanoid(6)
+            wallIdMap[item.id] = newId
+            newWalls.push({ ...item, id: newId, x1: item.x1 + 50, y1: item.y1 + 50, x2: item.x2 + 50, y2: item.y2 + 50 })
+          }
+        }
+
+        // Second pass: furniture and openings.
+        for (const { kind, item } of s.clipboard) {
+          if (kind === 'furniture') {
+            newFurniture.push({ ...item, id: nanoid(6), x: item.x + 50, y: item.y + 50 })
+          } else if (kind === 'opening') {
+            const newWallId = wallIdMap[item.wallId]
+            if (!newWallId) continue // wall not in clipboard — skip
+            newOpenings.push({ ...item, id: nanoid(6), wallId: newWallId })
+          }
+        }
+
+        return {
+          furniture: [...s.furniture, ...newFurniture],
+          walls: [...s.walls, ...newWalls],
+          openings: [...s.openings, ...newOpenings],
+          selection: {
+            items: [
+              ...newFurniture.map((f) => ({ kind: 'furniture', id: f.id })),
+              ...newWalls.map((w) => ({ kind: 'wall', id: w.id })),
+              ...newOpenings.map((o) => ({ kind: 'opening', id: o.id })),
+            ],
+          },
         }
       }),
   }), {
