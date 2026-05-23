@@ -248,11 +248,13 @@ function box(w, h, d, cx, cy, cz) {
 }
 
 // Diagonal box: rotated around X so it follows the stair slope.
-// The box's Z axis aligns with the slope direction (0, sin(theta), cos(theta)).
-// centerY is the Y coordinate of the box center at Z = 0 (the mid-run).
+// Stair steps rise from z=-D/2 (y=0) to z=+D/2 (y=H), so positive-Z must
+// map to higher-Y. RotationX(-theta) achieves this: a point at +Z rotates
+// to +Y*sin(theta), matching the stair ascent direction.
+// centerY is the Y coordinate of the box centre at the stair mid-run (Z=0).
 function slopeBox(w, h, len, theta, cx, centerY) {
   const geo = new THREE.BoxGeometry(w, h, len)
-  geo.applyMatrix4(new THREE.Matrix4().makeRotationX(theta))
+  geo.applyMatrix4(new THREE.Matrix4().makeRotationX(-theta))
   geo.translate(cx, centerY, 0)
   return geo
 }
