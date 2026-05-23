@@ -37,10 +37,12 @@ export function reconcileWalls(scene, walls, openings, meshMap, opts = {}) {
     const thickness = WALL_THICKNESS * KONVA_TO_THREE
     const color = wallColorFor(w)
     const own = openingsByWall.get(w.id) ?? []
-    const fp = wallFingerprint(length, own)
-
     const wallHeight = w.height    ?? WALL_HEIGHT
     const wallThick  = w.thickness ?? thickness
+
+    // geoFp covers everything that changes the BoxGeometry shape.
+    const openingsFp = wallFingerprint(length, own)
+    const geoFp = `${openingsFp}:${wallHeight.toFixed(2)}:${wallThick.toFixed(3)}`
 
     const resolvedMat = resolveWallMaterialId(w.material)
     const texFp = `${color}:${resolvedMat ?? ''}:${length.toFixed(3)}:${wallHeight.toFixed(2)}:${wallThick.toFixed(3)}`
@@ -53,17 +55,17 @@ export function reconcileWalls(scene, walls, openings, meshMap, opts = {}) {
       )
       mesh.userData.kind = 'wall'
       mesh.userData.id = w.id
-      mesh.userData.fp = fp
+      mesh.userData.geoFp = geoFp
       mesh.userData.texFp = texFp
       mesh.castShadow    = true
       mesh.receiveShadow = true
       scene.add(mesh)
       meshMap.set(w.id, mesh)
     } else {
-      if (mesh.userData.fp !== fp) {
+      if (mesh.userData.geoFp !== geoFp) {
         mesh.geometry.dispose()
         mesh.geometry = buildGeometry(length, wallThick, own, wallHeight)
-        mesh.userData.fp = fp
+        mesh.userData.geoFp = geoFp
       }
       if (mesh.userData.texFp !== texFp) {
         mesh.material.dispose()
