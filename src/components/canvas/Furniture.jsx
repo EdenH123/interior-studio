@@ -2,6 +2,8 @@ import { useRef } from 'react'
 import { Group, Rect, Text, Line, Circle } from 'react-konva'
 import { PIXELS_PER_METER } from './constants'
 import { furnitureColorFor } from './furnitureMaterials'
+import { findWallSnap } from './wallSnapGeometry'
+import useStore from '../../store/useStore'
 
 const SELECTION_COLOR = '#3b82f6'
 
@@ -11,6 +13,9 @@ export default function Furniture({ item, selected, scale, onSelect, onShiftSele
   // Konva's built-in drag accumulates screen-space deltas without dividing by
   // scale, causing the item to "jump" when zoomed in beyond 1:1.
   const dragOffset = useRef(null)
+  // Rotation to apply on dragEnd when a wall snap is active.
+  const pendingRotation = useRef(null)
+  const walls = useStore((s) => s.walls)
   const w = item.width * PIXELS_PER_METER
   const d = item.depth * PIXELS_PER_METER
   const fill = furnitureColorFor(item)
@@ -33,14 +38,36 @@ export default function Furniture({ item, selected, scale, onSelect, onShiftSele
       onDragMove={(e) => {
         if (!dragOffset.current) return
         const p = e.target.getStage().getRelativePointerPosition()
-        e.target.x(p.x - dragOffset.current.dx)
-        e.target.y(p.y - dragOffset.current.dy)
+        const worldX = p.x - dragOffset.current.dx
+        const worldY = p.y - dragOffset.current.dy
+        e.target.x(worldX)
+        e.target.y(worldY)
+        // Wall snap: override position if within threshold of a wall face.
+        if (!item.wallMounted) {
+          const wallSnap = findWallSnap(
+            { x: worldX, y: worldY, width: item.width, depth: item.depth },
+            walls,
+            scale,
+          )
+          if (wallSnap) {
+            e.target.x(wallSnap.x)
+            e.target.y(wallSnap.y)
+            pendingRotation.current = wallSnap.rotation
+          } else {
+            pendingRotation.current = null
+          }
+        }
       }}
       onDragEnd={(e) => {
-        const p = e.target.getStage().getRelativePointerPosition()
-        const off = dragOffset.current ?? { dx: 0, dy: 0 }
+        const node = e.target
+        const finalX = node.x()
+        const finalY = node.y()
+        const finalRotation = pendingRotation.current
         dragOffset.current = null
-        onDragEnd?.(item.id, { x: p.x - off.dx, y: p.y - off.dy })
+        pendingRotation.current = null
+        onDragEnd?.(item.id, finalRotation != null
+          ? { x: finalX, y: finalY, rotation: finalRotation }
+          : { x: finalX, y: finalY })
       }}
       onMouseDown={(e) => {
         if (e.evt.button === 0) {

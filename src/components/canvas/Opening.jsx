@@ -1,6 +1,10 @@
-import { Group, Line, Path, Rect } from 'react-konva'
+import { Group, Rect } from 'react-konva'
 import { PIXELS_PER_METER } from './constants'
 import { openingPlacement, projectOntoWall, wallLengthPx } from './openingGeometry'
+import {
+  DoorGlyph, DoubleDoorGlyph, SlidingDoorGlyph,
+  WindowGlyph, FixedWindowGlyph, CasementGlyph, ArchedWindowGlyph,
+} from './OpeningGlyphs'
 
 // 2D rendering for a single opening on a wall. The Group is positioned at
 // the opening's centre on the wall and rotated to match the wall's
@@ -65,48 +69,14 @@ export default function Opening({ opening, wall, view, selected, onSelect, onShi
         width={p.widthPx} height={24 / view.scale}
         fill="rgba(0,0,0,0.001)"
       />
-      {opening.type === 'door'
-        ? <DoorGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />
-        : <WindowGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
+      {opening.type === 'door'           && <DoorGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
+      {opening.type === 'door-double'   && <DoubleDoorGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
+      {opening.type === 'door-sliding'  && <SlidingDoorGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
+      {opening.type === 'window'        && <WindowGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
+      {opening.type === 'window-fixed'  && <FixedWindowGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
+      {opening.type === 'window-casement' && <CasementGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
+      {opening.type === 'window-arched' && <ArchedWindowGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
     </Group>
   )
 }
 
-function DoorGlyph({ widthPx, scale, selected }) {
-  const half = widthPx / 2
-  const stroke = selected ? '#3b82f6' : '#e5e7eb'
-  const jamb = selected ? 2 / scale : 1.5 / scale
-  // Hinge at -half on the wall, panel swings perpendicular (towards -y
-  // in the rotated frame). Arc traces the free end from the open
-  // position (-half, -widthPx) round to the closed position (half, 0).
-  const arcData =
-    `M ${half} 0 A ${widthPx} ${widthPx} 0 0 0 ${-half} ${-widthPx}`
-  return (
-    <Group listening={false}>
-      {/* Jambs as small ticks marking the gap edges */}
-      <Line points={[-half, -4 / scale, -half, 4 / scale]} stroke={stroke} strokeWidth={jamb} />
-      <Line points={[half, -4 / scale, half, 4 / scale]} stroke={stroke} strokeWidth={jamb} />
-      {/* Door panel — line from hinge perpendicular to wall */}
-      <Line points={[-half, 0, -half, -widthPx]} stroke={stroke} strokeWidth={jamb} />
-      {/* Swing arc */}
-      <Path data={arcData} stroke={stroke} strokeWidth={1 / scale} opacity={0.6} fill="" />
-    </Group>
-  )
-}
-
-function WindowGlyph({ widthPx, scale, selected }) {
-  const half = widthPx / 2
-  const stroke = selected ? '#3b82f6' : '#a5b4fc'
-  const sw = 1.5 / scale
-  const offset = 4 / scale
-  return (
-    <Group listening={false}>
-      {/* Jambs */}
-      <Line points={[-half, -offset, -half, offset]} stroke={stroke} strokeWidth={sw} />
-      <Line points={[half, -offset, half, offset]} stroke={stroke} strokeWidth={sw} />
-      {/* Two parallel glass-pane lines along the wall direction */}
-      <Line points={[-half, -offset / 2, half, -offset / 2]} stroke={stroke} strokeWidth={sw} />
-      <Line points={[-half, offset / 2, half, offset / 2]} stroke={stroke} strokeWidth={sw} />
-    </Group>
-  )
-}

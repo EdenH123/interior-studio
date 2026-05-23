@@ -21,6 +21,12 @@ export default function useCanvasKeyboard() {
   const cancelCalibration = useStore((s) => s.cancelCalibration)
   const selectAll = useStore((s) => s.selectAll)
   const clearPendingPlacement = useStore((s) => s.clearPendingPlacement)
+  const furniture = useStore((s) => s.furniture)
+  const walls = useStore((s) => s.walls)
+  const openings = useStore((s) => s.openings)
+  const setClipboard = useStore((s) => s.setClipboard)
+  const pasteClipboard = useStore((s) => s.pasteClipboard)
+  const pushToast = useStore((s) => s.pushToast)
 
   useEffect(() => {
     const down = (e) => {
@@ -60,12 +66,48 @@ export default function useCanvasKeyboard() {
         if (e.shiftKey) t.redo()
         else t.undo()
       }
+
+      // Copy
+      if ((e.metaKey || e.ctrlKey) && e.key === 'c' && !e.shiftKey) {
+        e.preventDefault()
+        const items = selectionItems(selection)
+        if (items.length === 0) return
+        const clipItems = []
+        for (const { kind, id } of items) {
+          if (kind === 'furniture') {
+            const f = furniture.find((x) => x.id === id)
+            if (f) clipItems.push({ kind: 'furniture', item: f })
+          } else if (kind === 'wall') {
+            const w = walls.find((x) => x.id === id)
+            if (w) {
+              clipItems.push({ kind: 'wall', item: w })
+              // Also copy openings on this wall
+              for (const o of openings.filter((x) => x.wallId === id)) {
+                clipItems.push({ kind: 'opening', item: o })
+              }
+            }
+          }
+          // 'room' and 'opening' selections without a wall are skipped
+        }
+        if (clipItems.length > 0) {
+          setClipboard(clipItems)
+          pushToast(`Copied ${clipItems.filter((c) => c.kind !== 'opening').length} item(s)`, 'info')
+        }
+        return
+      }
+
+      // Paste
+      if ((e.metaKey || e.ctrlKey) && e.key === 'v' && !e.shiftKey) {
+        e.preventDefault()
+        pasteClipboard()
+        return
+      }
     }
     const up = (e) => { if (e.code === 'Space') setSpaceDown(false) }
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
-  }, [selection, calibration, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement])
+  }, [selection, calibration, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement, furniture, walls, openings, setClipboard, pasteClipboard, pushToast])
 
   return spaceDown
 }

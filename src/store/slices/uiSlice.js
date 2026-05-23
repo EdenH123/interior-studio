@@ -57,6 +57,12 @@ export const createUiSlice = (set) => ({
   setPendingPlacement: (spec) => set({ pendingPlacement: spec }),
   clearPendingPlacement: () => set({ pendingPlacement: null }),
 
+  // Clipboard for copy/paste. Session-only — not persisted across reloads.
+  // Shape: [{ kind: 'furniture' | 'wall' | 'opening', item: {...} }] | null
+  clipboard: null,
+  setClipboard: (items) => set({ clipboard: items }),
+  clearClipboard: () => set({ clipboard: null }),
+
   // AI panel takes over the right-hand slot when open (replaces
   // PropertiesPanel). Not persisted — opening on each fresh session is fine.
   aiPanelOpen: false,

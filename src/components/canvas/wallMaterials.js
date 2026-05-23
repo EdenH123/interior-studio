@@ -17,7 +17,14 @@ const fromSW = (c) => ({ id: c.id, label: c.name, color: c.hex, code: c.code, ca
 
 const WOOD_PANEL = { id: 'wood-panel', label: 'Wood Panel', color: '#A87852', category: 'Other' }
 
+const STRUCTURAL = [
+  { id: 'struct-brick',    label: 'Brick',     color: '#c8714e', category: 'Structural' },
+  { id: 'struct-stone',    label: 'Stone',     color: '#b8b4ae', category: 'Structural' },
+  { id: 'struct-concrete', label: 'Concrete',  color: '#787880', category: 'Structural' },
+]
+
 export const WALL_MATERIALS = [
+  ...STRUCTURAL,
   ...BENJAMIN_MOORE.map(fromBM),
   ...SHERWIN_WILLIAMS.map(fromSW),
   WOOD_PANEL,

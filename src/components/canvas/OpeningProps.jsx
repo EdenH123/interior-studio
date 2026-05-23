@@ -32,7 +32,7 @@ export default function OpeningProps({ opening, wall, onUpdate, pushToast }) {
       <Row label="Position" value={`${(opening.position * 100).toFixed(1)}% along wall`} />
       {numberField('Width (m)', 'width')}
       {numberField('Height (m)', 'height')}
-      {opening.type === 'window' && numberField('Sill height (m)', 'sillHeight', 0.05, 0)}
+      {opening.type.startsWith('window') && numberField('Sill height (m)', 'sillHeight', 0.05, 0)}
       <p className="text-[10px] text-gray-500 mt-3 leading-snug">
         Drag the opening along its wall to reposition · Del to remove. The opening always stays inside the wall and won't overlap with others.
       </p>

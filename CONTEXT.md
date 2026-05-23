@@ -87,7 +87,7 @@ interior-studio/
 │   │   │   ├── DrawPreview.jsx     # the dashed-blue preview wall + start/end dots + live dimension label
 │   │   │   ├── Underlay.jsx        # Konva.Image with drag-when-unlocked + selection
 │   │   │   ├── UnderlayProps.jsx   # PropertiesPanel editor for the underlay (opacity, calibrate, remove, AI trace)
-│   │   │   ├── WallProps.jsx       # PropertiesPanel editor for a selected wall — editable Length (m) input
+│   │   │   ├── WallProps.jsx       # PropertiesPanel editor for a selected wall — editable Length (m), Height (m), Thickness (m) inputs + material picker
 │   │   │   ├── RotationHandle.jsx  # blue circle on a stick — click-drag to rotate selected furniture
 │   │   │   ├── CalibrationOverlay.jsx  # invisible capture rect + cyan calibration markers (top of stage)
 │   │   │   ├── CalibrationPrompt.jsx   # HTML modal asking for real-world distance
@@ -486,6 +486,32 @@ interior-studio/
   - `StairProps.jsx` (new): Properties panel for stair items — Style buttons (Standard / Floating / Spiral), read-only dims, "Add railing" checkbox, and Railing type buttons (Wood / Metal / Cable / Glass) with a one-line hint.
   - `PropertiesPanel.jsx`: routes `f.stairStyle != null` furniture to `StairProps` instead of `FurnitureProps`.
 
+- [x] Material textures in 3D — procedural PBR textures for walls and floors (branch claude/features-batch-WE8lC, 2026-05-22)
+  - **`proceduralTextures.js`** (new): canvas-based texture generator. Wall textures: `struct-brick` (offset brick rows + mortar), `struct-stone` (irregular blocks), `wood-panel` (grain + plank joints), `struct-concrete` (deterministic noise). Floor textures: wood plank, tile (grout grid + highlight), marble (quadratic-curve veining), concrete, carpet (weave). Module-level `_cache` Map; `.clone()` per mesh shares GPU source.
+  - **`wallMaterials.js`**: new `Structural` category prepended — `struct-brick`, `struct-stone`, `struct-concrete` available in the wall material picker.
+  - **`sceneReconcilers.js`**: `buildWallMaterial()` / `buildFloorMaterial()` helpers; change detection via `texFp` / `matFp` fingerprints. `reconcileCeilings` gets `buildCeilingMaterial` with `ceilingMatIdFor` — `ceiling-wood` maps to wood plank texture.
+  - **`useThree.js`**: `floorMatIdFor` and `ceilingMatIdFor` closures added; passed to reconcilers as optional parameters.
+
+- [x] More door/window styles — 4 new opening types (branch claude/features-batch-WE8lC, 2026-05-22)
+  - **`openingsCatalog.js`**: 7 opening types total — `door` (hinged), `door-double` (French/double, 1.6m), `door-sliding` (1.2m), `window`, `window-fixed` (1.5m), `window-casement` (1.0m), `window-arched` (1.0m).
+  - **`openingsSlice.js`**: `open: false` default and `toggleDoorOpen` now match `type.startsWith('door')` to cover all door variants.
+  - **`OpeningGlyphs.jsx`** (new): all 7 2D glyph components extracted from `Opening.jsx` — `DoubleDoorGlyph` (dual swing arcs), `SlidingDoorGlyph` (panel + directional arrow), `FixedWindowGlyph` (solid frame + centre divider), `CasementGlyph` (diagonal hinge line), `ArchedWindowGlyph` (SVG arc top).
+  - **`reconcileDoors.js`**: `buildDoubleDoor()` (two half-width panels sharing hinged animation), `buildSlidingDoor()` (static panel offset to side). All `window-*` types share `buildWindowFrame()`.
+
+- [x] Furniture snap-to-wall — non-wall-mounted items snap flush to nearest wall face (branch claude/features-batch-WE8lC)
+  - **`wallSnapGeometry.js`** (new pure utility): `findWallSnap(item, walls, scale, thresholdScreen=60)` — projects item centroid onto each wall segment, clamps to the segment, measures distance. If within threshold (60 screen px, zoom-adjusted via `scale`), picks the correct side via `sign(dot(normal, centroid−wallPoint))`, returns `{ x, y, rotation }` snapped flush against the wall face with `halfDepth + WALL_HALF_THICK + 1 px` offset. Rotation = wall angle ± 90° so the item face is flush. `normalizeAngle(deg)` wraps to 0–359. 7 unit tests in `wallSnapGeometry.test.js`.
+  - **`useFurnitureDrop.js`**: `onDragOver` and `onDrop` now call `findWallSnap` for non-wall-mounted floor items after grid-snap. Ghost updates with `rotation: wallSnap.rotation` for preview; `addFurniture` places with snap rotation. Wall-mounted items continue to use the existing `nearestWallSnap` + `wallMountedPlacement` path unchanged.
+  - **`Furniture.jsx`**: `onDragMove` calls `findWallSnap` for non-wall-mounted items; overrides Konva node position and stores snap rotation in `pendingRotation.current`. `onDragEnd` commits `{ x, y, rotation }` — rotation is the pending snap value or the original item rotation if no snap was active.
+
+- [x] Per-wall height and thickness controls (branch claude/features-batch-WE8lC, 2026-05-22)
+  - **`WallProps.jsx`**: Two new `NumField` inputs below Length — **Height (m)** (step 0.1, min 0.5, max 6.0, default 2.4) and **Thickness (m)** (step 0.05, min 0.05, max 1.0, default 0.2). Both dispatch `updateWall(id, { height: n })` / `updateWall(id, { thickness: n })` on Enter/blur; Esc reverts. `NumField` reusable helper component keeps the component under 150 lines.
+  - **`sceneReconcilers.js`**: `reconcileWalls` now reads `w.height ?? WALL_HEIGHT` and `w.thickness ?? thickness` per-wall inside the loop. Both `buildGeometry` and `buildWallMaterial` accept `wallHeight` as a parameter (with `WALL_HEIGHT` default so call sites without per-wall overrides are unaffected). `syncOverlay` also updated to receive and use `wallHeight`. `texFp` fingerprint extended with `wallHeight` and `wallThick` so geometry + material rebuild when dimensions change. Defaults (`WALL_HEIGHT=2.4`, `WALL_THICKNESS*KONVA_TO_THREE`) unchanged — existing designs look identical.
+
+- [x] Copy/paste (branch claude/features-batch-WE8lC, 2026-05-22)
+  - **`uiSlice.js`**: `clipboard: null` (session-only, not persisted) + `setClipboard(items)` / `clearClipboard()`. Clipboard shape: `[{ kind: 'furniture'|'wall'|'opening', item }]`.
+  - **`useStore.js`**: `pasteClipboard` cross-slice action — single `set()` call so undo reverts the entire paste as one step. Walls offset +50 px on both axes; furniture offset +50 px; openings pasted only when their parent wall was also in the clipboard (orphaned openings skipped). Pasted items become the new selection. `nanoid` imported at top.
+  - **`useCanvasKeyboard.js`**: `Ctrl/Cmd+C` builds clipboard from current selection (walls include their openings automatically); `Ctrl/Cmd+V` calls `pasteClipboard`. Both respect the existing `INPUT`/`TEXTAREA` guard. Toast confirms "Copied N item(s)". Subscribes to `furniture`, `walls`, `openings`, `setClipboard`, `pasteClipboard`, `pushToast` from the store.
+
 ### 🚧 In Progress
 - (nothing active)
 
@@ -503,7 +529,10 @@ interior-studio/
 // GROUND_FLOOR_ID = 'L00000' — fixed; used by persist migration.
 
 // Wall — levelId added in session 28; items without it treated as ground floor.
-{ id, x1, y1, x2, y2, levelId: string, material?: string | null }
+// height (metres) and thickness (metres) are optional per-wall overrides;
+// 3D reconciler falls back to WALL_HEIGHT=2.4 and WALL_THICKNESS*0.02 when absent.
+{ id, x1, y1, x2, y2, levelId: string, material?: string | null,
+  height?: number, thickness?: number }
 
 // Furniture item — levelId + optional stair fields added in session 28.
 // x, y are world pixels (centroid); width/depth/height are meters;
