@@ -124,7 +124,7 @@ With an opening selected, the right panel shows:
 - **Color** — a row of color swatches. Doors offer Wood, White, Dark, Black, Gray. Windows offer White, Wood, Black, Gray. The change applies immediately in the 3D view.
 - **Material** (doors only) — three styles: **Painted** (smooth flat finish), **Wood Grain** (procedural vertical wood grain texture), **Glass** (frosted glass for modern sliding doors).
 
-Every door also has a visible wooden **casing** (jambs + header) framing the doorway in 3D, so the opening reads as a doorway even when the panel is closed.
+Every door also has a visible wooden **casing** (jambs + header) framing the doorway in 3D, including inner jamb lining that wraps the cut wall edges — so the opening reads as a real doorway from any angle, even when the panel is closed or open. Single and double doors have metal knobs at handle height; sliding doors get a chrome vertical pull bar near the leading edge.
 
 If your edit would make the opening fall off the end of the wall or
 overlap another opening already on it, the change is rejected and a toast

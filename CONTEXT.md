@@ -540,6 +540,11 @@ interior-studio/
   - **`proceduralTextures.js`**: new `drawDoorWood` function (vertical grain + 3 darker knot patches) and `getDoorTexture()` export. Cached at key `door:wood`.
   - **`reconcileDoors.js`**: new `buildPanelMaterial(materialId, color)` helper replaces inline `MeshStandardMaterial`. `buildDoubleDoor` and `buildSlidingDoor` accept `materialId` parameter.
 
+- [x] Door handles + inner jamb lining (branch feature/door-handles-and-lining, 2026-05-24)
+  - **Inner jamb lining**: `buildDoorCasing` in `reconcileDoors.js` now adds 3 wood pieces *inside* the CSG-cut hole (left jamb + right jamb + header), filling the cut wall-edge surfaces. Without the lining, the raw wall material was visible on the inside faces of the hole even when the door was open, so the doorway never read as a clean opening. Now the entire interior of the doorway is wood — the doorway feels like a real doorway from any angle. Lining thickness 2.5 cm.
+  - **Door handles**: new `buildDoorKnob()` (rosette + stem + sphere, brushed dark metal) and `attachKnobPair(parent, x, y)` helpers add knobs to both faces of the panel at handle height (1.0 m). Single hinged door gets one knob pair near the free edge. Double door gets a knob pair on each panel's free edge (where the panels meet). Sliding door gets a `buildSlidingPull()` vertical chrome bar near the leading edge.
+  - **`reconcileDoors.js`**: single-door creation now stores `group.userData.panel` reference so the material rebuild path doesn't have to guess at `children[0]` (which is no longer always the panel after handles were added).
+
 ### 🚧 In Progress
 - (nothing active)
 

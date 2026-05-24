@@ -20,15 +20,20 @@ function hexToInt(hex) {
   return parseInt(hex.replace('#', ''), 16)
 }
 
-// Builds the wood casing (jambs + header) that wraps a door opening on
-// both sides of the wall. Without this, the doorway is invisible in 3D:
-// the CSG-cut hole is there but it's hidden behind the door panel from
-// the room side, so the wall reads as solid. The casing makes the
-// opening obvious from any angle.
+// Builds the wood casing for a door opening. Two parts:
+//   1. Outer trim on both wall faces — decorative molding around the hole
+//   2. Inner jamb lining inside the hole — covers the cut wall edges so
+//      the doorway interior reads as wood, not as raw wall material
+// Without the inner lining the CSG-cut edges show the wall material, so
+// even with the door open the opening looks "filled" with wall. The
+// lining wraps those edges in wood, making the doorway feel like a real
+// doorway from any angle.
 function buildDoorCasing(w, h, wallHalfThick) {
   const group = new THREE.Group()
   const CT = CASING_WIDTH
   const CD = CASING_DEPTH
+  const LT = 0.025                  // jamb lining thickness inside the hole
+  const wallThick = wallHalfThick * 2
   const mat = new THREE.MeshStandardMaterial({ color: CASING_COLOR, roughness: 0.7, metalness: 0 })
 
   const mk = (geo) => {
@@ -38,16 +43,76 @@ function buildDoorCasing(w, h, wallHalfThick) {
     return m
   }
 
+  // Outer trim on each wall face
   for (const side of [1, -1]) {
     const z = side * (wallHalfThick + CD / 2)
     const top   = mk(new THREE.BoxGeometry(w + 2 * CT, CT, CD))
     const left  = mk(new THREE.BoxGeometry(CT, h + CT, CD))
     const right = mk(new THREE.BoxGeometry(CT, h + CT, CD))
-    top.position.set(0,             h + CT / 2,     z)
-    left.position.set(-w / 2 - CT / 2,  (h + CT) / 2, z)
-    right.position.set(w / 2 + CT / 2,  (h + CT) / 2, z)
+    top.position.set(0,                h + CT / 2,   z)
+    left.position.set(-w / 2 - CT / 2, (h + CT) / 2, z)
+    right.position.set(w / 2 + CT / 2, (h + CT) / 2, z)
     group.add(top, left, right)
   }
+
+  // Inner lining — fills the wall-cut edges of the hole
+  const leftJamb  = mk(new THREE.BoxGeometry(LT, h, wallThick))
+  const rightJamb = mk(new THREE.BoxGeometry(LT, h, wallThick))
+  const header    = mk(new THREE.BoxGeometry(w - 2 * LT, LT, wallThick))
+  leftJamb.position.set(-w / 2 + LT / 2, h / 2,        0)
+  rightJamb.position.set(w / 2 - LT / 2, h / 2,        0)
+  header.position.set(0,                 h - LT / 2,   0)
+  group.add(leftJamb, rightJamb, header)
+
+  return group
+}
+
+// Builds a door knob assembly (rosette + sphere). Z axis points outward
+// from the door face so callers can position by setting handleGroup.position.z
+// to +DOOR_THICKNESS/2 (front) or -DOOR_THICKNESS/2 with rotation.y = π (back).
+function buildDoorKnob() {
+  const group = new THREE.Group()
+  const knobMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.35, metalness: 0.75 })
+
+  const rose = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.006, 16), knobMat)
+  rose.rotation.x = Math.PI / 2
+
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.025, 12), knobMat)
+  stem.rotation.x = Math.PI / 2
+  stem.position.z = 0.012
+
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.024, 16, 12), knobMat)
+  knob.position.z = 0.034
+
+  group.add(rose, stem, knob)
+  return group
+}
+
+// Attaches a pair of knobs (one each side of the panel) at the given local
+// (x, y) on the door panel. handle is on the side OPPOSITE the hinge.
+function attachKnobPair(parent, localX, localY) {
+  const front = buildDoorKnob()
+  front.position.set(localX, localY,  DOOR_THICKNESS / 2)
+  const back  = buildDoorKnob()
+  back.position.set(localX, localY, -DOOR_THICKNESS / 2)
+  back.rotation.y = Math.PI
+  parent.add(front, back)
+}
+
+// Builds a vertical pull handle for sliding doors — slim chrome bar.
+function buildSlidingPull(h) {
+  const group = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color: 0x5a5a5a, roughness: 0.3, metalness: 0.85 })
+  const barH = Math.min(0.6, h * 0.35)
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, barH, 12), mat)
+  bar.position.z = 0.025
+  // Standoffs
+  const standA = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.04, 10), mat)
+  standA.rotation.x = Math.PI / 2
+  standA.position.set(0,  barH / 2 - 0.025, 0.012)
+  const standB = standA.clone()
+  standB.position.y = -(barH / 2 - 0.025)
+  group.add(bar, standA, standB)
   return group
 }
 
@@ -120,7 +185,7 @@ function buildDoubleDoor(w, h, panelColor = DEFAULT_DOOR_COLOR, materialId = 'pa
   const group = new THREE.Group()
   const panelMat = buildPanelMaterial(materialId, panelColor)
 
-  const makePanel = (pivotX, meshOffsetX) => {
+  const makePanel = (pivotX, meshOffsetX, knobLocalX) => {
     const panel = new THREE.Group()
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w / 2, h - 0.01, DOOR_THICKNESS), panelMat)
     mesh.castShadow = true
@@ -128,13 +193,17 @@ function buildDoubleDoor(w, h, panelColor = DEFAULT_DOOR_COLOR, materialId = 'pa
     mesh.position.set(meshOffsetX, (h - 0.01) / 2, 0)
     panel.add(mesh)
     panel.position.x = pivotX
+    // Knob near the panel's free edge (where the two panels meet)
+    attachKnobPair(panel, knobLocalX, 1.0)
     return panel
   }
 
   // Left panel: pivot at -w/2, mesh center at +w/4 from pivot (fills left half when closed)
+  // Knob on right edge of left panel = +w/2 in panel-local (panel's free edge)
   // Right panel: pivot at +w/2, mesh center at -w/4 from pivot (fills right half when closed)
-  const leftPanel  = makePanel(-w / 2,  w / 4)
-  const rightPanel = makePanel( w / 2, -w / 4)
+  // Knob on left edge of right panel = -w/2 in panel-local
+  const leftPanel  = makePanel(-w / 2,  w / 4,  w / 2 - 0.07)
+  const rightPanel = makePanel( w / 2, -w / 4, -w / 2 + 0.07)
   group.add(leftPanel, rightPanel)
   group.userData.leftPanel  = leftPanel
   group.userData.rightPanel = rightPanel
@@ -150,9 +219,14 @@ function buildSlidingDoor(w, h, wallHalfThick, panelColor = DEFAULT_DOOR_COLOR, 
   const panel = new THREE.Mesh(new THREE.BoxGeometry(w, h - 0.01, DOOR_THICKNESS), panelMat)
   panel.castShadow = true
   panel.receiveShadow = true
-  // Position panel so its back face sits flush with the wall's room-side face.
-  panel.position.set(0, (h - 0.01) / 2, wallHalfThick + DOOR_THICKNESS / 2)
+  const panelZ = wallHalfThick + DOOR_THICKNESS / 2
+  panel.position.set(0, (h - 0.01) / 2, panelZ)
   group.add(panel)
+
+  // Vertical pull handle near the leading edge of the panel
+  const pull = buildSlidingPull(h)
+  pull.position.set(w / 2 - 0.08, h / 2, panelZ + DOOR_THICKNESS / 2)
+  group.add(pull)
 
   // Thin overhead track — visible even when panel is fully open to the side.
   const trackMat = new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 0.4, metalness: 0.6 })
@@ -255,14 +329,17 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
         group.userData.kind = 'door'
         group.userData.id = o.id
         group.userData.matFp = matFp
+        group.userData.panel = panel
         group.add(panel)
+        // Knob near the free edge (opposite the hinge at x=0)
+        attachKnobPair(group, o.width - 0.07, 1.0)
         group.rotation.y = targetAngle
         group.userData.targetAngle = targetAngle
         scene.add(group)
         meshMap.set(o.id, group)
       } else {
         if (group.userData.matFp !== matFp) {
-          const panel = group.children[0]
+          const panel = group.userData.panel ?? group.children[0]
           if (panel?.material) { panel.material.dispose(); panel.material = buildPanelMaterial(materialId, doorColor) }
           group.userData.matFp = matFp
         }
