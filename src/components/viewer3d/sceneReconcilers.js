@@ -18,7 +18,7 @@ const WALL_HEIGHT = 2.4
 // `meshMap` is a Map<wallId, THREE.Mesh> owned by the caller (the hook).
 // Walls with openings on them get CSG-cut geometry; the holes are painted
 // as a translucent rectangle fallback when CSG fails (with a warn).
-// opts: { levelOffsets?: Map<id,metres>, activeLevelId?: string, solo?: bool, xray?: bool }
+// opts: { levelOffsets?: Map<id,metres>, levelHeights?: Map<id,metres>, activeLevelId?: string, solo?: bool, xray?: bool }
 export function reconcileWalls(scene, walls, openings, meshMap, opts = {}) {
   const present = new Set()
   // Fingerprint each opening so we can skip rebuilds when nothing changed.
@@ -37,7 +37,7 @@ export function reconcileWalls(scene, walls, openings, meshMap, opts = {}) {
     const thickness = WALL_THICKNESS * KONVA_TO_THREE
     const color = wallColorFor(w)
     const own = openingsByWall.get(w.id) ?? []
-    const wallHeight = w.height    ?? WALL_HEIGHT
+    const wallHeight = w.height    ?? opts.levelHeights?.get(w.levelId) ?? WALL_HEIGHT
     const wallThick  = w.thickness ?? thickness
 
     // geoFp covers everything that changes the BoxGeometry shape.

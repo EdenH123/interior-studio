@@ -39,7 +39,7 @@ function lightSourceY(type, yOffset, height) {
 
 // `lightMap`  — Map<furnitureId, THREE.Light> owned by useThree.
 // `lightsOn`  — global master switch from the lighting slice.
-// `opts`      — { levelOffsets?: Map<id,metres>, activeLevelId?: string, solo?: bool }
+// `opts`      — { levelOffsets?: Map<id,metres>, levelHeights?: Map<id,metres>, activeLevelId?: string, solo?: bool }
 //
 // Furniture meshes are wrapped in a `THREE.Group` so we can swap the visual
 // (BoxGeometry fallback ↔ loaded GLB) without recreating the addressable
@@ -60,6 +60,14 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
     const pos = konvaToFloor(f.x, f.y)
     const color = furnitureColorFor(f)
 
+    // For stair items, height must equal the level's floor-to-floor rise so the
+    // top step lands exactly at the next floor's base. Use the level's configured
+    // height; fall back to the stored f.height when no map is provided.
+    const isStairItem = (f.stairStyle != null)
+    const effectiveHeight = isStairItem
+      ? (opts.levelHeights?.get(f.levelId) ?? f.height)
+      : f.height
+
     // ── mesh group ──────────────────────────────────────────────────────────
     // Wall-mounted items use mountHeight (bottom of item above floor level).
     // Lighting items use their ceiling/floor offset. Everything else: 0.
@@ -78,7 +86,7 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       group.userData.kind = 'furniture'
       group.userData.id = f.id
       group.userData.type = f.type
-      group.userData.dims = { width: f.width, depth: f.depth, height: f.height }
+      group.userData.dims = { width: f.width, depth: f.depth, height: effectiveHeight }
       group.userData.color = color
       group.userData.tintColor    = tintColor
       group.userData.tintMatProps = tintMatProps
@@ -95,7 +103,7 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       else populateBoxFallback(group)
     } else {
       const d = group.userData.dims
-      const dimsChanged = !d || d.width !== f.width || d.depth !== f.depth || d.height !== f.height
+      const dimsChanged = !d || d.width !== f.width || d.depth !== f.depth || d.height !== effectiveHeight
       const glassChanged = Boolean(group.userData.tintMatProps?.isGlass) !== Boolean(tintMatProps?.isGlass)
       const tintChanged = group.userData.tintColor !== tintColor
         || group.userData.tintMatProps?.roughness !== tintMatProps?.roughness
@@ -104,7 +112,7 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       const stairStyleChanged = group.userData.stairStyle !== (f.stairStyle ?? null)
       const railingChanged    = group.userData.addRailing  !== (f.addRailing  ?? false)
                              || group.userData.railingType !== (f.railingType  ?? 'wood')
-      group.userData.dims = { width: f.width, depth: f.depth, height: f.height }
+      group.userData.dims = { width: f.width, depth: f.depth, height: effectiveHeight }
       group.userData.tintColor    = tintColor
       group.userData.tintMatProps = tintMatProps
       group.userData.partColors   = partColors

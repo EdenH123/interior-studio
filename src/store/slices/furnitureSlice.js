@@ -36,6 +36,7 @@ export const createFurnitureSlice = (set) => ({
       if (spec.stairType) {
         const sorted = [...(s.levels ?? [])].sort((a, b) => a.order - b.order)
         const idx = sorted.findIndex((l) => l.id === activeLevel)
+        const currentLevel = idx >= 0 ? sorted[idx] : null
         const nextLevel = idx >= 0 && idx + 1 < sorted.length ? sorted[idx + 1] : null
         stairFields = {
           fromLevel:   activeLevel,
@@ -43,6 +44,10 @@ export const createFurnitureSlice = (set) => ({
           stairStyle:  spec.stairStyle ?? 'standard',
           addRailing:  false,
           railingType: 'wood',
+          // Store the level's rise so the stair geometry exactly fills the gap.
+          // The reconciler also re-derives this from levelHeights, so existing
+          // stairs (placed before this fix) are corrected automatically.
+          height:      currentLevel?.height ?? spec.height,
         }
       }
       const railingFields = spec.railingStyle ? { railingStyle: spec.railingStyle } : {}

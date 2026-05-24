@@ -218,8 +218,9 @@ export default function useThree(containerRef) {
   useEffect(() => {
     if (!stateRef.current) return
     const levelOffsets = computeLevelOffsets(levels)
+    const levelHeights = new Map(levels.map((lv) => [lv.id, lv.height]))
     reconcileWalls(stateRef.current.scene, walls, openings, wallMeshes.current, {
-      levelOffsets, activeLevelId: activeLevel, solo: solo3d, xray: xrayCeiling,
+      levelOffsets, levelHeights, activeLevelId: activeLevel, solo: solo3d, xray: xrayCeiling,
     })
   }, [walls, openings, levels, activeLevel, solo3d, xrayCeiling])
 
@@ -247,10 +248,11 @@ export default function useThree(containerRef) {
   useEffect(() => {
     if (!stateRef.current) return
     const levelOffsets = computeLevelOffsets(levels)
+    const levelHeights = new Map(levels.map((lv) => [lv.id, lv.height]))
     reconcileFurniture(
       stateRef.current.scene, resolvedFurniture, furnMeshes.current,
       lightMap.current, lighting.lightsOn,
-      { levelOffsets, activeLevelId: activeLevel, solo: solo3d },
+      { levelOffsets, levelHeights, activeLevelId: activeLevel, solo: solo3d },
     )
   }, [resolvedFurniture, lighting.lightsOn, levels, activeLevel, solo3d])
 
@@ -262,13 +264,21 @@ export default function useThree(containerRef) {
     // are keyed independently in the mesh map.
     // Floor stair holes: cut where stairs ARRIVE (stair.toLevel === lv.id).
     // Ceiling stair holes: cut where stairs DEPART (stair.levelId === lv.id).
+    const sortedLevels = [...levels].sort((a, b) => a.order - b.order)
     const allRooms = levels.flatMap((lv) => {
       const lvWalls = walls.filter((w) => (w.levelId ?? activeLevel) === lv.id)
       const lvRooms = detectRooms(lvWalls).map((r) => ({ ...r, id: `${lv.id}:${r.id}`, levelId: lv.id }))
       const isStairItem = (f) => f.stairStyle != null || f.type === 'stairs'
-      const arrivingStairs  = furniture.filter((f) => isStairItem(f) && f.toLevel === lv.id)
+      // Derive "arrives at lv" — use stored toLevel when set; fall back to
+      // level-order when toLevel is null (stair placed before the floor existed).
+      const stairArrivesAt = (f) => {
+        if (f.toLevel != null) return f.toLevel === lv.id
+        const fromIdx = sortedLevels.findIndex((l) => l.id === (f.levelId ?? activeLevel))
+        return fromIdx >= 0 && fromIdx + 1 < sortedLevels.length && sortedLevels[fromIdx + 1].id === lv.id
+      }
+      const arrivingStairs  = furniture.filter((f) => isStairItem(f) && stairArrivesAt(f))
       const departingStairs = furniture.filter(
-        (f) => isStairItem(f) && (f.levelId ?? activeLevel) === lv.id && f.toLevel,
+        (f) => isStairItem(f) && (f.levelId ?? activeLevel) === lv.id,
       )
       const floorHolesMap   = arrivingStairs.length  > 0 ? computeStairHolesForRooms(lvRooms, arrivingStairs)  : null
       const ceilHolesMap    = departingStairs.length > 0 ? computeStairHolesForRooms(lvRooms, departingStairs) : null

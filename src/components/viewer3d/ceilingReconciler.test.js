@@ -86,10 +86,11 @@ describe('reconcileCeilings', () => {
 
     reconcileCeilings(scene, [simpleRoom], meshMap, () => '#ffffff', offsets, levels, { visible: true })
     const mesh = [...meshMap.values()][0]
-    expect(mesh.userData.color).toBe('#ffffff')
+    // matFp encodes color as "<color>:<matId>" — no custom mat so suffix is empty
+    expect(mesh.userData.matFp).toBe('#ffffff:')
 
     reconcileCeilings(scene, [simpleRoom], meshMap, () => '#cccccc', offsets, levels, { visible: true })
-    expect(mesh.userData.color).toBe('#cccccc')
+    expect(mesh.userData.matFp).toBe('#cccccc:')
   })
 
   it('removes mesh when room disappears', () => {

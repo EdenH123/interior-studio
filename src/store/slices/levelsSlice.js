@@ -27,11 +27,23 @@ export const createLevelsSlice = (set, get) => ({
     const id = nanoid(6)
     const cur = get().levels
     const maxOrder = cur.length ? Math.max(...cur.map((l) => l.order)) : -1
+    // The level directly below the new one (the current top floor).
+    const sorted = [...cur].sort((a, b) => a.order - b.order)
+    const prevTopId = sorted.length ? sorted[sorted.length - 1].id : null
     set((s) => ({
       levels: [
         ...s.levels,
         { id, name: `Floor ${maxOrder + 1}`, height: DEFAULT_LEVEL_HEIGHT, order: maxOrder + 1 },
       ],
+      // Repair any stairs on the previous top floor that never got a toLevel
+      // because they were placed before this new floor was added.
+      furniture: (s.furniture ?? []).map((f) => {
+        const isStair = f.stairStyle != null || f.type === 'stairs'
+        if (isStair && f.toLevel == null && f.levelId === prevTopId) {
+          return { ...f, toLevel: id }
+        }
+        return f
+      }),
     }))
     return id
   },

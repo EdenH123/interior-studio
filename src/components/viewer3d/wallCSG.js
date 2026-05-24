@@ -23,6 +23,7 @@ export function buildWallWithHoles(lengthM, heightM, thicknessM, openings) {
     hole.position.set(cx, cy, 0)
     hole.updateMatrixWorld()
     current = evaluator.evaluate(current, hole, SUBTRACTION)
+    current.updateMatrixWorld()
   }
   return current.geometry
 }
