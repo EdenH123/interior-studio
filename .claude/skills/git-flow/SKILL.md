@@ -63,52 +63,25 @@ If that returns `M`, the new session is `M + 1`. If the log is empty
 (first session ever committed via this skill), `N = 1`. Use the same N
 for both the commit subject and any branch name created this turn.
 
-## Decision: direct-to-main vs PR flow
+## Always use PR flow
 
-Inspect CONTEXT.md to decide. Diff `git diff -- CONTEXT.md` for the
-"Done" section. Two cases:
+**Every change goes through a PR — no direct pushes to main.** This applies
+to features, bug fixes, doc updates, refactors, skill edits, and dependency
+bumps. The PR is the audit trail; main is always green, reviewed history.
 
-- **PR flow** — the diff added a **new feature** entry to the Done list
-  (a new `- [x]` bullet describing user-visible behavior that didn't
-  exist before). New skills, new doc sections, restructures, or
-  multi-file feature work all qualify. The clearest signal: the same
-  session also touched `USER_GUIDE.md`.
-- **Direct-to-main flow** — everything else. Doc-only updates,
-  bugfixes, internal refactors, dependency bumps, test additions, skill
-  edits, CONTEXT.md polish without a new feature, anything where the
-  Done list got *updated* rather than *extended* with new behavior.
+Every PR branch must include:
+1. The code/doc change.
+2. **CONTEXT.md updated** — move items between Done / In Progress / Up Next,
+   log new files, conventions, known issues. Never delete history.
+3. **USER_GUIDE.md updated** — if anything user-visible changed (new feature,
+   fixed behaviour, changed shortcut, new UI element). Skip only for purely
+   internal changes (refactors with identical behaviour, skill edits, test
+   additions).
 
-When ambiguous: default to direct-to-main. The PR flow exists to give
-features a reviewable atomic unit; small changes don't benefit from the
-ceremony and shouldn't be branched.
+Commit CONTEXT.md + USER_GUIDE.md on the same branch as the code change so
+the PR is a complete, self-contained unit.
 
-## Direct-to-main flow
-
-```bash
-git add -A
-git commit -m "$(cat <<'EOF'
-Session N: <one-line summary, <70 chars, imperative voice>
-
-- bullet describing the most prominent change
-- next prominent change
-- (one bullet per logical change — keep tight, this is the audit trail)
-EOF
-)"
-git push origin main
-```
-
-The subject line is what someone reads in `git log --oneline`. Make it
-specific — "Session 14: fix opening drag overlap toast" beats
-"Session 14: bug fixes". The bullet body explains the *what* in enough
-detail that `git log -p` isn't strictly necessary to understand the
-session.
-
-Stage with `git add -A` (not `.`) so deletions are included. The
-`-A` form catches removals as well as additions.
-
-Confirm `git status` is clean after push.
-
-## PR flow (new feature sessions)
+## PR flow (all sessions)
 
 GitHub interactions go through whichever interface the current session
 has: in a local terminal that's the `gh` CLI; in the remote/cloud
