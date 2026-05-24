@@ -554,6 +554,15 @@ interior-studio/
   - **`reconcileFurniture.js`**: for stair items (`stairStyle != null`), `effectiveHeight = opts.levelHeights?.get(f.levelId) ?? f.height` is used for geometry dims instead of `f.height`. This fixes both existing and newly placed stairs. `useThree.js` now passes `levelHeights` to `reconcileFurniture` alongside `levelOffsets`.
   - **`furnitureSlice.js`**: `addFurniture` for stair items now stores `height: currentLevel?.height ?? spec.height` so the correct rise is persisted from placement time.
 
+- [x] Layer toggles affect 3D view — session 33 (2026-05-24)
+  - **`useThree.js`**: subscribes to `layers` from the store. After each reconciler call, a visibility pass iterates the corresponding mesh map and sets `mesh.visible = false` when the layer is off.
+    - `layers.walls = false` → all `wallMeshes` hidden
+    - `layers.openings = false` (or `layers.walls = false`) → all `doorMeshes` (door panels + casings) hidden
+    - `layers.furniture = false` → all `furnMeshes` (boxes, GLBs, stairs, lighting fixtures) hidden
+    - `layers.rooms = false` → all `roomMeshes` (floor slabs) and `ceilingMeshes` hidden
+  - `layers` added to the dep array of each affected `useEffect` so toggling a layer ON correctly re-reconciles with normal visibility restored.
+  - No changes to reconciler files — all logic is in `useThree.js`.
+
 ### 🚧 In Progress
 - (nothing active)
 
