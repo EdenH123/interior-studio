@@ -181,7 +181,7 @@ function syncOverlay(wallMesh, length, thickness, openings, wallHeight = WALL_HE
   for (const o of openings) {
     const wM = o.width
     const hM = o.height
-    const sill = o.type === 'window' ? (o.sillHeight ?? 0) : 0
+    const sill = o.type.startsWith('window') ? (o.sillHeight ?? 0.9) : 0
     const cx = (o.position - 0.5) * length
     const cy = sill + hM / 2 - wallHeight / 2
     const color = o.type === 'door' ? 0x1f2937 : 0x60a5fa
