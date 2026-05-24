@@ -81,7 +81,7 @@ function buildSlidingDoor(w, h) {
   })
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h - 0.01, DOOR_THICKNESS), panelMat)
   mesh.castShadow = true
-  mesh.position.set(w * 0.35, (h - 0.01) / 2, 0)
+  mesh.position.set(0, (h - 0.01) / 2, 0)
   group.add(mesh)
   return group
 }
@@ -161,31 +161,45 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
       group.visible = visible
 
     } else if (o.type === 'door-double') {
-      // Double door: two panels, each half-width, animated together like a hinged door.
-      const hingeLX = (o.position - 0.5) * length - o.width / 2
-      const hingeWX = wallCX + hingeLX * Math.cos(wallYaw)
-      const hingeWZ = wallCZ - hingeLX * Math.sin(wallYaw)
-      const closedAngle = wallYaw
-      const openAngle   = wallYaw + Math.PI / 2
-      const targetAngle = o.open ? openAngle : closedAngle
+      // Double door: group is centred on the opening; each half-panel pivots
+      // independently from its outer edge (+π/2 / -π/2 into the room).
+      const centerLX = (o.position - 0.5) * length
+      const centerWX = wallCX + centerLX * Math.cos(wallYaw)
+      const centerWZ = wallCZ - centerLX * Math.sin(wallYaw)
+      const targetLeft  = o.open ?  Math.PI / 2 : 0
+      const targetRight = o.open ? -Math.PI / 2 : 0
 
       let group = meshMap.get(o.id)
       if (!group) {
         group = buildDoubleDoor(o.width, o.height)
         group.userData.kind = 'door'
         group.userData.id = o.id
-        group.rotation.y = targetAngle
-        group.userData.targetAngle = targetAngle
+        group.userData.leftPanel.rotation.y  = targetLeft
+        group.userData.rightPanel.rotation.y = targetRight
+        group.userData.targetLeft  = targetLeft
+        group.userData.targetRight = targetRight
         scene.add(group)
         meshMap.set(o.id, group)
       } else {
-        const prev = group.userData.targetAngle
-        if (prev !== targetAngle) {
-          doorAnims.set(o.id, { group, startAngle: group.rotation.y, targetAngle, startTime: performance.now() })
-          group.userData.targetAngle = targetAngle
+        const prevL = group.userData.targetLeft  ?? 0
+        const prevR = group.userData.targetRight ?? 0
+        if (prevL !== targetLeft || prevR !== targetRight) {
+          doorAnims.set(o.id, {
+            kind: 'double',
+            leftPanel:   group.userData.leftPanel,
+            rightPanel:  group.userData.rightPanel,
+            startLeft:   group.userData.leftPanel.rotation.y,
+            targetLeft,
+            startRight:  group.userData.rightPanel.rotation.y,
+            targetRight,
+            startTime: performance.now(),
+          })
+          group.userData.targetLeft  = targetLeft
+          group.userData.targetRight = targetRight
         }
       }
-      group.position.set(hingeWX, yOffset, hingeWZ)
+      group.position.set(centerWX, yOffset, centerWZ)
+      group.rotation.y = wallYaw
       group.visible = visible
 
     } else if (o.type === 'door-sliding') {
@@ -248,7 +262,12 @@ export function tickDoorAnims(doorAnims) {
   for (const [id, anim] of doorAnims) {
     const t = Math.min(1, (now - anim.startTime) / DOOR_ANIM_MS)
     const s = t * t * (3 - 2 * t) // smoothstep
-    anim.group.rotation.y = anim.startAngle + (anim.targetAngle - anim.startAngle) * s
+    if (anim.kind === 'double') {
+      anim.leftPanel.rotation.y  = anim.startLeft  + (anim.targetLeft  - anim.startLeft)  * s
+      anim.rightPanel.rotation.y = anim.startRight + (anim.targetRight - anim.startRight) * s
+    } else {
+      anim.group.rotation.y = anim.startAngle + (anim.targetAngle - anim.startAngle) * s
+    }
     if (t >= 1) doorAnims.delete(id)
   }
 }
