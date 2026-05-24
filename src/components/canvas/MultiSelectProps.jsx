@@ -96,6 +96,27 @@ function MultiFurnitureProps({ ids, furniture, updateFurniture }) {
   return (
     <div>
       <p className="text-gray-400 text-xs mb-3">{ids.length} furniture items</p>
+      {furnitureItems.length >= 2 && (
+        <div className="mb-3">
+          <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Align</div>
+          <div className="grid grid-cols-3 gap-1">
+            {[
+              { label: 'Left',  title: 'Align left edges',    fn: () => { const minX = Math.min(...furnitureItems.map(f => f.x)); furnitureItems.forEach(f => updateFurniture(f.id, { x: minX })) } },
+              { label: 'Ctr·X', title: 'Center horizontally', fn: () => { const avgX = furnitureItems.reduce((s, f) => s + f.x, 0) / furnitureItems.length; furnitureItems.forEach(f => updateFurniture(f.id, { x: avgX })) } },
+              { label: 'Right', title: 'Align right edges',   fn: () => { const maxX = Math.max(...furnitureItems.map(f => f.x)); furnitureItems.forEach(f => updateFurniture(f.id, { x: maxX })) } },
+              { label: 'Top',   title: 'Align top edges',     fn: () => { const minY = Math.min(...furnitureItems.map(f => f.y)); furnitureItems.forEach(f => updateFurniture(f.id, { y: minY })) } },
+              { label: 'Ctr·Y', title: 'Center vertically',   fn: () => { const avgY = furnitureItems.reduce((s, f) => s + f.y, 0) / furnitureItems.length; furnitureItems.forEach(f => updateFurniture(f.id, { y: avgY })) } },
+              { label: 'Bot',   title: 'Align bottom edges',  fn: () => { const maxY = Math.max(...furnitureItems.map(f => f.y)); furnitureItems.forEach(f => updateFurniture(f.id, { y: maxY })) } },
+            ].map(({ label, title, fn }) => (
+              <button key={title} title={title} onClick={fn}
+                className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] py-1 px-1 rounded border border-gray-700 hover:border-gray-500 transition-colors"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <label className="block mb-3">
         <span className="text-gray-500 text-[11px] uppercase tracking-wider">Rotation (all)</span>
         <input
