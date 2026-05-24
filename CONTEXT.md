@@ -523,6 +523,9 @@ interior-studio/
 - [x] Furniture alignment tools in multi-select panel (branch claude/angle-walls-alignment-WE8lC, 2026-05-24)
   - **`MultiSelectProps.jsx`** `MultiFurnitureProps`: when 2+ items selected, shows an "Align" section above the Rotation field with a 3×2 grid of buttons: Left (align left edges), Ctr·X (center horizontally), Right (align right edges), Top (align top edges), Ctr·Y (center vertically), Bot (align bottom edges). Operations work on item centroids (`f.x`, `f.y`) via `updateFurniture`. `updateFurniture` is already threaded through to `MultiFurnitureProps` from `MultiSelectProps` → `PropertiesPanel`.
 
+- [x] Fix sliding door clipping through wall when open (branch fix/door-visual-quality, 2026-05-24)
+  - **`reconcileDoors.js`**: `buildSlidingDoor` now positions the panel flush with the room-side wall face (Z = wallHalfThick + DOOR_THICKNESS/2) so it slides along the wall surface instead of clipping into solid wall geometry. Added a metallic overhead track mesh (2.2× door width) visible in both states. Removed legacy transparency on panel material.
+
 - [x] Fix door types 3D visual (branch fix/door-types-visual, 2026-05-24)
   - **`reconcileDoors.js`**: rewrote double door animation direction — `targetLeft = -π/2`, `targetRight = +π/2` (was reversed, panels opened outward). Sliding door now animates when clicked: panel slides one full width along the wall direction with 300 ms smoothstep. All door/window types now accept a `color` hex field; `matFp` fingerprint triggers material rebuild. Color defaults: doors = `#c8a97e` (wood), windows = `#f0ece6` (off-white).
   - **`wallCSG.js`** + **`sceneReconcilers.js`**: sill check changed from `o.type === 'window'` to `o.type.startsWith('window')` — fixes `window-fixed`, `window-casement`, `window-arched` not getting their sill offset.

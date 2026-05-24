@@ -1,7 +1,9 @@
 import * as THREE from 'three'
 import { KONVA_TO_THREE } from './threeMath'
+import { WALL_THICKNESS } from '../canvas/constants'
 
 const DOOR_THICKNESS = 0.04
+const DEFAULT_WALL_HALF = (WALL_THICKNESS * KONVA_TO_THREE) / 2  // 0.1 m
 const DOOR_ANIM_MS   = 300
 const WIN_FT = 0.055  // window frame bar thickness (m)
 const WIN_FD = 0.13   // window frame depth through wall (m)
@@ -84,15 +86,25 @@ function buildDoubleDoor(w, h, panelColor = DEFAULT_DOOR_COLOR) {
   return group
 }
 
-function buildSlidingDoor(w, h, panelColor = DEFAULT_DOOR_COLOR) {
+// wallHalfThick: half of the wall depth in Three.js metres.
+// The panel rides on the room-side (+Z) wall face so it stays visible
+// when slid open instead of clipping into the solid wall.
+function buildSlidingDoor(w, h, wallHalfThick, panelColor = DEFAULT_DOOR_COLOR) {
   const group = new THREE.Group()
-  const panelMat = new THREE.MeshStandardMaterial({
-    color: panelColor, roughness: 0.8, metalness: 0, transparent: true, opacity: 0.85,
-  })
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h - 0.01, DOOR_THICKNESS), panelMat)
-  mesh.castShadow = true
-  mesh.position.set(0, (h - 0.01) / 2, 0)
-  group.add(mesh)
+  const panelMat = new THREE.MeshStandardMaterial({ color: panelColor, roughness: 0.8, metalness: 0 })
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(w, h - 0.01, DOOR_THICKNESS), panelMat)
+  panel.castShadow = true
+  panel.receiveShadow = true
+  // Position panel so its back face sits flush with the wall's room-side face.
+  panel.position.set(0, (h - 0.01) / 2, wallHalfThick + DOOR_THICKNESS / 2)
+  group.add(panel)
+
+  // Thin overhead track — visible even when panel is fully open to the side.
+  const trackMat = new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 0.4, metalness: 0.6 })
+  const track = new THREE.Mesh(new THREE.BoxGeometry(w * 2.2, 0.018, 0.025), trackMat)
+  track.position.set(0, h + 0.009, wallHalfThick + 0.012)
+  group.add(track)
+
   return group
 }
 
@@ -230,8 +242,9 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
       group.visible = visible
 
     } else if (o.type === 'door-sliding') {
-      // Closed: panel centred in the opening.
-      // Open: panel slid one full width to the right along the wall.
+      // Closed: panel centred on the opening, riding the room-side wall face.
+      // Open: panel slid one full width along the wall (same face, different position).
+      const wallHalfThick = (wall.thickness ?? (WALL_THICKNESS * KONVA_TO_THREE)) / 2
       const slideX = o.open ? o.width * cosYaw : 0
       const slideZ = o.open ? -o.width * sinYaw : 0
       const targetX = openCX + slideX
@@ -239,9 +252,11 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
 
       let group = meshMap.get(o.id)
       if (!group || group.userData.matFp !== matFp ||
-          group.userData.width !== o.width || group.userData.height !== o.height) {
+          group.userData.width !== o.width || group.userData.height !== o.height ||
+          group.userData.wallHalfThick !== wallHalfThick) {
         if (group) { scene.remove(group); disposeMeshes(group); doorAnims.delete(o.id) }
-        group = buildSlidingDoor(o.width, o.height, doorColor)
+        group = buildSlidingDoor(o.width, o.height, wallHalfThick, doorColor)
+        group.userData.wallHalfThick = wallHalfThick
         group.userData.kind   = 'door'
         group.userData.id     = o.id
         group.userData.matFp  = matFp
