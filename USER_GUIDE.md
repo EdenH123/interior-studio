@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-21_  <!-- PDF export, 3D opening drop, multi-select room materials -->
+_Last updated: 2026-05-24_  <!-- 7 opening types, wall height/thickness, structural textures, furniture snap-to-wall, copy/paste, 45° angle walls, furniture alignment -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -79,16 +79,27 @@ are removed at the same time.
 ## Doors and windows
 
 Above the furniture catalog, the left panel has an **Openings** group with
-a **Door** tile and a **Window** tile.
+seven types to choose from:
 
-1. Drag a tile from the sidebar onto the canvas. While dragging, a blue
+| Type | Default width | Notes |
+|---|---|---|
+| Hinged Door | 0.9 m | Standard swing door; panel opens 90° in 3D |
+| Double Door | 1.6 m | Two panels sharing a center hinge; both swing in 3D |
+| Sliding Door | 1.2 m | Panel slides to one side; static in 3D |
+| Window | 1.2 m | Standard sash, 0.9 m sill height |
+| Fixed Window | 1.5 m | Non-opening pane, 0.9 m sill height |
+| Casement | 1.0 m | Side-hinged swing-out frame, 0.9 m sill height |
+| Arched Window | 1.0 m | Semicircular arch at the top, 0.9 m sill height |
+
+To place an opening:
+
+1. **Drag** a tile from the sidebar onto the canvas. While dragging, a blue
    preview locks to the nearest wall — that's where it'll land. Drop with
    no wall close enough and you'll see a red X; nothing happens.
-2. The opening appears on the wall with its default size (door 0.9 × 2.1
-   m, window 1.2 × 1.4 m with a 0.9 m sill).
+2. The opening appears on the wall with its default size.
 3. The wall stays whole visually but renders as two segments around the
-   gap. In 3D the hole is actually carved out of the wall geometry and a
-   hinged door panel fills the opening.
+   gap. In 3D the hole is actually carved out of the wall geometry and the
+   appropriate door panel or window frame fills the opening.
 
 ### Opening and closing doors in 3D
 
@@ -145,6 +156,14 @@ drop target), the preview clears and nothing is placed.
 ### Moving furniture
 
 **Click and drag** a piece on the canvas to move it.
+
+### Snapping furniture to a wall
+
+While dragging, if the item's centre comes within about 60 screen pixels
+of a wall, it **snaps flush against that wall face** automatically —
+position and rotation both update so the item sits squarely against it.
+Release to confirm. This works for any floor-placed item (sofa, bookshelf,
+bed, etc.); wall-mounted items (TV) use a separate wall-mount path.
 
 ### Choosing a furniture material
 
@@ -236,19 +255,20 @@ Dragging any one selected furniture piece moves **all** selected
 furniture by the same offset (walls and openings are not drag-moved in
 multi-select).
 
-### Editing a wall's length
+### Editing a wall's dimensions
 
-Once a wall is selected, the right panel shows a **Length (m)** input.
-Type a new length in metres (up to 2 decimals — e.g. `3.20`) and press
-**Enter** (or click anywhere else) to apply. The wall keeps its first
-endpoint fixed and extends or shortens along its existing direction;
-the second endpoint moves to land at the new length.
+Once a wall is selected, the right panel shows three dimension inputs:
 
-Press **Esc** while typing to revert to the current length and exit
-the field.
+- **Length (m)** — type a new length and press **Enter** (or click away)
+  to apply. The first endpoint stays fixed; the second moves to match.
+  Minimum: 0.05 m.
+- **Height (m)** — changes how tall this wall is in the 3D view (default
+  2.4 m, range 0.5 – 6.0 m). Useful for half-walls, low partitions, or
+  cathedral walls. Step: 0.1 m.
+- **Thickness (m)** — changes the wall's depth in 3D (default 0.2 m,
+  range 0.05 – 1.0 m). Step: 0.05 m.
 
-Minimum length: 0.05 m (5 cm). Below that the input rejects the change
-silently and the displayed value snaps back.
+Press **Esc** while typing any field to revert to the current value.
 
 ### Wall materials
 
@@ -256,11 +276,14 @@ Below the length input, the right panel has a **Material** picker
 grouped by category:
 
 - **Default** — neutral gray (what walls start as)
+- **Structural** — three materials that show a real texture in 3D:
+  Brick (hand-laid offset courses), Stone (irregular ashlar blocks),
+  Concrete (weathered cast finish)
 - **Benjamin Moore** — ~30 popular colours (Hale Navy, Revere Pewter,
   White Dove, Chantilly Lace, Hawthorne Yellow, Caliente, etc.)
 - **Sherwin-Williams** — ~30 popular colours (Agreeable Gray,
   Alabaster, Naval, Evergreen Fog, Urbane Bronze, Tricorn Black, etc.)
-- **Other** — Wood Panel
+- **Other** — Wood Panel (visible grain texture in 3D)
 
 Hover any swatch to see the full name and manufacturer code (e.g.
 "Hale Navy · HC-154", "Agreeable Gray · SW 7029"). A search box at
@@ -707,6 +730,22 @@ any preview that wasn't applied.
   underlay is loaded and whether it's locked, but not what it looks
   like.
 
+## Copy and paste
+
+Select one or more items (walls, furniture, openings), then:
+
+- **Ctrl/Cmd+C** — copies the selection to a session clipboard. A toast
+  confirms "Copied N item(s)". The clipboard resets each time you copy.
+- **Ctrl/Cmd+V** — pastes a duplicate offset 50 px to the right and
+  down from the originals. The paste becomes the new selection so you
+  can immediately move it into place.
+
+Notes:
+- Walls paste with their openings. Openings that belonged to a wall not
+  in the clipboard are skipped.
+- The clipboard is session-only — it clears on page refresh.
+- Each paste is a single undo step (Ctrl/Cmd+Z reverts the whole paste).
+
 ## Undo and redo
 
 Made a mistake? Press **Ctrl/Cmd+Z** to undo. **Ctrl/Cmd+Shift+Z**
@@ -860,6 +899,8 @@ your cursor position in metres.
 | `R` | Rotate selected furniture clockwise 15° |
 | `Shift+R` | Rotate selected furniture counter-clockwise 15° |
 | `Ctrl/Cmd+A` | Select all visible items |
+| `Ctrl/Cmd+C` | Copy selected items |
+| `Ctrl/Cmd+V` | Paste copied items (offset +50 px) |
 | `Ctrl/Cmd+Z` | Undo last change |
 | `Ctrl/Cmd+Shift+Z` | Redo |
 | `Space` (hold) + drag | Pan the canvas |
