@@ -512,6 +512,17 @@ interior-studio/
   - **`useStore.js`**: `pasteClipboard` cross-slice action — single `set()` call so undo reverts the entire paste as one step. Walls offset +50 px on both axes; furniture offset +50 px; openings pasted only when their parent wall was also in the clipboard (orphaned openings skipped). Pasted items become the new selection. `nanoid` imported at top.
   - **`useCanvasKeyboard.js`**: `Ctrl/Cmd+C` builds clipboard from current selection (walls include their openings automatically); `Ctrl/Cmd+V` calls `pasteClipboard`. Both respect the existing `INPUT`/`TEXTAREA` guard. Toast confirms "Copied N item(s)". Subscribes to `furniture`, `walls`, `openings`, `setClipboard`, `pasteClipboard`, `pushToast` from the store.
 
+- [x] 45° angle walls with modifier-key snap modes (branch claude/angle-walls-alignment-WE8lC, 2026-05-24)
+  - **`snapTo45`** added to `constants.js` after `snapTo90`: snaps wall endpoint to nearest 45° multiple (0°/45°/90°/135°/180°/225°/270°/315°) from the draw start.
+  - **`useModifierKeys.js`** (new hook): tracks `shiftDown` + `altDown` via `window.addEventListener('keydown'/'keyup')`. Does NOT call `preventDefault` on Alt so browser menu shortcuts are unaffected. Independent of `useCanvasKeyboard` to avoid duplicating space/undo/selection-shortcut logic.
+  - **`CanvasArea.jsx`**: imports `useModifierKeys` + `snapTo45`; `snapFn` = Alt→free, Shift→90°, default→45°. `previewEnd` uses `snapFn`. Passes `shiftDown` + `altDown` to `useDrawWalls` and `HudOverlay`.
+  - **`useDrawWalls.js`**: signature extended with `shiftDown = false, altDown = false`; same `snapFn` logic used for commit snap (matches preview exactly).
+  - **`DrawPreview.jsx`**: now shows a cyan angle readout (`${angleDeg}°`) via a Konva `<Text>` at the midpoint. Imports `Text` from `react-konva`.
+  - **`HudOverlay.jsx`**: drawing hint includes live snap mode: "free angle" / "90° only" / "45° snap · Shift=90° · Alt=free".
+
+- [x] Furniture alignment tools in multi-select panel (branch claude/angle-walls-alignment-WE8lC, 2026-05-24)
+  - **`MultiSelectProps.jsx`** `MultiFurnitureProps`: when 2+ items selected, shows an "Align" section above the Rotation field with a 3×2 grid of buttons: Left (align left edges), Ctr·X (center horizontally), Right (align right edges), Top (align top edges), Ctr·Y (center vertically), Bot (align bottom edges). Operations work on item centroids (`f.x`, `f.y`) via `updateFurniture`. `updateFurniture` is already threaded through to `MultiFurnitureProps` from `MultiSelectProps` → `PropertiesPanel`.
+
 ### 🚧 In Progress
 - (nothing active)
 
@@ -601,8 +612,7 @@ interior-studio/
   for display via `formatMeters()` in `components/canvas/constants.js`.
 - **World bounds**: grid is drawn from `-WORLD_HALF` to `+WORLD_HALF` (5000 px
   each way = 100 m × 100 m). Adjust in `constants.js` if needed.
-- **Snap angle**: walls snap to multiples of 90° from the start point, length
-  preserved (see `snapTo90`).
+- **Snap angle**: walls snap to multiples of **45°** by default (see `snapTo45`). Hold **Shift** for 90°-only snap; hold **Alt** for free angle. Snap function selected in both `CanvasArea.jsx` (preview) and `useDrawWalls.js` (commit) so preview and actual wall always match.
 - **Wall thickness**: rendered with `strokeWidth = WALL_THICKNESS` (8 px), but
   `hitStrokeWidth` is 16 px so right-click delete is forgiving.
 - **State library**: Zustand. Slice by selector in components

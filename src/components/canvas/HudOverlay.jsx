@@ -3,9 +3,10 @@ import { getSingleItem, selectionItems } from '../../store/selectionHelpers'
 
 // Small floating chips shown over the 2D canvas: zoom % and cursor coords
 // in meters (bottom-left) and a context-sensitive hint (bottom-right).
-export default function HudOverlay({ view, cursor, drawing, spaceDown, selection, calibration }) {
+export default function HudOverlay({ view, cursor, drawing, spaceDown, selection, calibration, shiftDown, altDown }) {
   const single = getSingleItem(selection)
   const count = selectionItems(selection).length
+  const snapModeHint = altDown ? 'free angle' : shiftDown ? '90° only' : '45° snap · Shift=90° · Alt=free'
   const hint = spaceDown
     ? 'pan'
     : calibration
@@ -15,7 +16,7 @@ export default function HudOverlay({ view, cursor, drawing, spaceDown, selection
           ? 'click second calibration point · esc to cancel'
           : 'enter real distance to apply'
       : drawing
-        ? 'click to extend · click same point or esc to end chain'
+        ? `click to extend · esc to end · ${snapModeHint}`
         : count > 1
           ? `${count} items selected · del to remove · shift+click to deselect`
           : single?.kind === 'furniture'

@@ -1,6 +1,6 @@
 import useStore from '../store/useStore'
 import {
-  SNAP_RADIUS_SCREEN, snapTo90, findNearestSnapPoint, snapParallelWallLength,
+  SNAP_RADIUS_SCREEN, snapTo90, snapTo45, findNearestSnapPoint, snapParallelWallLength,
 } from '../components/canvas/constants'
 
 // Owns the click-to-draw-walls flow. Returns a handler for the Stage's
@@ -19,7 +19,7 @@ import {
 //       3. parallel-wall length snap — snaps the length to match a parallel
 //          existing wall of similar length (Issue 1)
 //     then either advances the chain or ends it on a zero-length commit
-export default function useDrawWalls(stageRef, viewScale, spaceDown) {
+export default function useDrawWalls(stageRef, viewScale, spaceDown, shiftDown = false, altDown = false) {
   const walls = useStore((s) => s.walls)
   const calibration = useStore((s) => s.calibration)
   const drawStart = useStore((s) => s.drawStart)
@@ -48,7 +48,8 @@ export default function useDrawWalls(stageRef, viewScale, spaceDown) {
     if (snap) {
       end = snap
     } else {
-      const dirSnapped = snapTo90(drawStart, p)
+      const snapFn = altDown ? ((_s, e) => e) : shiftDown ? snapTo90 : snapTo45
+      const dirSnapped = snapFn(drawStart, p)
       // Try endpoint snap from the direction-locked position — catches
       // near-miss rectangle closes where the raw cursor misses the threshold.
       const closeEndpoint = findNearestSnapPoint(dirSnapped, walls, threshold)

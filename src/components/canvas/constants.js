@@ -23,6 +23,21 @@ export function snapTo90(start, end) {
   }
 }
 
+// Snaps the wall endpoint to the nearest 45° multiple from `start`.
+// Covers 0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°.
+export function snapTo45(start, end) {
+  const dx = end.x - start.x
+  const dy = end.y - start.y
+  if (dx === 0 && dy === 0) return end
+  const angle = Math.atan2(dy, dx)
+  const snapped = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4)
+  const dist = Math.hypot(dx, dy)
+  return {
+    x: start.x + Math.cos(snapped) * dist,
+    y: start.y + Math.sin(snapped) * dist,
+  }
+}
+
 export function formatMeters(px) {
   return `${(px / PIXELS_PER_METER).toFixed(2)} m`
 }
