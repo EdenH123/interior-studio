@@ -20,6 +20,7 @@ import { wallSegmentsForRendering } from './canvas/openingGeometry'
 import DrawPreview from './canvas/DrawPreview'
 import SnapIndicator from './canvas/SnapIndicator'
 import RotationHandle from './canvas/RotationHandle'
+import ResizeHandle from './canvas/ResizeHandle'
 import DragGhost from './canvas/DragGhost'
 import DiffOverlay from './canvas/DiffOverlay'
 import { registerStage } from './canvas/stageHandle'
@@ -201,6 +202,11 @@ export default function CanvasArea() {
                 onDragEnd={onFurnDragEnd}
                 onContextMenu={removeFurniture} />
             ))}
+            {selectedFurniture && (
+              <ResizeHandle item={selectedFurniture} scale={view.scale}
+                shiftDown={shiftDown}
+                onResize={(dims) => updateFurniture(selectedFurniture.id, dims)} />
+            )}
             {selectedFurniture && (
               <RotationHandle item={selectedFurniture} scale={view.scale}
                 onRotate={(deg) => updateFurniture(selectedFurniture.id, { rotation: deg })} />
