@@ -121,7 +121,10 @@ With an opening selected, the right panel shows:
 
 - **Width (m)** and **Height (m)** — type a value and press Enter.
 - **Sill height (m)** — windows only; how far above the floor the bottom of the glass sits.
-- **Material** — a row of color swatches. Doors offer Wood, White, Dark, Black, Gray. Windows offer White, Wood, Black, Gray. The change applies immediately in the 3D view.
+- **Color** — a row of color swatches. Doors offer Wood, White, Dark, Black, Gray. Windows offer White, Wood, Black, Gray. The change applies immediately in the 3D view.
+- **Material** (doors only) — three styles: **Painted** (smooth flat finish), **Wood Grain** (procedural vertical wood grain texture), **Glass** (frosted glass for modern sliding doors).
+
+Every door also has a visible wooden **casing** (jambs + header) framing the doorway in 3D, so the opening reads as a doorway even when the panel is closed.
 
 If your edit would make the opening fall off the end of the wall or
 overlap another opening already on it, the change is rejected and a toast

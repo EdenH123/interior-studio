@@ -15,10 +15,17 @@ const WINDOW_COLORS = [
   { label: 'Gray',    value: '#8a8a8a' },
 ]
 
+const DOOR_MATERIALS = [
+  { id: 'painted', label: 'Painted' },
+  { id: 'wood',    label: 'Wood Grain' },
+  { id: 'glass',   label: 'Glass' },
+]
+
 export default function OpeningProps({ opening, wall, onUpdate, pushToast }) {
   const spec = getOpeningSpec(opening.type)
   const isDoor = opening.type.startsWith('door')
   const colors = isDoor ? DOOR_COLORS : WINDOW_COLORS
+  const currentMaterial = opening.material ?? 'painted'
 
   const numberField = (label, field, step = 0.01, min = 0.05) => (
     <label className="block mt-2">
@@ -50,7 +57,7 @@ export default function OpeningProps({ opening, wall, onUpdate, pushToast }) {
       {opening.type.startsWith('window') && numberField('Sill height (m)', 'sillHeight', 0.05, 0)}
 
       <div className="mt-3">
-        <span className="text-gray-500 text-[11px] uppercase tracking-wider">Material</span>
+        <span className="text-gray-500 text-[11px] uppercase tracking-wider">Color</span>
         <div className="flex gap-2 mt-1 flex-wrap">
           {colors.map(({ label, value }) => (
             <button
@@ -66,6 +73,27 @@ export default function OpeningProps({ opening, wall, onUpdate, pushToast }) {
           ))}
         </div>
       </div>
+
+      {isDoor && (
+        <div className="mt-3">
+          <span className="text-gray-500 text-[11px] uppercase tracking-wider">Material</span>
+          <div className="flex gap-1 mt-1">
+            {DOOR_MATERIALS.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => onUpdate(opening.id, { material: id })}
+                className={`flex-1 px-2 py-1 text-[11px] rounded border transition-all ${
+                  currentMaterial === id
+                    ? 'bg-blue-600 border-blue-500 text-white'
+                    : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <p className="text-[10px] text-gray-500 mt-3 leading-snug">
         Drag the opening along its wall to reposition · Del to remove.

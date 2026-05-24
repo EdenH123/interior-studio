@@ -252,3 +252,42 @@ export function getFloorTexture(materialId) {
   tex.needsUpdate = true
   return { map: tex, roughness: cfg.roughness, selfColored: cfg.selfColored }
 }
+
+function drawDoorWood(ctx, W, H) {
+  ctx.fillStyle = '#b88a5a'
+  ctx.fillRect(0, 0, W, H)
+  // Vertical wood grain — long lines down the height of the door.
+  for (let i = 0; i < 18; i++) {
+    const x = (i / 18) * W + Math.sin(i * 1.9) * 4
+    ctx.strokeStyle = `rgba(60,30,8,${0.06 + (i % 4) * 0.025})`
+    ctx.lineWidth = 0.9
+    ctx.beginPath()
+    ctx.moveTo(x, 0)
+    for (let y = 0; y <= H; y += 8) {
+      ctx.lineTo(x + Math.sin(y * 0.03 + i * 0.7) * 2.2, y)
+    }
+    ctx.stroke()
+  }
+  // Subtle knots — a few darker oval patches.
+  for (let i = 0; i < 3; i++) {
+    const cx = ((i * 137) % W)
+    const cy = ((i * 217) % H)
+    const grad = ctx.createRadialGradient(cx, cy, 1, cx, cy, 14)
+    grad.addColorStop(0, 'rgba(50,28,6,0.5)')
+    grad.addColorStop(1, 'rgba(50,28,6,0)')
+    ctx.fillStyle = grad
+    ctx.beginPath()
+    ctx.ellipse(cx, cy, 9, 13, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
+}
+
+// Door panel wood texture — single shared texture (no per-door tiling).
+// UV space of a BoxGeometry maps the texture 1:1 across each face, so a
+// single 256×512 wood image already reads as a full door panel.
+export function getDoorTexture() {
+  const base = getBase('door:wood', drawDoorWood, 256, 512)
+  const tex = base.clone()
+  tex.needsUpdate = true
+  return tex
+}
