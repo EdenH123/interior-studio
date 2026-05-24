@@ -531,6 +531,9 @@ interior-studio/
   - **`wallCSG.js`** + **`sceneReconcilers.js`**: sill check changed from `o.type === 'window'` to `o.type.startsWith('window')` — fixes `window-fixed`, `window-casement`, `window-arched` not getting their sill offset.
   - **`OpeningProps.jsx`**: added Material swatch row — 5 door presets (Wood/White/Dark/Black/Gray), 4 window presets. Color dispatched via `updateOpening`.
 
+- [x] Fix canvas jump when moving furniture (branch fix/canvas-jump-furniture-drag, 2026-05-24)
+  - **`useViewport.js`**: `handleStageDragEnd` now guards `if (e.target !== e.target.getStage()) return` before updating pan position. Konva bubbles `dragend` from draggable child nodes (furniture Groups) up to the Stage; without the guard `e.target.x()/y()` returns the furniture's world position and overwrites the Stage pan state, causing the canvas to jump to a random location on every furniture move.
+
 ### 🚧 In Progress
 - (nothing active)
 

@@ -38,6 +38,7 @@ export default function useViewport() {
   }
 
   function handleStageDragEnd(e) {
+    if (e.target !== e.target.getStage()) return
     setView((v) => ({ ...v, x: e.target.x(), y: e.target.y() }))
   }
 
