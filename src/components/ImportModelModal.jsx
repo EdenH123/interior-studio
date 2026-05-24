@@ -4,15 +4,20 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import useStore from '../store/useStore'
 import { arrayBufferToBase64 } from '../utils/customModelUrls'
 
-export default function ImportModelModal({ onClose }) {
-  const addCustomModel = useStore((s) => s.addCustomModel)
+// Pass `editModel` (a customModels entry) to open in edit-dimensions mode
+// instead of import mode. No file picker shown; only name/dims/color editable.
+export default function ImportModelModal({ onClose, editModel }) {
+  const addCustomModel    = useStore((s) => s.addCustomModel)
+  const updateCustomModel = useStore((s) => s.updateCustomModel)
 
-  const [file,    setFile]    = useState(null)       // { name, buffer }
-  const [label,   setLabel]   = useState('')
-  const [width,   setWidth]   = useState('')
-  const [depth,   setDepth]   = useState('')
-  const [height,  setHeight]  = useState('')
-  const [color,   setColor]   = useState('#94a3b8')
+  const isEdit = !!editModel
+
+  const [file,    setFile]    = useState(null)
+  const [label,   setLabel]   = useState(editModel?.label  ?? '')
+  const [width,   setWidth]   = useState(editModel ? editModel.width.toFixed(2)  : '')
+  const [depth,   setDepth]   = useState(editModel ? editModel.depth.toFixed(2)  : '')
+  const [height,  setHeight]  = useState(editModel ? editModel.height.toFixed(2) : '')
+  const [color,   setColor]   = useState(editModel?.color ?? '#94a3b8')
   const [error,   setError]   = useState(null)
   const [loading, setLoading] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -56,14 +61,18 @@ export default function ImportModelModal({ onClose }) {
 
   function handleSubmit() {
     const w = parseFloat(width), d = parseFloat(depth), h = parseFloat(height)
-    if (!file)              { setError('Please select a .glb file.'); return }
+    if (!isEdit && !file)   { setError('Please select a .glb file.'); return }
     if (!label.trim())      { setError('Please enter a name.'); return }
     if (!w || w <= 0 || !d || d <= 0 || !h || h <= 0) {
       setError('Width, depth, and height must be positive numbers.')
       return
     }
-    const glbData = arrayBufferToBase64(file.buffer)
-    addCustomModel({ label: label.trim(), width: w, depth: d, height: h, color, glbData })
+    if (isEdit) {
+      updateCustomModel(editModel.id, { label: label.trim(), width: w, depth: d, height: h, color })
+    } else {
+      const glbData = arrayBufferToBase64(file.buffer)
+      addCustomModel({ label: label.trim(), width: w, depth: d, height: h, color, glbData })
+    }
     onClose()
   }
 
@@ -74,35 +83,39 @@ export default function ImportModelModal({ onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-gray-200 text-sm font-semibold">Import 3D Model</h2>
+          <h2 className="text-gray-200 text-sm font-semibold">
+            {isEdit ? `Edit "${editModel.label}"` : 'Import 3D Model'}
+          </h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg leading-none">×</button>
         </div>
 
-        {/* Drop zone */}
-        <div
-          className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-            dragging ? 'border-blue-500 bg-blue-950/30' : 'border-gray-600 hover:border-gray-500'
-          } ${file ? 'border-green-600 bg-green-950/20' : ''}`}
-          onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={handleDrop}
-          onClick={() => inputRef.current?.click()}
-        >
-          <input ref={inputRef} type="file" accept=".glb" className="hidden" onChange={handleFileInput} />
-          {loading ? (
-            <p className="text-gray-400 text-sm">Analysing model…</p>
-          ) : file ? (
-            <div>
-              <p className="text-green-400 text-sm font-mono truncate">{file.name}</p>
-              <p className="text-gray-500 text-[11px] mt-1">dimensions auto-detected below</p>
-            </div>
-          ) : (
-            <div>
-              <p className="text-gray-400 text-sm">Drop a <span className="font-mono text-gray-300">.glb</span> file here</p>
-              <p className="text-gray-600 text-[11px] mt-1">or click to browse</p>
-            </div>
-          )}
-        </div>
+        {/* Drop zone — hidden in edit mode */}
+        {!isEdit && (
+          <div
+            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+              dragging ? 'border-blue-500 bg-blue-950/30' : 'border-gray-600 hover:border-gray-500'
+            } ${file ? 'border-green-600 bg-green-950/20' : ''}`}
+            onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            onClick={() => inputRef.current?.click()}
+          >
+            <input ref={inputRef} type="file" accept=".glb" className="hidden" onChange={handleFileInput} />
+            {loading ? (
+              <p className="text-gray-400 text-sm">Analysing model…</p>
+            ) : file ? (
+              <div>
+                <p className="text-green-400 text-sm font-mono truncate">{file.name}</p>
+                <p className="text-gray-500 text-[11px] mt-1">dimensions auto-detected below</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-gray-400 text-sm">Drop a <span className="font-mono text-gray-300">.glb</span> file here</p>
+                <p className="text-gray-600 text-[11px] mt-1">or click to browse</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Name */}
         <label className="flex flex-col gap-1">
@@ -158,10 +171,10 @@ export default function ImportModelModal({ onClose }) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!file || loading}
+            disabled={!isEdit && (!file || loading)}
             className="px-4 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded transition-colors"
           >
-            Add to Library
+            {isEdit ? 'Save Changes' : 'Add to Library'}
           </button>
         </div>
       </div>

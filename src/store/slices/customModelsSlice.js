@@ -13,6 +13,11 @@ export function createCustomModelsSlice(set) {
         ],
       })),
 
+    updateCustomModel: (id, patch) =>
+      set((s) => ({
+        customModels: s.customModels.map((m) => m.id === id ? { ...m, ...patch } : m),
+      })),
+
     removeCustomModel: (id) => {
       revokeCustomModelUrl(id)
       set((s) => ({

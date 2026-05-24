@@ -12,6 +12,7 @@ export const FURNITURE_DRAG_MIME = 'application/x-interior-studio-furniture'
 
 export default function Sidebar() {
   const [showImport, setShowImport] = useState(false)
+  const [editModel,  setEditModel]  = useState(null)
   return (
     <aside className="w-60 shrink-0 bg-gray-900 border-r border-gray-700 flex flex-col">
       <LevelsPanel />
@@ -21,7 +22,10 @@ export default function Sidebar() {
       <IkeaProductSearch />
       <div className="flex-1 overflow-y-auto p-2 space-y-3">
         <OpeningsGroup />
-        <MyModelsGroup onImport={() => setShowImport(true)} />
+        <MyModelsGroup
+          onImport={() => setShowImport(true)}
+          onEdit={(model) => setEditModel(model)}
+        />
         {CATEGORIES.map((cat) => (
           <CategoryGroup
             key={cat}
@@ -35,11 +39,12 @@ export default function Sidebar() {
         drag a tile onto the canvas to place
       </div>
       {showImport && <ImportModelModal onClose={() => setShowImport(false)} />}
+      {editModel  && <ImportModelModal editModel={editModel} onClose={() => setEditModel(null)} />}
     </aside>
   )
 }
 
-function MyModelsGroup({ onImport }) {
+function MyModelsGroup({ onImport, onEdit }) {
   const customModels    = useStore((s) => s.customModels)
   const removeCustomModel = useStore((s) => s.removeCustomModel)
   const setDragGhostCustom = useStore((s) => s.setDragGhostCustom)
@@ -67,6 +72,7 @@ function MyModelsGroup({ onImport }) {
             <CustomModelTile
               key={cm.id}
               model={cm}
+              onEdit={() => onEdit(cm)}
               onRemove={() => removeCustomModel(cm.id)}
               onDragStart={() => setDragGhostCustom(cm)}
               onDragEnd={clearDragGhost}
@@ -78,7 +84,7 @@ function MyModelsGroup({ onImport }) {
   )
 }
 
-function CustomModelTile({ model, onRemove, onDragStart, onDragEnd }) {
+function CustomModelTile({ model, onEdit, onRemove, onDragStart, onDragEnd }) {
   const aspect = model.width / model.depth
   const boxW = aspect >= 1 ? 36 : 36 * aspect
   const boxH = aspect >= 1 ? 36 / aspect : 36
@@ -95,8 +101,17 @@ function CustomModelTile({ model, onRemove, onDragStart, onDragEnd }) {
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
       className="relative bg-gray-800 border border-gray-700 rounded p-2 cursor-grab active:cursor-grabbing hover:border-gray-500 transition-colors select-none group"
-      title={`${model.label} — ${model.width.toFixed(2)} × ${model.depth.toFixed(2)} m`}
+      title={`${model.label} — ${model.width.toFixed(2)} × ${model.depth.toFixed(2)} × ${model.height.toFixed(2)} m`}
     >
+      {/* Edit dimensions */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onEdit() }}
+        className="absolute top-1 left-1 text-gray-600 hover:text-blue-400 text-[10px] leading-none opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Edit dimensions"
+      >
+        ✎
+      </button>
+      {/* Remove */}
       <button
         onClick={(e) => { e.stopPropagation(); onRemove() }}
         className="absolute top-1 right-1 text-gray-600 hover:text-red-400 text-[10px] leading-none opacity-0 group-hover:opacity-100 transition-opacity"
@@ -112,7 +127,7 @@ function CustomModelTile({ model, onRemove, onDragStart, onDragEnd }) {
       </div>
       <div className="mt-1 text-[11px] text-gray-300 truncate">{model.label}</div>
       <div className="text-[10px] text-gray-500 font-mono">
-        {model.width.toFixed(2)}×{model.depth.toFixed(2)}m
+        {model.width.toFixed(2)}×{model.depth.toFixed(2)}×{model.height.toFixed(2)}m
       </div>
     </div>
   )
