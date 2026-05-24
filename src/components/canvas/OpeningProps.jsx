@@ -1,12 +1,25 @@
 import { getOpeningSpec } from './openingsCatalog'
 
-// Editor for a selected opening. Width / height / sill height are
-// editable as plain meters. The store's `updateOpening` re-clamps + re-
-// checks overlap on every update; rejected patches return false so the
-// caller can toast (we don't here — the visual stays at the old value
-// which is feedback enough for typed edits).
+const DOOR_COLORS = [
+  { label: 'Wood',    value: '#c8a97e' },
+  { label: 'White',   value: '#f0ece6' },
+  { label: 'Dark',    value: '#3a3028' },
+  { label: 'Black',   value: '#1a1a1a' },
+  { label: 'Gray',    value: '#8a8a8a' },
+]
+
+const WINDOW_COLORS = [
+  { label: 'White',   value: '#f0ece6' },
+  { label: 'Wood',    value: '#c8a97e' },
+  { label: 'Black',   value: '#1a1a1a' },
+  { label: 'Gray',    value: '#8a8a8a' },
+]
+
 export default function OpeningProps({ opening, wall, onUpdate, pushToast }) {
   const spec = getOpeningSpec(opening.type)
+  const isDoor = opening.type.startsWith('door')
+  const colors = isDoor ? DOOR_COLORS : WINDOW_COLORS
+
   const numberField = (label, field, step = 0.01, min = 0.05) => (
     <label className="block mt-2">
       <span className="text-gray-500 text-[11px] uppercase tracking-wider">{label}</span>
@@ -24,6 +37,8 @@ export default function OpeningProps({ opening, wall, onUpdate, pushToast }) {
     </label>
   )
 
+  const currentColor = opening.color ?? (isDoor ? '#c8a97e' : '#f0ece6')
+
   return (
     <div>
       <h3 className="text-gray-200 text-xs uppercase tracking-widest mb-2">{spec?.label ?? opening.type}</h3>
@@ -33,8 +48,27 @@ export default function OpeningProps({ opening, wall, onUpdate, pushToast }) {
       {numberField('Width (m)', 'width')}
       {numberField('Height (m)', 'height')}
       {opening.type.startsWith('window') && numberField('Sill height (m)', 'sillHeight', 0.05, 0)}
+
+      <div className="mt-3">
+        <span className="text-gray-500 text-[11px] uppercase tracking-wider">Material</span>
+        <div className="flex gap-2 mt-1 flex-wrap">
+          {colors.map(({ label, value }) => (
+            <button
+              key={value}
+              title={label}
+              onClick={() => onUpdate(opening.id, { color: value })}
+              className="w-6 h-6 rounded border-2 transition-all"
+              style={{
+                backgroundColor: value,
+                borderColor: currentColor === value ? '#3b82f6' : '#374151',
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
       <p className="text-[10px] text-gray-500 mt-3 leading-snug">
-        Drag the opening along its wall to reposition · Del to remove. The opening always stays inside the wall and won't overlap with others.
+        Drag the opening along its wall to reposition · Del to remove.
       </p>
     </div>
   )

@@ -6,11 +6,19 @@ const DOOR_ANIM_MS   = 300
 const WIN_FT = 0.055  // window frame bar thickness (m)
 const WIN_FD = 0.13   // window frame depth through wall (m)
 
-function buildWindowFrame(w, h) {
+const DEFAULT_DOOR_COLOR   = 0xc8a97e  // warm wood
+const DEFAULT_WINDOW_COLOR = 0xf0ece6  // off-white frame
+
+function hexToInt(hex) {
+  if (!hex) return null
+  return parseInt(hex.replace('#', ''), 16)
+}
+
+function buildWindowFrame(w, h, frameColor = DEFAULT_WINDOW_COLOR) {
   const FT = WIN_FT, FD = WIN_FD
   const group = new THREE.Group()
 
-  const frameMat = new THREE.MeshStandardMaterial({ color: 0xf0ece6, roughness: 0.55, metalness: 0 })
+  const frameMat = new THREE.MeshStandardMaterial({ color: frameColor, roughness: 0.55, metalness: 0 })
   const glassMat = new THREE.MeshStandardMaterial({
     color: 0xb8d8e8, transparent: true, opacity: 0.28,
     roughness: 0.05, metalness: 0.12, depthWrite: false,
@@ -22,13 +30,10 @@ function buildWindowFrame(w, h) {
     return m
   }
 
-  // 4 frame bars around the opening
   const left  = mk(new THREE.BoxGeometry(FT, h, FD), frameMat)
   const right = mk(new THREE.BoxGeometry(FT, h, FD), frameMat)
   const top   = mk(new THREE.BoxGeometry(w, FT, FD), frameMat)
-  // Sill: slightly wider and deeper than frame — gives a realistic ledge
   const sill  = mk(new THREE.BoxGeometry(w + 0.08, FT * 1.8, FD + 0.07), frameMat)
-  // Horizontal glazing bar at mid-height — splits glass into two panes
   const midBar = mk(new THREE.BoxGeometry(w - 2 * FT, FT * 0.7, FD), frameMat)
 
   left.position.set(-w / 2 + FT / 2,  h / 2, 0)
@@ -37,7 +42,6 @@ function buildWindowFrame(w, h) {
   sill.position.set(0,                 FT * 0.9, 0)
   midBar.position.set(0,               h / 2, 0)
 
-  // Two glass panes — lower and upper, separated by the mid-bar
   const paneH = (h - 2 * FT - FT * 0.7) / 2
   const glassW = w - 2 * FT
   const lowerGlass = mk(new THREE.BoxGeometry(glassW, paneH, 0.006), glassMat, false)
@@ -51,33 +55,39 @@ function buildWindowFrame(w, h) {
   return group
 }
 
-function buildDoubleDoor(w, h) {
+// Double door: group centred on the opening.
+// Left panel pivot at -w/2, right panel pivot at +w/2.
+// Each panel's mesh extends inward (toward centre) so they fill the opening when closed.
+// When open: left panel rotates -π/2, right panel +π/2 — both swing into the +Z side (room).
+function buildDoubleDoor(w, h, panelColor = DEFAULT_DOOR_COLOR) {
   const group = new THREE.Group()
-  const panelMat = new THREE.MeshStandardMaterial({ color: 0xc8a97e, roughness: 0.8, metalness: 0 })
+  const panelMat = new THREE.MeshStandardMaterial({ color: panelColor, roughness: 0.8, metalness: 0 })
 
-  const makePanel = (hinge, openSign) => {
+  const makePanel = (pivotX, meshOffsetX) => {
     const panel = new THREE.Group()
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w / 2, h - 0.01, DOOR_THICKNESS), panelMat)
     mesh.castShadow = true
     mesh.receiveShadow = true
-    mesh.position.set(openSign * w / 4, (h - 0.01) / 2, 0)
+    mesh.position.set(meshOffsetX, (h - 0.01) / 2, 0)
     panel.add(mesh)
-    panel.position.x = hinge
+    panel.position.x = pivotX
     return panel
   }
 
-  const leftPanel  = makePanel(-w / 2, 1)
-  const rightPanel = makePanel( w / 2, -1)
+  // Left panel: pivot at -w/2, mesh center at +w/4 from pivot (fills left half when closed)
+  // Right panel: pivot at +w/2, mesh center at -w/4 from pivot (fills right half when closed)
+  const leftPanel  = makePanel(-w / 2,  w / 4)
+  const rightPanel = makePanel( w / 2, -w / 4)
   group.add(leftPanel, rightPanel)
   group.userData.leftPanel  = leftPanel
   group.userData.rightPanel = rightPanel
   return group
 }
 
-function buildSlidingDoor(w, h) {
+function buildSlidingDoor(w, h, panelColor = DEFAULT_DOOR_COLOR) {
   const group = new THREE.Group()
   const panelMat = new THREE.MeshStandardMaterial({
-    color: 0xc8a97e, roughness: 0.8, metalness: 0, transparent: true, opacity: 0.85,
+    color: panelColor, roughness: 0.8, metalness: 0, transparent: true, opacity: 0.85,
   })
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h - 0.01, DOOR_THICKNESS), panelMat)
   mesh.castShadow = true
@@ -96,8 +106,6 @@ function disposeMeshes(group) {
   })
 }
 
-// Builds / syncs door panel Groups and window frame Groups for all openings.
-// `doorAnims` is a live Map<id, anim> that tickDoorAnims reads every frame.
 // opts: { levelOffsets?: Map<id,metres>, activeLevelId?: string, solo?: bool }
 export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts = {}) {
   const present = new Set()
@@ -117,16 +125,27 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
     if (length < 0.001) continue
 
     const wallYaw = -Math.atan2(bz - az, bx - ax)
+    const cosYaw  = Math.cos(wallYaw)
+    const sinYaw  = Math.sin(wallYaw)
     const wallCX  = (ax + bx) / 2
     const wallCZ  = (az + bz) / 2
     const yOffset = opts.levelOffsets?.get(wall.levelId) ?? 0
     const visible = !opts.solo || !wall.levelId || wall.levelId === opts.activeLevelId
 
+    // Centre of the opening in world XZ
+    const centerLX = (o.position - 0.5) * length
+    const openCX   = wallCX + centerLX * cosYaw
+    const openCZ   = wallCZ - centerLX * sinYaw
+
+    const doorColor   = hexToInt(o.color) ?? DEFAULT_DOOR_COLOR
+    const windowColor = hexToInt(o.color) ?? DEFAULT_WINDOW_COLOR
+    const matFp = o.color ?? ''
+
     if (o.type === 'door') {
-      // Hinge at the left edge of the opening in wall-local X.
-      const hingeLX = (o.position - 0.5) * length - o.width / 2
-      const hingeWX = wallCX + hingeLX * Math.cos(wallYaw)
-      const hingeWZ = wallCZ - hingeLX * Math.sin(wallYaw)
+      // Hinge at the left edge of the opening.
+      const hingeLX = centerLX - o.width / 2
+      const hingeWX = wallCX + hingeLX * cosYaw
+      const hingeWZ = wallCZ - hingeLX * sinYaw
 
       const closedAngle = wallYaw
       const openAngle   = wallYaw + Math.PI / 2
@@ -136,7 +155,7 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
       if (!group) {
         const panel = new THREE.Mesh(
           new THREE.BoxGeometry(o.width, o.height, DOOR_THICKNESS),
-          new THREE.MeshStandardMaterial({ color: 0xc8a97e, roughness: 0.8, metalness: 0.0 }),
+          new THREE.MeshStandardMaterial({ color: doorColor, roughness: 0.8, metalness: 0.0 }),
         )
         panel.position.set(o.width / 2, o.height / 2, 0)
         panel.castShadow = true
@@ -145,12 +164,18 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
         group = new THREE.Group()
         group.userData.kind = 'door'
         group.userData.id = o.id
+        group.userData.matFp = matFp
         group.add(panel)
         group.rotation.y = targetAngle
         group.userData.targetAngle = targetAngle
         scene.add(group)
         meshMap.set(o.id, group)
       } else {
+        if (group.userData.matFp !== matFp) {
+          const panel = group.children[0]
+          if (panel?.material) { panel.material.dispose(); panel.material = new THREE.MeshStandardMaterial({ color: doorColor, roughness: 0.8, metalness: 0 }) }
+          group.userData.matFp = matFp
+        }
         const prev = group.userData.targetAngle
         if (prev !== targetAngle) {
           doorAnims.set(o.id, { group, startAngle: group.rotation.y, targetAngle, startTime: performance.now() })
@@ -161,19 +186,21 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
       group.visible = visible
 
     } else if (o.type === 'door-double') {
-      // Double door: group is centred on the opening; each half-panel pivots
-      // independently from its outer edge (+π/2 / -π/2 into the room).
-      const centerLX = (o.position - 0.5) * length
-      const centerWX = wallCX + centerLX * Math.cos(wallYaw)
-      const centerWZ = wallCZ - centerLX * Math.sin(wallYaw)
-      const targetLeft  = o.open ?  Math.PI / 2 : 0
-      const targetRight = o.open ? -Math.PI / 2 : 0
+      // Group centred on the opening. Each panel pivots from its outer edge.
+      // Open: left panel -π/2, right panel +π/2 (both swing into the +Z / room side).
+      const targetLeft  = o.open ? -Math.PI / 2 : 0
+      const targetRight = o.open ?  Math.PI / 2 : 0
 
       let group = meshMap.get(o.id)
-      if (!group) {
-        group = buildDoubleDoor(o.width, o.height)
-        group.userData.kind = 'door'
-        group.userData.id = o.id
+      if (!group || group.userData.matFp !== matFp ||
+          group.userData.width !== o.width || group.userData.height !== o.height) {
+        if (group) { scene.remove(group); disposeMeshes(group); doorAnims.delete(o.id) }
+        group = buildDoubleDoor(o.width, o.height, doorColor)
+        group.userData.kind   = 'door'
+        group.userData.id     = o.id
+        group.userData.matFp  = matFp
+        group.userData.width  = o.width
+        group.userData.height = o.height
         group.userData.leftPanel.rotation.y  = targetLeft
         group.userData.rightPanel.rotation.y = targetRight
         group.userData.targetLeft  = targetLeft
@@ -198,52 +225,73 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
           group.userData.targetRight = targetRight
         }
       }
-      group.position.set(centerWX, yOffset, centerWZ)
+      group.position.set(openCX, yOffset, openCZ)
       group.rotation.y = wallYaw
       group.visible = visible
 
     } else if (o.type === 'door-sliding') {
-      // Sliding door: static panel shown partially slid open, no animation.
-      const centerLX = (o.position - 0.5) * length
-      const doorWX   = wallCX + centerLX * Math.cos(wallYaw)
-      const doorWZ   = wallCZ - centerLX * Math.sin(wallYaw)
+      // Closed: panel centred in the opening.
+      // Open: panel slid one full width to the right along the wall.
+      const slideX = o.open ? o.width * cosYaw : 0
+      const slideZ = o.open ? -o.width * sinYaw : 0
+      const targetX = openCX + slideX
+      const targetZ = openCZ + slideZ
 
       let group = meshMap.get(o.id)
-      if (!group || group.userData.width !== o.width || group.userData.height !== o.height) {
-        if (group) { scene.remove(group); disposeMeshes(group) }
-        group = buildSlidingDoor(o.width, o.height)
+      if (!group || group.userData.matFp !== matFp ||
+          group.userData.width !== o.width || group.userData.height !== o.height) {
+        if (group) { scene.remove(group); disposeMeshes(group); doorAnims.delete(o.id) }
+        group = buildSlidingDoor(o.width, o.height, doorColor)
         group.userData.kind   = 'door'
         group.userData.id     = o.id
+        group.userData.matFp  = matFp
         group.userData.width  = o.width
         group.userData.height = o.height
+        group.userData.targetX = targetX
+        group.userData.targetZ = targetZ
+        group.position.set(targetX, yOffset, targetZ)
         scene.add(group)
         meshMap.set(o.id, group)
+      } else {
+        const prevX = group.userData.targetX
+        const prevZ = group.userData.targetZ
+        if (prevX !== targetX || prevZ !== targetZ) {
+          doorAnims.set(o.id, {
+            kind: 'slide',
+            group,
+            startX: group.position.x,
+            startZ: group.position.z,
+            targetX,
+            targetZ,
+            startTime: performance.now(),
+          })
+          group.userData.targetX = targetX
+          group.userData.targetZ = targetZ
+        }
       }
-      group.position.set(doorWX, yOffset, doorWZ)
       group.rotation.y = wallYaw
-      group.visible    = visible
+      group.visible = visible
 
     } else {
-      // All window-* types: centered on o.position along the wall, raised by sill height.
-      const centerLX = (o.position - 0.5) * length
-      const winWX    = wallCX + centerLX * Math.cos(wallYaw)
-      const winWZ    = wallCZ - centerLX * Math.sin(wallYaw)
-      const sillH    = o.sillHeight ?? 0.9
+      // All window-* types: raised by sill height, centred on opening.
+      const sillH = o.sillHeight ?? 0.9
 
       let group = meshMap.get(o.id)
-      if (!group || group.userData.width !== o.width || group.userData.height !== o.height) {
+      if (!group || group.userData.matFp !== matFp ||
+          group.userData.width !== o.width || group.userData.height !== o.height) {
         if (group) { scene.remove(group); disposeMeshes(group) }
-        group = buildWindowFrame(o.width, o.height)
+        group = buildWindowFrame(o.width, o.height, windowColor)
         group.userData.kind   = 'window'
         group.userData.id     = o.id
+        group.userData.matFp  = matFp
         group.userData.width  = o.width
         group.userData.height = o.height
         scene.add(group)
         meshMap.set(o.id, group)
       }
-      group.position.set(winWX, yOffset + sillH, winWZ)
+      group.position.set(openCX, yOffset + sillH, openCZ)
       group.rotation.y = wallYaw
-      group.visible    = visible
+      group.visible = visible
     }
   }
 
@@ -265,6 +313,9 @@ export function tickDoorAnims(doorAnims) {
     if (anim.kind === 'double') {
       anim.leftPanel.rotation.y  = anim.startLeft  + (anim.targetLeft  - anim.startLeft)  * s
       anim.rightPanel.rotation.y = anim.startRight + (anim.targetRight - anim.startRight) * s
+    } else if (anim.kind === 'slide') {
+      anim.group.position.x = anim.startX + (anim.targetX - anim.startX) * s
+      anim.group.position.z = anim.startZ + (anim.targetZ - anim.startZ) * s
     } else {
       anim.group.rotation.y = anim.startAngle + (anim.targetAngle - anim.startAngle) * s
     }

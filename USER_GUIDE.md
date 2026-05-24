@@ -103,10 +103,11 @@ To place an opening:
 
 ### Opening and closing doors in 3D
 
-In the 3D view, each door has a physical panel with its hinge on the
-left edge. **Click the door panel** to toggle it open or closed. A
-smooth 300 ms animation swings it 90° away from the wall into the room.
-Click again to close it. The open/closed state is saved with the project.
+**Click a door panel** in the 3D view to toggle it open or closed (300 ms animation). Click again to close. The state is saved with the project.
+
+- **Hinged door** — panel swings 90° from its hinge edge into the room.
+- **Double door** — both panels swing open independently from their outer edges.
+- **Sliding door** — panel slides one full width along the wall to reveal the opening.
 
 ### Moving an opening
 
@@ -114,11 +115,13 @@ Click an opening to select it (it turns blue), then drag it. It stays
 locked to its parent wall — there's no way to move a door from one wall to
 another short of deleting and re-dropping it.
 
-### Editing size
+### Editing size and material
 
-With an opening selected, the right panel shows **Width** and **Height**
-in meters. Windows also show **Sill height** (how far above the floor the
-bottom of the window sits). Type a new number and press tab or enter.
+With an opening selected, the right panel shows:
+
+- **Width (m)** and **Height (m)** — type a value and press Enter.
+- **Sill height (m)** — windows only; how far above the floor the bottom of the glass sits.
+- **Material** — a row of color swatches. Doors offer Wood, White, Dark, Black, Gray. Windows offer White, Wood, Black, Gray. The change applies immediately in the 3D view.
 
 If your edit would make the opening fall off the end of the wall or
 overlap another opening already on it, the change is rejected and a toast
