@@ -117,9 +117,10 @@ function buildWallMaterial(color, resolvedMaterialId, lengthM, heightM = WALL_HE
   }
   return new THREE.MeshStandardMaterial({
     map: texInfo.map,
+    roughnessMap: texInfo.roughnessMap ?? null,
     color: new THREE.Color(texInfo.selfColored ? '#ffffff' : color),
     roughness: texInfo.roughness,
-    metalness: 0.0,
+    metalness: texInfo.metalness ?? 0.0,
   })
 }
 
@@ -127,20 +128,23 @@ function buildFloorMaterial(color, floorMatId) {
   const texInfo = getFloorTexture(floorMatId)
   return new THREE.MeshStandardMaterial({
     map: texInfo?.map ?? null,
+    roughnessMap: texInfo?.roughnessMap ?? null,
     color: new THREE.Color(texInfo?.selfColored ? '#ffffff' : color),
     side: THREE.DoubleSide,
     roughness: texInfo?.roughness ?? 0.9,
+    metalness: texInfo?.metalness ?? 0.0,
   })
 }
 
 function buildCeilingMaterial(color, ceilingMatId) {
-  // ceiling-wood gets the floor wood texture applied to the ceiling surface
   const texInfo = ceilingMatId === 'ceiling-wood' ? getFloorTexture('_wood') : null
   return new THREE.MeshStandardMaterial({
     map: texInfo?.map ?? null,
+    roughnessMap: texInfo?.roughnessMap ?? null,
     color: new THREE.Color(texInfo?.selfColored ? '#ffffff' : color),
     side: THREE.DoubleSide,
     roughness: texInfo?.roughness ?? 0.9,
+    metalness: texInfo?.metalness ?? 0.0,
   })
 }
 
