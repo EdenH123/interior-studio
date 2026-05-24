@@ -534,6 +534,12 @@ interior-studio/
 - [x] Fix canvas jump when moving furniture (branch fix/canvas-jump-furniture-drag, 2026-05-24)
   - **`useViewport.js`**: `handleStageDragEnd` now guards `if (e.target !== e.target.getStage()) return` before updating pan position. Konva bubbles `dragend` from draggable child nodes (furniture Groups) up to the Stage; without the guard `e.target.x()/y()` returns the furniture's world position and overwrites the Stage pan state, causing the canvas to jump to a random location on every furniture move.
 
+- [x] Door casings + door materials (branch fix/door-casings-and-materials, 2026-05-24)
+  - **Door casings**: `reconcileDoors.js` now adds a static wooden frame (jambs + header) around every door opening, on both sides of the wall. The casing sits in the same `meshMap` under key `${id}:casing` and is positioned at the opening centre with wall yaw — it does not animate with the door panel. Without the casing, sliding doors and double doors appeared as flat panels on a solid wall (the CSG hole is there but invisible from the room side because the panel covers it / both panels swing perpendicular to the wall hiding the hole edges). The casing makes the doorway opening obvious from any angle. Casing dimensions: 7 cm trim width, 1.8 cm sticking out from each wall face, wood color `#a8896a`.
+  - **Door materials**: `o.material` field added (default `'painted'`). Three options: **painted** (flat color, current behaviour), **wood** (vertical wood-grain procedural texture from `proceduralTextures.getDoorTexture`), **glass** (frosted `MeshPhysicalMaterial` with transmission — pairs well with sliding doors). `OpeningProps.jsx` renders a 3-button picker below the color row for doors only. `matFp` extended to `${color}:${materialId}` so material changes trigger panel rebuild.
+  - **`proceduralTextures.js`**: new `drawDoorWood` function (vertical grain + 3 darker knot patches) and `getDoorTexture()` export. Cached at key `door:wood`.
+  - **`reconcileDoors.js`**: new `buildPanelMaterial(materialId, color)` helper replaces inline `MeshStandardMaterial`. `buildDoubleDoor` and `buildSlidingDoor` accept `materialId` parameter.
+
 ### 🚧 In Progress
 - (nothing active)
 
