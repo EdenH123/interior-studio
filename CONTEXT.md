@@ -563,6 +563,19 @@ interior-studio/
   - `layers` added to the dep array of each affected `useEffect` so toggling a layer ON correctly re-reconciles with normal visibility restored.
   - No changes to reconciler files — all logic is in `useThree.js`.
 
+- [x] Overhauled procedural textures — realistic PBR materials (branch claude/object-resize-models-bikg3, 2026-05-24)
+  - Added `hash2` + `valueNoise` + `fbm` noise utilities to `proceduralTextures.js` for natural-looking variation.
+  - **Brick**: fbm per-face variation, mortar depth gradient, corner micro-chips, separate roughness map.
+  - **Stone**: procedurally randomised block sizes, bevel edges with light/shadow, fbm surface noise.
+  - **Wood panel**: per-plank tones, dense wavy grain, multi-ring knots.
+  - **Concrete wall**: multi-scale fbm aggregate texture, formwork seams, pitting holes.
+  - **Floor wood**: per-plank color + knots with concentric rings, grain, end-grain joints, roughness map (smooth mid-plank, rough at joints/knots). Resolution 512×256.
+  - **Floor tile**: fbm clouding + off-center specular highlight + grout depth; low roughness 0.22 + metalness 0.03 for porcelain gloss.
+  - **Marble**: bezier veins with branches, background clouding, crystal specks, roughness map (smooth slab, rough at veins). 1024×1024 resolution.
+  - **Concrete floor**: multi-scale fbm, saw-cut expansion joints, aggregate pits.
+  - **Carpet**: loop-pile dot grid + directional sheen.
+  - `sceneReconcilers.js`: wired `roughnessMap` and `metalness` into all three material builders (wall, floor, ceiling).
+
 - [x] Corner resize handles on 2D canvas (branch claude/object-resize-models-bikg3, 2026-05-24)
   - `ResizeHandle.jsx` (new): four blue corner squares appear when a furniture item is selected.
   - Drag any corner to resize width + depth symmetrically from the centroid. Hold Shift for proportional (locked-ratio) resize.
