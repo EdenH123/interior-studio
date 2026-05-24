@@ -10,6 +10,7 @@ import useOpeningDrop from '../hooks/useOpeningDrop'
 import useCustomModelDrop from '../hooks/useCustomModelDrop'
 import useMarquee from '../hooks/useMarquee'
 import useFurnitureMultiDrag from '../hooks/useFurnitureMultiDrag'
+import useModifierKeys from '../hooks/useModifierKeys'
 import { isSelected, getSingleItem } from '../store/selectionHelpers'
 import Grid from './canvas/Grid'
 import Wall from './canvas/Wall'
@@ -29,7 +30,7 @@ import CalibrationPrompt from './canvas/CalibrationPrompt'
 import { detectRooms } from './canvas/roomDetection'
 import { DEFAULT_ROOM_FILL, getFloorMaterial, materialOverlayFill } from './canvas/floorMaterials'
 import { getFurnitureSpec } from './canvas/furnitureCatalog'
-import { SNAP_RADIUS_SCREEN, WORLD_HALF, GRID_SIZE, snapTo90, findNearestSnapPoint } from './canvas/constants'
+import { SNAP_RADIUS_SCREEN, WORLD_HALF, GRID_SIZE, snapTo90, snapTo45, findNearestSnapPoint } from './canvas/constants'
 import { snapToGrid } from '../hooks/useViewport'
 import HudOverlay from './canvas/HudOverlay'
 
@@ -77,7 +78,8 @@ export default function CanvasArea() {
 
   const { view, recenterIfUnset, handleWheel, handleStageDragEnd } = useViewport()
   const spaceDown = useCanvasKeyboard()
-  const handleStageMouseDown = useDrawWalls(stageRef, view.scale, spaceDown)
+  const { shiftDown, altDown } = useModifierKeys()
+  const handleStageMouseDown = useDrawWalls(stageRef, view.scale, spaceDown, shiftDown, altDown)
   const dragHandlers = combineDragHandlers(
     useFurnitureDrop(containerRef, view),
     useOpeningDrop(containerRef, view),
@@ -100,8 +102,9 @@ export default function CanvasArea() {
   const snapTarget = cursorWorld
     ? findNearestSnapPoint(cursorWorld, walls, SNAP_RADIUS_SCREEN / view.scale)
     : null
+  const snapFn = altDown ? ((_s, e) => e) : shiftDown ? snapTo90 : snapTo45
   const previewEnd = drawStart && cursorWorld
-    ? snapTarget ?? snapTo90(drawStart, cursorWorld)
+    ? snapTarget ?? snapFn(drawStart, cursorWorld)
     : null
 
   return (
@@ -231,7 +234,7 @@ export default function CanvasArea() {
           </Layer>
         </Stage>
       )}
-      <HudOverlay view={view} cursor={cursorWorld} drawing={!!drawStart} spaceDown={spaceDown} selection={selection} calibration={calibration} />
+      <HudOverlay view={view} cursor={cursorWorld} drawing={!!drawStart} spaceDown={spaceDown} selection={selection} calibration={calibration} shiftDown={shiftDown} altDown={altDown} />
       {calibration?.p1 && calibration?.p2 && (
         <CalibrationPrompt p1={calibration.p1} p2={calibration.p2}
           onConfirm={applyCalibration} onCancel={cancelCalibration} />
