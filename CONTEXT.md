@@ -563,6 +563,13 @@ interior-studio/
   - `layers` added to the dep array of each affected `useEffect` so toggling a layer ON correctly re-reconciles with normal visibility restored.
   - No changes to reconciler files — all logic is in `useThree.js`.
 
+- [x] Corner resize handles on 2D canvas (branch claude/object-resize-models-bikg3, 2026-05-24)
+  - `ResizeHandle.jsx` (new): four blue corner squares appear when a furniture item is selected.
+  - Drag any corner to resize width + depth symmetrically from the centroid. Hold Shift for proportional (locked-ratio) resize.
+  - Handles follow the item's rotation, are counter-scaled so they stay 7 px on screen at any zoom level.
+  - Uses the same `dragBoundFunc` pin-and-read-pointer pattern as `RotationHandle`.
+  - Wired into `CanvasArea.jsx` alongside the existing `RotationHandle`; no store changes needed.
+
 ### 🚧 In Progress
 - (nothing active)
 
