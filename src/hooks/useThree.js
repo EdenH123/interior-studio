@@ -75,6 +75,7 @@ export default function useThree(containerRef) {
   const solo3d          = useStore((s) => s.solo3d)
   const xrayCeiling     = useStore((s) => s.xrayCeiling)
   const ceilingsVisible = useStore((s) => s.ceilingsVisible)
+  const layers          = useStore((s) => s.layers)
   const select          = useStore((s) => s.select)
   const clearSelection  = useStore((s) => s.clearSelection)
   const toggleDoorOpen  = useStore((s) => s.toggleDoorOpen)
@@ -222,7 +223,11 @@ export default function useThree(containerRef) {
     reconcileWalls(stateRef.current.scene, walls, openings, wallMeshes.current, {
       levelOffsets, levelHeights, activeLevelId: activeLevel, solo: solo3d, xray: xrayCeiling,
     })
-  }, [walls, openings, levels, activeLevel, solo3d, xrayCeiling])
+    // Apply layer visibility after reconciling (walls layer controls wall meshes)
+    if (!layers.walls) {
+      for (const m of wallMeshes.current.values()) m.visible = false
+    }
+  }, [walls, openings, levels, activeLevel, solo3d, xrayCeiling, layers])
 
   // ── doors ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -231,7 +236,11 @@ export default function useThree(containerRef) {
     reconcileDoors(stateRef.current.scene, walls, openings, doorMeshes.current, doorAnims.current, {
       levelOffsets, activeLevelId: activeLevel, solo: solo3d,
     })
-  }, [walls, openings, levels, activeLevel, solo3d])
+    // Door panels are openings; hide if either walls or openings layer is off
+    if (!layers.walls || !layers.openings) {
+      for (const m of doorMeshes.current.values()) m.visible = false
+    }
+  }, [walls, openings, levels, activeLevel, solo3d, layers])
 
   // ── furniture + lights ───────────────────────────────────────────────────────
   // Resolve custom-model blob URLs (created lazily from stored base64).
@@ -254,7 +263,11 @@ export default function useThree(containerRef) {
       lightMap.current, lighting.lightsOn,
       { levelOffsets, levelHeights, activeLevelId: activeLevel, solo: solo3d },
     )
-  }, [resolvedFurniture, lighting.lightsOn, levels, activeLevel, solo3d])
+    // Apply layer visibility after reconciling
+    if (!layers.furniture) {
+      for (const m of furnMeshes.current.values()) m.visible = false
+    }
+  }, [resolvedFurniture, lighting.lightsOn, levels, activeLevel, solo3d, layers])
 
   // ── rooms + ceilings ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -315,7 +328,12 @@ export default function useThree(containerRef) {
     reconcileCeilings(stateRef.current.scene, allRooms, ceilingMeshes.current,
       ceilingColorFor, levelOffsets, levels,
       { solo: solo3d, activeLevelId: activeLevel, visible: ceilingsVisible }, ceilingMatIdFor)
-  }, [walls, roomMeta, furniture, levels, activeLevel, solo3d, ceilingsVisible])
+    // Apply layer visibility after reconciling (rooms layer controls floors + ceilings)
+    if (!layers.rooms) {
+      for (const m of roomMeshes.current.values()) m.visible = false
+      for (const m of ceilingMeshes.current.values()) m.visible = false
+    }
+  }, [walls, roomMeta, furniture, levels, activeLevel, solo3d, ceilingsVisible, layers])
 
   // ── selection highlight ──────────────────────────────────────────────────────
   useEffect(() => {
