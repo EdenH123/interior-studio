@@ -52,15 +52,23 @@ point instead of wherever the cursor was. This makes it easy to close
 rooms (snap back to where you started) and to connect walls cleanly to
 existing geometry without aiming.
 
-### 90° wall snapping
+### Wall angle snapping
 
-If there's no nearby snap point, the preview wall automatically locks to
-**perfectly horizontal or vertical** from the start point. The cursor
-suggests the direction; the wall just stays straight.
+If there's no nearby snap point the preview wall locks to the nearest
+**45° multiple** from the start point (0°, 45°, 90°, 135°, 180°, 225°,
+270°, or 315°). A cyan degree readout at the midpoint shows the current
+angle live.
 
-If you want a free angle, you'll need to either draw to an existing
-snap point or place a wall and rotate the world (rotation isn't in this
-build — every wall is currently 0° or 90°).
+Two modifier keys change the snap mode while you hold them:
+
+| Key | Snap mode |
+|---|---|
+| *(none)* | 45° multiples (default) |
+| **Shift** | 90° only (horizontal / vertical) |
+| **Alt** | Free angle — no snapping |
+
+The HUD hint at the bottom of the canvas reflects the active mode.
+Release the key to return to the default 45° snap.
 
 ### Deleting a wall
 
@@ -213,8 +221,10 @@ You can select more than one item at a time in three ways:
 With multiple items selected, the right panel shows shared editing controls
 based on what's selected:
 
-- **All furniture** — shared Rotation control (applies to every piece
-  relative to its own centre) and a Material picker (applies to all).
+- **All furniture** — an **Align** section with six buttons (Left,
+  Ctr·X, Right, Top, Ctr·Y, Bot) that snap all selected pieces to a
+  shared edge or centre line, plus a shared Rotation control and a
+  Material picker (both apply to all selected pieces).
 - **All rooms** — shared **Floor material** and **Ceiling material** pickers
   that apply to every selected room at once. Swatches show no active
   selection when the rooms have different materials currently.
@@ -855,7 +865,9 @@ your cursor position in metres.
 | `Space` (hold) + drag | Pan the canvas |
 | Mouse wheel | Zoom 2D (or zoom 3D camera, when hovering the 3D view) |
 | Middle-mouse drag | Pan the canvas |
-| Left-click (empty canvas) | Start / extend a wall chain |
+| Left-click (empty canvas) | Start / extend a wall chain (snaps to 45°) |
+| `Shift` (hold, while drawing) | Lock wall to 90° only |
+| `Alt` (hold, while drawing) | Free angle — no snap |
 | Left-click (item) | Select item |
 | `Shift`+click (item) | Add/remove item from multi-selection |
 | Drag on empty canvas | Draw marquee rectangle to select items inside |
