@@ -545,6 +545,15 @@ interior-studio/
   - **Door handles**: new `buildDoorKnob()` (rosette + stem + sphere, brushed dark metal) and `attachKnobPair(parent, x, y)` helpers add knobs to both faces of the panel at handle height (1.0 m). Single hinged door gets one knob pair near the free edge. Double door gets a knob pair on each panel's free edge (where the panels meet). Sliding door gets a `buildSlidingPull()` vertical chrome bar near the leading edge.
   - **`reconcileDoors.js`**: single-door creation now stores `group.userData.panel` reference so the material rebuild path doesn't have to guess at `children[0]` (which is no longer always the panel after handles were added).
 
+- [x] Fix double-door CSG hole missing + wall heights per level (2026-05-24)
+  - **`wallCSG.js`**: added `current.updateMatrixWorld()` after each `evaluator.evaluate()` call in the loop. Without this, the result `Brush` from the first cut had a stale/uninitialised `matrixWorld`; the second cut (e.g. `door-double` on the same wall as a `door-sliding`) received the wrong input transform and produced no visible hole in the browser (worked in Node.js because the identity matrix happened to coincide with the intended transform there).
+  - **`sceneReconcilers.js`** + **`useThree.js`**: `reconcileWalls` now reads wall height as `w.height ?? opts.levelHeights?.get(w.levelId) ?? WALL_HEIGHT`. `useThree.js` passes `levelHeights: new Map(levels.map(lv => [lv.id, lv.height]))` in the walls effect opts. This fixes walls on upper floors always being `WALL_HEIGHT` (2.4 m) tall regardless of the configured level height (default 2.7 m), causing a 0.3 m gap at the top of every upper-floor room.
+
+- [x] Fix stairs going through upper floor base (2026-05-24)
+  - **Root cause**: stair catalog hardcodes `height: 2.7` but level heights vary (Ground Floor = 2.4 m). Stairs were 0.3 m taller than the Ground Floor rise, so the top steps poked through Floor 1's floor slab.
+  - **`reconcileFurniture.js`**: for stair items (`stairStyle != null`), `effectiveHeight = opts.levelHeights?.get(f.levelId) ?? f.height` is used for geometry dims instead of `f.height`. This fixes both existing and newly placed stairs. `useThree.js` now passes `levelHeights` to `reconcileFurniture` alongside `levelOffsets`.
+  - **`furnitureSlice.js`**: `addFurniture` for stair items now stores `height: currentLevel?.height ?? spec.height` so the correct rise is persisted from placement time.
+
 ### 🚧 In Progress
 - (nothing active)
 

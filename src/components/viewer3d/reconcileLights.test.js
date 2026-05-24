@@ -114,7 +114,10 @@ vi.mock('./furnitureModels', () => ({
   fitToBox: vi.fn(),
 }))
 vi.mock('./selectionHighlight', () => ({ setObjectEmissive: vi.fn() }))
-vi.mock('../canvas/furnitureMaterials', () => ({ furnitureColorFor: () => '#fff' }))
+vi.mock('../canvas/furnitureMaterials', () => ({
+  furnitureColorFor: () => '#fff',
+  furnitureMaterialPropsFor: () => null,
+}))
 vi.mock('../../utils/colorTemp', () => ({
   kelvinToRgb: () => ({ r: 255, g: 220, b: 180 }),
 }))
