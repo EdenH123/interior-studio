@@ -6,13 +6,15 @@
 // 0.9 m for windows so they sit above counter height.
 
 export const OPENINGS = [
-  { type: 'door',            label: 'Hinged Door',  width: 0.9, height: 2.1, sillHeight: 0   },
-  { type: 'door-double',     label: 'Double Door',  width: 1.6, height: 2.1, sillHeight: 0   },
-  { type: 'door-sliding',    label: 'Sliding Door', width: 1.2, height: 2.1, sillHeight: 0   },
-  { type: 'window',          label: 'Window',       width: 1.2, height: 1.4, sillHeight: 0.9 },
-  { type: 'window-fixed',    label: 'Fixed Window', width: 1.5, height: 1.2, sillHeight: 0.9 },
-  { type: 'window-casement', label: 'Casement',     width: 1.0, height: 1.2, sillHeight: 0.9 },
-  { type: 'window-arched',   label: 'Arched Window',width: 1.0, height: 1.4, sillHeight: 0.9 },
+  { type: 'door',            label: 'Hinged Door',   width: 0.9, height: 2.1, sillHeight: 0   },
+  { type: 'door-double',     label: 'Double Door',   width: 1.6, height: 2.1, sillHeight: 0   },
+  { type: 'door-sliding',    label: 'Sliding Door',  width: 1.2, height: 2.1, sillHeight: 0   },
+  { type: 'window',          label: 'Window',        width: 1.2, height: 1.4, sillHeight: 0.9 },
+  { type: 'window-fixed',    label: 'Fixed Window',  width: 1.5, height: 1.2, sillHeight: 0.9 },
+  { type: 'window-casement', label: 'Casement',      width: 1.0, height: 1.2, sillHeight: 0.9 },
+  { type: 'window-arched',   label: 'Arched Window', width: 1.0, height: 1.4, sillHeight: 0.9 },
+  { type: 'opening',         label: 'Open Arch',     width: 1.2, height: 2.1, sillHeight: 0   },
+  { type: 'opening-wide',    label: 'Wide Opening',  width: 2.4, height: 2.2, sillHeight: 0   },
 ]
 
 const BY_TYPE = Object.fromEntries(OPENINGS.map((o) => [o.type, o]))

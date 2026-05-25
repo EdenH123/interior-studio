@@ -32,9 +32,11 @@ export default function useDrawWalls(stageRef, viewScale, spaceDown, shiftDown =
     if (evt.button === 1 || (evt.button === 0 && spaceDown)) return
     if (evt.button !== 0) return
     if (calibration) return
-    // Allow shape clicks when a wall chain is in progress — the closing click
-    // often lands on a wall shape near the snap endpoint.
-    if (e.target !== stageRef.current && !drawStart) return
+    // Allow shape clicks when a wall chain is in progress, or when the click
+    // landed on a room polygon (enables starting interior partition walls
+    // by clicking inside an existing room).
+    const targetIsRoom = e.target?.getAttr?.('name') === 'room-fill'
+    if (e.target !== stageRef.current && !drawStart && !targetIsRoom) return
     clearSelection()
     const p = stageRef.current.getRelativePointerPosition()
     if (!p) return

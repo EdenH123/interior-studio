@@ -40,7 +40,7 @@ export default function FurnitureProps({ item, onUpdate }) {
       <DimField label="W" dim="width"  item={item} onCommit={(v) => commitDim('width',  v)} />
       <DimField label="D" dim="depth"  item={item} onCommit={(v) => commitDim('depth',  v)} />
       <DimField label="H" dim="height" item={item} onCommit={(v) => commitDim('height', v)} />
-      <Row label="Rotation" value={`${item.rotation}°`} />
+      <RotationField item={item} onUpdate={onUpdate} />
       <Row label="Position" value={`${formatMeters(item.x)}, ${formatMeters(item.y)}`} />
       <Row label="Model" value={describeModelStatus(item.model ?? item.customModelId)} />
       {item.wallMounted && <MountHeightField item={item} onUpdate={onUpdate} />}
@@ -185,6 +185,39 @@ function PartColorRow({ label, value, onChange }) {
           ? <button onClick={() => onChange(null)} className="text-gray-500 hover:text-gray-300 text-[10px] leading-none">✕</button>
           : <span className="text-gray-600 text-[10px]">default</span>
         }
+      </div>
+    </div>
+  )
+}
+
+function RotationField({ item, onUpdate }) {
+  const [val, setVal] = useState(String(Math.round(item.rotation)))
+  useEffect(() => { setVal(String(Math.round(item.rotation))) }, [item.rotation])
+
+  function commit() {
+    const deg = parseFloat(val)
+    if (!isFinite(deg)) { setVal(String(Math.round(item.rotation))); return }
+    const normalized = ((Math.round(deg) % 360) + 360) % 360
+    onUpdate(item.id, { rotation: normalized })
+    setVal(String(normalized))
+  }
+
+  return (
+    <div className="flex justify-between items-center py-1 border-b border-gray-800">
+      <span className="text-gray-500 text-[11px] uppercase tracking-wider">Rotation</span>
+      <div className="flex items-center gap-1">
+        <input
+          type="number" step="1"
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter')  { e.preventDefault(); commit() }
+            if (e.key === 'Escape') { e.preventDefault(); setVal(String(Math.round(item.rotation))); e.currentTarget.blur() }
+          }}
+          className="w-16 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-gray-200 text-[12px] font-mono text-right focus:border-blue-500 focus:outline-none"
+        />
+        <span className="text-gray-500 text-[10px]">°</span>
       </div>
     </div>
   )

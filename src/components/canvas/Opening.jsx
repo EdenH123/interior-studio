@@ -3,7 +3,7 @@ import { PIXELS_PER_METER } from './constants'
 import { openingPlacement, projectOntoWall, wallLengthPx } from './openingGeometry'
 import {
   DoorGlyph, DoubleDoorGlyph, SlidingDoorGlyph,
-  WindowGlyph, FixedWindowGlyph, CasementGlyph, ArchedWindowGlyph,
+  WindowGlyph, FixedWindowGlyph, CasementGlyph, ArchedWindowGlyph, OpenArchGlyph,
 } from './OpeningGlyphs'
 
 // 2D rendering for a single opening on a wall. The Group is positioned at
@@ -75,7 +75,8 @@ export default function Opening({ opening, wall, view, selected, onSelect, onShi
       {opening.type === 'window'        && <WindowGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
       {opening.type === 'window-fixed'  && <FixedWindowGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
       {opening.type === 'window-casement' && <CasementGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
-      {opening.type === 'window-arched' && <ArchedWindowGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
+      {opening.type === 'window-arched'  && <ArchedWindowGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
+      {(opening.type === 'opening' || opening.type === 'opening-wide') && <OpenArchGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
     </Group>
   )
 }
