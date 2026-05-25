@@ -325,27 +325,26 @@ console.log('Generating furniture GLBs (v2 — high-detail procedural)…\n')
 console.log('  (chair.glb produced separately by process-sheenchair.mjs)\n')
 
 // ─── SOFA  2.0 × 0.9 × 0.85 ──────────────────────────────────────────────────
+// frame = solid structural upholstery; cushions = removable seat+back pads (lighter tone)
 writeGLB('sofa', [
   { parts: [
     box(-1.00, 0, -0.45,  1.00, 0.09, 0.45),                     // base platform
-    box(-0.86, 0.09, -0.45,  0.86, 0.85, -0.40),                 // solid back panel — closes open back + top gaps
-    // gap dividers: fill the 6 cm x-slots between cushions so hollow interior isn't visible
+    box(-0.86, 0.09, -0.45,  0.86, 0.85, -0.40),                 // solid back panel
     box(-0.38, 0.09, -0.45, -0.32, 0.42,  0.45),                 // seat gap L
     box( 0.32, 0.09, -0.45,  0.38, 0.42,  0.45),                 // seat gap R
     box(-0.38, 0.42, -0.45, -0.32, 0.85, -0.15),                 // back gap L
     box( 0.32, 0.42, -0.45,  0.38, 0.85, -0.15),                 // back gap R
-    // three seat cushions — domed top surfaces
+    box(-1.00, 0.09, -0.45, -0.86, 0.65, 0.45),                  // left armrest
+    box( 0.86, 0.09, -0.45,  1.00, 0.65, 0.45),                  // right armrest
+  ], color: C_UPHOLSTERY, roughness: 0.85, name: 'frame' },
+  { parts: [
     cushion(-1.00, 0.09, -0.45, -0.38, 0.42, 0.45, 0.034),
     cushion(-0.32, 0.09, -0.45,  0.32, 0.42, 0.45, 0.034),
     cushion( 0.38, 0.09, -0.45,  1.00, 0.42, 0.45, 0.034),
-    // three back cushions — domed front faces
     backCushion(-1.00, 0.42, -0.45, -0.38, 0.85, -0.15, 0.030),
     backCushion(-0.32, 0.42, -0.45,  0.32, 0.85, -0.15, 0.030),
     backCushion( 0.38, 0.42, -0.45,  1.00, 0.85, -0.15, 0.030),
-    // armrests
-    box(-1.00, 0.09, -0.45, -0.86, 0.65, 0.45),
-    box( 0.86, 0.09, -0.45,  1.00, 0.65, 0.45),
-  ], color: C_UPHOLSTERY, roughness: 0.85, name: 'fabric' },
+  ], color: [0.82, 0.74, 0.65, 1], roughness: 0.85, name: 'cushions' },
   { parts: [
     cyl(-0.88, -0.38, 0, 0.09, 0.055, 8),
     cyl( 0.88, -0.38, 0, 0.09, 0.055, 8),
@@ -359,11 +358,13 @@ writeGLB('armchair', [
   { parts: [
     box(-0.45, 0, -0.45, 0.45, 0.09, 0.45),                      // base platform
     box(-0.33, 0.09, -0.45, 0.33, 0.85, -0.40),                  // solid back panel
-    cushion(-0.45, 0.09, -0.45, 0.45, 0.42, 0.45, 0.030),        // seat cushion
-    backCushion(-0.45, 0.42, -0.45, 0.45, 0.85, -0.13, 0.028),   // back cushion
     box(-0.45, 0.09, -0.45, -0.33, 0.65, 0.45),                  // left armrest
     box( 0.33, 0.09, -0.45,  0.45, 0.65, 0.45),                  // right armrest
-  ], color: C_UPHOLSTERY, roughness: 0.85, name: 'fabric' },
+  ], color: C_UPHOLSTERY, roughness: 0.85, name: 'frame' },
+  { parts: [
+    cushion(-0.45, 0.09, -0.45, 0.45, 0.42, 0.45, 0.030),        // seat cushion
+    backCushion(-0.45, 0.42, -0.45, 0.45, 0.85, -0.13, 0.028),   // back cushion
+  ], color: [0.82, 0.74, 0.65, 1], roughness: 0.85, name: 'cushions' },
   { parts: [
     cyl(-0.38, -0.38, 0, 0.09, 0.04, 8),
     cyl( 0.38, -0.38, 0, 0.09, 0.04, 8),
@@ -373,17 +374,20 @@ writeGLB('armchair', [
 ])
 
 // ─── COFFEE TABLE  1.1 × 0.6 × 0.45 ─────────────────────────────────────────
+// Stone/marble top + wood lower shelf + dark metal legs.
 writeGLB('coffee-table', [
   { parts: [
-    box(-0.55, 0.39, -0.30, 0.55, 0.45, 0.30),   // top
+    box(-0.55, 0.39, -0.30, 0.55, 0.45, 0.30),   // top slab
+  ], color: [0.94, 0.93, 0.91, 1], roughness: 0.12, metallic: 0.02, name: 'top' },
+  { parts: [
     box(-0.52, 0.12, -0.27, 0.52, 0.17, 0.27),   // lower shelf
-  ], color: C_WOOD_LT, name: 'top' },
+  ], color: C_WOOD_LT, roughness: 0.65, name: 'shelf' },
   { parts: [
     cyl(-0.48, -0.26, 0, 0.39, 0.028, 8),
     cyl( 0.48, -0.26, 0, 0.39, 0.028, 8),
     cyl(-0.48,  0.26, 0, 0.39, 0.028, 8),
     cyl( 0.48,  0.26, 0, 0.39, 0.028, 8),
-  ], color: C_WOOD_DK, roughness: 0.65, name: 'legs' },
+  ], color: [0.22, 0.22, 0.25, 1], roughness: 0.30, metallic: 0.6, name: 'legs' },
 ])
 
 // ─── DINING TABLE  1.6 × 0.9 × 0.75 ─────────────────────────────────────────
@@ -514,16 +518,19 @@ writeGLB('lamp', [
 ])
 
 // ─── TV  1.2 × 0.15 × 0.7 ────────────────────────────────────────────────────
+// frame + screen + brushed-aluminium stand.
 writeGLB('tv', [
   { parts: [
-    box(-0.600, 0.085, -0.075, 0.600, 0.700, 0.075),
-    box(-0.560, 0.085, -0.030, 0.560, 0.108, 0.040),
-    cyl(0, 0, 0, 0.09, 0.025, 8),
-    box(-0.220, 0, -0.075, 0.220, 0.025, 0.075),
+    box(-0.600, 0.085, -0.075, 0.600, 0.700, 0.075),   // display body
+    box(-0.560, 0.085, -0.030, 0.560, 0.108, 0.040),   // thin bezel shelf
   ], color: C_TV, name: 'frame' },
   { parts: [
-    box(-0.570, 0.110, -0.040, 0.570, 0.675, 0.000),
+    box(-0.570, 0.110, -0.040, 0.570, 0.675, 0.000),   // screen panel
   ], color: [0.02, 0.02, 0.05, 1], roughness: 0.05, metallic: 0.1, name: 'screen' },
+  { parts: [
+    cyl(0, 0, 0, 0.09, 0.025, 8),                      // stand column
+    box(-0.220, 0, -0.075, 0.220, 0.025, 0.075),       // stand base
+  ], color: [0.65, 0.65, 0.68, 1], roughness: 0.25, metallic: 0.5, name: 'stand' },
 ])
 
 // ─── LOVESEAT  1.40 × 0.85 × 0.85 ───────────────────────────────────────────
@@ -533,13 +540,15 @@ writeGLB('loveseat', [
     box(-0.56, 0.09, -0.425, 0.56, 0.85, -0.38),                 // solid back panel
     box(-0.04, 0.09, -0.425, 0.04, 0.42,  0.425),                // seat gap divider
     box(-0.04, 0.42, -0.425, 0.04, 0.85, -0.13),                 // back gap divider
+    box(-0.70, 0.09, -0.425, -0.56, 0.65,  0.425),               // left armrest
+    box( 0.56, 0.09, -0.425,  0.70, 0.65,  0.425),               // right armrest
+  ], color: C_UPHOLSTERY, roughness: 0.85, name: 'frame' },
+  { parts: [
     cushion(-0.70, 0.09, -0.425, -0.04, 0.42, 0.425, 0.034),
     cushion( 0.04, 0.09, -0.425,  0.70, 0.42, 0.425, 0.034),
     backCushion(-0.70, 0.42, -0.425, -0.04, 0.85, -0.13, 0.030),
     backCushion( 0.04, 0.42, -0.425,  0.70, 0.85, -0.13, 0.030),
-    box(-0.70, 0.09, -0.425, -0.56, 0.65,  0.425),               // left armrest
-    box( 0.56, 0.09, -0.425,  0.70, 0.65,  0.425),               // right armrest
-  ], color: C_UPHOLSTERY, roughness: 0.85, name: 'fabric' },
+  ], color: [0.82, 0.74, 0.65, 1], roughness: 0.85, name: 'cushions' },
   { parts: [
     cyl(-0.62, -0.37, 0, 0.09, 0.050, 8),
     cyl( 0.62, -0.37, 0, 0.09, 0.050, 8),
@@ -552,12 +561,14 @@ writeGLB('loveseat', [
 // Long seat (full length), back only on one end, raised head-end rest.
 writeGLB('chaise', [
   { parts: [
-    box(-0.90, 0, -0.40, 0.90, 0.09, 0.40),
-    cushion(-0.90, 0.09, -0.40, 0.90, 0.42, 0.40, 0.030, 8, 4),
-    backCushion(-0.90, 0.42, -0.40, -0.72, 0.85, -0.10, 0.028),
-    box(-0.90, 0.09, -0.40, -0.76, 0.65, 0.40),
-    box(-0.90, 0.09, 0.26, -0.76, 0.45, 0.40),
-  ], color: C_UPHOLSTERY, roughness: 0.85, name: 'fabric' },
+    box(-0.90, 0, -0.40, 0.90, 0.09, 0.40),                     // base platform
+    box(-0.90, 0.09, -0.40, -0.76, 0.65, 0.40),                 // armrest/back body
+    box(-0.90, 0.09, 0.26, -0.76, 0.45, 0.40),                  // arm side fill
+  ], color: C_UPHOLSTERY, roughness: 0.85, name: 'frame' },
+  { parts: [
+    cushion(-0.90, 0.09, -0.40, 0.90, 0.42, 0.40, 0.030, 8, 4), // seat cushion
+    backCushion(-0.90, 0.42, -0.40, -0.72, 0.85, -0.10, 0.028), // back cushion
+  ], color: [0.82, 0.74, 0.65, 1], roughness: 0.85, name: 'cushions' },
   { parts: [
     cyl(-0.82, -0.35, 0, 0.09, 0.045, 8),
     cyl( 0.82, -0.35, 0, 0.09, 0.045, 8),
