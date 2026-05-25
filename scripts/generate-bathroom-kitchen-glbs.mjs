@@ -320,6 +320,8 @@ const C_MIRROR   = [0.78, 0.86, 0.90, 1]   // mirror blue-grey
 const C_WICKER   = [0.56, 0.43, 0.28, 1]   // wicker / rattan
 const C_STAINLESS= [0.55, 0.60, 0.63, 1]   // brushed steel
 const C_WOOD_LT  = [0.60, 0.42, 0.22, 1]   // light oak (reused from main script)
+const C_MARBLE   = [0.96, 0.95, 0.94, 1]   // marble / stone countertop
+const C_PAINT_W  = [0.93, 0.92, 0.90, 1]   // painted white cabinet
 
 console.log('Generating bathroom & kitchen GLBs…\n')
 
@@ -486,31 +488,39 @@ writeGLB('laundry-basket', [
 // ─── KITCHEN ──────────────────────────────────────────────────────────────────
 
 // KITCHEN SINK  0.80 × 0.60 × 0.90
+// Oak cabinet below + stainless countertop/sink basin + chrome tap & handles.
 writeGLB('kitchen-sink', [
   { parts: [
     box(-0.40, 0,    -0.30,  0.40, 0.82,  0.30),        // cabinet body
     box(-0.38, 0.02,  0.29,  0.38, 0.80,  0.31),        // cabinet door
+  ], color: C_WOOD_LT, roughness: 0.55, name: 'cabinet' },
+  { parts: [
     box(-0.40, 0.82, -0.30,  0.40, 0.86,  0.30),        // countertop
     box(-0.32, 0.84, -0.22,  0.32, 0.90,  0.18),        // sink basin
-  ], color: C_STAINLESS, roughness: 0.30, metallic: 0.6, name: 'body' },
+  ], color: C_STAINLESS, roughness: 0.22, metallic: 0.55, name: 'sink' },
   { parts: [
     box(-0.16, 0.40,  0.30,  0.16, 0.42,  0.32),        // door handle
     cyl(0, -0.16, 0.85, 0.93, 0.013, 8),                // tap riser
     box(-0.007, 0.92, -0.16, 0.007, 0.94, -0.06),       // tap spout
-  ], color: C_CHROME, roughness: 0.15, metallic: 0.9, name: 'fittings' },
+    box( 0.06, 0.875, -0.20,  0.10, 0.895, -0.13),      // hot handle
+    box(-0.10, 0.875, -0.20, -0.06, 0.895, -0.13),      // cold handle
+  ], color: C_CHROME, roughness: 0.12, metallic: 0.9, name: 'chrome' },
 ])
 
 // FRIDGE  0.70 × 0.70 × 1.85
+// Dark gunmetal body + stainless steel doors + chrome handles.
 writeGLB('fridge', [
   { parts: [
     box(-0.35, 0,    -0.35,  0.35, 1.85,  0.35),        // body
+  ], color: [0.18, 0.19, 0.20, 1], roughness: 0.30, metallic: 0.3, name: 'body' },
+  { parts: [
     box(-0.33, 0.02,  0.34,  0.33, 0.85,  0.36),        // lower fridge door
     box(-0.33, 0.87,  0.34,  0.33, 1.83,  0.36),        // upper freezer door
-  ], color: C_CHROME, roughness: 0.20, metallic: 0.7, name: 'body' },
+  ], color: C_STAINLESS, roughness: 0.18, metallic: 0.6, name: 'doors' },
   { parts: [
     box( 0.18, 0.40,  0.35,  0.22, 0.60,  0.38),        // lower handle
     box( 0.18, 1.20,  0.35,  0.22, 1.40,  0.38),        // upper handle
-  ], color: C_STAINLESS, roughness: 0.15, metallic: 0.9, name: 'handles' },
+  ], color: C_CHROME, roughness: 0.12, metallic: 0.9, name: 'handles' },
 ])
 
 // OVEN  0.60 × 0.60 × 0.90
@@ -533,15 +543,18 @@ writeGLB('oven', [
 ])
 
 // DISHWASHER  0.60 × 0.60 × 0.85
+// Dark body + stainless control strip + chrome handle.
 writeGLB('dishwasher', [
   { parts: [
     box(-0.30, 0,    -0.30,  0.30, 0.85,  0.30),        // body
     box(-0.28, 0.02,  0.29,  0.28, 0.80,  0.31),        // door panel
-    box(-0.28, 0.80,  0.28,  0.28, 0.85,  0.31),        // control strip
   ], color: C_DARK_GRY, roughness: 0.40, name: 'body' },
   { parts: [
+    box(-0.28, 0.80,  0.28,  0.28, 0.85,  0.31),        // control strip
+  ], color: C_STAINLESS, roughness: 0.25, metallic: 0.5, name: 'controls' },
+  { parts: [
     box(-0.18, 0.74,  0.30,  0.18, 0.76,  0.32),        // handle
-  ], color: C_STAINLESS, roughness: 0.20, metallic: 0.8, name: 'handle' },
+  ], color: C_CHROME, roughness: 0.15, metallic: 0.85, name: 'handle' },
 ])
 
 // MICROWAVE  0.55 × 0.35 × 0.32  wallMounted  (-Z = wall)
@@ -559,11 +572,12 @@ writeGLB('microwave', [
 ])
 
 // UPPER CABINET  0.60 × 0.35 × 0.70  wallMounted  (-Z = wall)
+// Painted warm white body + chrome handle.
 writeGLB('upper-cabinet', [
   { parts: [
     box(-0.30, 0,    -0.175, 0.30, 0.70,  0.175),       // body
     box(-0.28, 0.02,  0.165, 0.28, 0.68,  0.185),       // door
-  ], color: C_CABINET, roughness: 0.35, name: 'body' },
+  ], color: C_PAINT_W, roughness: 0.30, name: 'body' },
   { parts: [
     box(-0.14, 0.33,  0.175, 0.14, 0.35,  0.195),       // handle
   ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'handle' },
@@ -582,29 +596,35 @@ writeGLB('range-hood', [
 ])
 
 // KITCHEN ISLAND  1.50 × 0.80 × 0.90
+// Oak wood cabinet + marble countertop + chrome handles on all four sides.
 writeGLB('kitchen-island', [
   { parts: [
     box(-0.75, 0,    -0.40,  0.75, 0.82,  0.40),        // cabinet body
-    box(-0.77, 0.82, -0.42,  0.77, 0.90,  0.42),        // countertop (slight overhang)
     box(-0.73, 0.02,  0.39, -0.03, 0.80,  0.41),        // front left door
     box( 0.03, 0.02,  0.39,  0.73, 0.80,  0.41),        // front right door
     box(-0.73, 0.02, -0.41, -0.03, 0.80, -0.39),        // back left door
     box( 0.03, 0.02, -0.41,  0.73, 0.80, -0.39),        // back right door
-  ], color: C_CABINET, roughness: 0.35, name: 'body' },
+  ], color: C_WOOD_LT, roughness: 0.55, name: 'cabinet' },
+  { parts: [
+    box(-0.77, 0.82, -0.42,  0.77, 0.90,  0.42),        // countertop (slight overhang)
+  ], color: C_MARBLE, roughness: 0.10, metallic: 0.02, name: 'counter' },
   { parts: [
     box(-0.60, 0.39,  0.40, -0.50, 0.41,  0.42),        // front handle L
     box( 0.50, 0.39,  0.40,  0.60, 0.41,  0.42),        // front handle R
+    box(-0.60, 0.39, -0.40, -0.50, 0.41, -0.42),        // back handle L
+    box( 0.50, 0.39, -0.40,  0.60, 0.41, -0.42),        // back handle R
   ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'handles' },
 ])
 
 // PANTRY UNIT  0.60 × 0.60 × 2.00
+// Painted warm white body + chrome handles.
 writeGLB('pantry-unit', [
   { parts: [
     box(-0.30, 0,    -0.30,  0.30, 2.00,  0.30),        // carcass
     box(-0.28, 0.02,  0.29,  0.28, 0.98,  0.31),        // lower door
     box(-0.28, 1.02,  0.29,  0.28, 1.98,  0.31),        // upper door
     box(-0.30, 0.98,  0.28,  0.30, 1.02,  0.31),        // middle rail
-  ], color: C_CABINET, roughness: 0.35, name: 'body' },
+  ], color: C_PAINT_W, roughness: 0.30, name: 'body' },
   { parts: [
     box( 0.15, 0.48,  0.30,  0.23, 0.50,  0.32),        // lower handle
     box( 0.15, 1.48,  0.30,  0.23, 1.50,  0.32),        // upper handle
@@ -612,6 +632,7 @@ writeGLB('pantry-unit', [
 ])
 
 // BAR STOOL  0.40 × 0.40 × 0.75
+// Fabric seat + wood column/base + chrome footrest.
 writeGLB('bar-stool', [
   { parts: [
     cushion(-0.185, 0.68, -0.185, 0.185, 0.75, 0.185, 0.018, 6, 6), // seat pad with dome
@@ -620,9 +641,11 @@ writeGLB('bar-stool', [
     cyl(0, 0, 0.06, 0.68, 0.033,  8),                   // central column
     box(-0.19, 0,    -0.025, 0.19, 0.055,  0.025),      // base X arm
     box(-0.025, 0,   -0.19,  0.025, 0.055, 0.19),       // base Z arm
+  ], color: C_WOOD_LT, roughness: 0.65, name: 'base' },
+  { parts: [
     box(-0.13, 0.35, -0.018, 0.13, 0.375,  0.018),      // foot-rest X
     box(-0.018, 0.35,-0.13,  0.018, 0.375, 0.13),       // foot-rest Z
-  ], color: C_WOOD_LT, roughness: 0.65, name: 'base' },
+  ], color: C_CHROME, roughness: 0.15, metallic: 0.85, name: 'footrest' },
 ])
 
 console.log('\nDone — 18 GLBs written.')
