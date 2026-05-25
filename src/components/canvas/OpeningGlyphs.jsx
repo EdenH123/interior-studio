@@ -122,6 +122,21 @@ export function CasementGlyph({ widthPx, scale, selected }) {
   )
 }
 
+export function OpenArchGlyph({ widthPx, scale, selected }) {
+  const half = widthPx / 2
+  const stroke = selected ? '#3b82f6' : '#e5e7eb'
+  const sw = selected ? 2 / scale : 1.5 / scale
+  const offset = 5 / scale
+  // Two jambs only — no door panel, no window glass — just an open hole
+  return (
+    <Group listening={false}>
+      <Line points={[-half, -offset, -half, offset]} stroke={stroke} strokeWidth={sw} />
+      <Line points={[half, -offset, half, offset]} stroke={stroke} strokeWidth={sw} />
+      <Line points={[-half * 0.6, 0, half * 0.6, 0]} stroke={stroke} strokeWidth={1 / scale} opacity={0.3} strokeDash={[3 / scale, 3 / scale]} />
+    </Group>
+  )
+}
+
 export function ArchedWindowGlyph({ widthPx, scale, selected }) {
   const half = widthPx / 2
   const stroke = selected ? '#3b82f6' : '#a5b4fc'
