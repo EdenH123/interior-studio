@@ -2,6 +2,10 @@ import { useEffect, useRef, useMemo } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js'
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import useStore from '../store/useStore'
 import {
   reconcileWalls, reconcileFurniture, reconcileRooms, reconcileCeilings, disposeAll,
@@ -153,6 +157,19 @@ export default function useThree(containerRef) {
     scene.add(floor)
     scene.add(new THREE.GridHelper(FLOOR_SIZE, FLOOR_SIZE, 0x374151, 0x1f2937))
 
+    // Post-processing: SSAO for contact shadows + subtle bloom for light edges.
+    const composer = new EffectComposer(renderer)
+    composer.addPass(new RenderPass(scene, camera))
+
+    const ssaoPass = new SSAOPass(scene, camera, width, height)
+    ssaoPass.kernelRadius = 0.5
+    ssaoPass.minDistance  = 0.001
+    ssaoPass.maxDistance  = 0.05
+    composer.addPass(ssaoPass)
+
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0.15, 0.4, 0.9)
+    composer.addPass(bloomPass)
+
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping  = true
     controls.zoomSpeed      = 0.8   // slightly slower than default to match 2D wheel feel
@@ -169,7 +186,7 @@ export default function useThree(containerRef) {
       // Skip OrbitControls.update during walkthrough — damping would fight
       // PointerLockControls and prevent mouselook from working.
       if (!stateRef.current.onFrame) controls.update()
-      renderer.render(scene, camera)
+      composer.render()
     }
 
     const ro = new ResizeObserver(([entry]) => {
@@ -178,6 +195,7 @@ export default function useThree(containerRef) {
       camera.aspect = width / height
       camera.updateProjectionMatrix()
       renderer.setSize(width, height)
+      composer.setSize(width, height)
     })
     ro.observe(container)
 
@@ -187,7 +205,7 @@ export default function useThree(containerRef) {
       { onSelect: select, onClear: clearSelection, onToggleDoor: toggleDoorOpen, onToggleWindow: toggleWindowOpen },
     )
 
-    stateRef.current = { scene, camera, renderer, controls, ro, raf: 0, detachPicking, onFrame: null }
+    stateRef.current = { scene, camera, renderer, composer, controls, ro, raf: 0, detachPicking, onFrame: null }
     // doorAnims is read directly by the tick closure; no slot needed on stateRef.
     tick()
 
@@ -208,6 +226,7 @@ export default function useThree(containerRef) {
         s.scene.remove(light)
       }
       lightMap.current.clear()
+      s.composer.dispose()
       s.renderer.dispose()
       if (s.renderer.domElement.parentNode) {
         s.renderer.domElement.parentNode.removeChild(s.renderer.domElement)
