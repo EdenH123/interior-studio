@@ -68,6 +68,11 @@ export const createUiSlice = (set) => ({
   lockAspectRatio: true,
   setLockAspectRatio: (val) => set({ lockAspectRatio: val }),
 
+  // Keyboard shortcuts cheat-sheet overlay.
+  showShortcuts: false,
+  toggleShortcuts: () => set((s) => ({ showShortcuts: !s.showShortcuts })),
+  closeShortcuts: () => set({ showShortcuts: false }),
+
   // AI panel takes over the right-hand slot when open (replaces
   // PropertiesPanel). Not persisted — opening on each fresh session is fine.
   aiPanelOpen: false,

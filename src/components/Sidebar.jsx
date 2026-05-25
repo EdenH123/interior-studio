@@ -13,6 +13,13 @@ export const FURNITURE_DRAG_MIME = 'application/x-interior-studio-furniture'
 export default function Sidebar() {
   const [showImport, setShowImport] = useState(false)
   const [editModel,  setEditModel]  = useState(null)
+  const [search, setSearch] = useState('')
+
+  const query = search.trim().toLowerCase()
+  const filteredFurniture = query
+    ? FURNITURE.filter((f) => f.label.toLowerCase().includes(query))
+    : null
+
   return (
     <aside className="w-60 shrink-0 bg-gray-900 border-r border-gray-700 flex flex-col">
       <LevelsPanel />
@@ -20,19 +27,47 @@ export default function Sidebar() {
         <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Elements</span>
       </div>
       <IkeaProductSearch />
-      <div className="flex-1 overflow-y-auto p-2 space-y-3">
-        <OpeningsGroup />
-        <MyModelsGroup
-          onImport={() => setShowImport(true)}
-          onEdit={(model) => setEditModel(model)}
+      <div className="px-2 pt-2">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search furniture…"
+          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500"
         />
-        {CATEGORIES.map((cat) => (
-          <CategoryGroup
-            key={cat}
-            name={cat}
-            items={FURNITURE.filter((f) => f.category === cat)}
-          />
-        ))}
+      </div>
+      <div className="flex-1 overflow-y-auto p-2 space-y-3">
+        {filteredFurniture ? (
+          filteredFurniture.length === 0 ? (
+            <p className="text-[10px] text-gray-600 px-1 pt-1">No matches for "{search}"</p>
+          ) : (
+            <div>
+              <div className="px-1 pb-1 text-[10px] uppercase tracking-widest text-gray-500">
+                Results ({filteredFurniture.length})
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {filteredFurniture.map((item) => (
+                  <CatalogTile key={item.type} item={item} />
+                ))}
+              </div>
+            </div>
+          )
+        ) : (
+          <>
+            <OpeningsGroup />
+            <MyModelsGroup
+              onImport={() => setShowImport(true)}
+              onEdit={(model) => setEditModel(model)}
+            />
+            {CATEGORIES.map((cat) => (
+              <CategoryGroup
+                key={cat}
+                name={cat}
+                items={FURNITURE.filter((f) => f.category === cat)}
+              />
+            ))}
+          </>
+        )}
       </div>
       <LayersPanel />
       <div className="px-3 py-2 border-t border-gray-700 text-[11px] text-gray-500 font-mono leading-snug">

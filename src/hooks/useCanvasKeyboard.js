@@ -27,6 +27,7 @@ export default function useCanvasKeyboard() {
   const setClipboard = useStore((s) => s.setClipboard)
   const pasteClipboard = useStore((s) => s.pasteClipboard)
   const pushToast = useStore((s) => s.pushToast)
+  const toggleShortcuts = useStore((s) => s.toggleShortcuts)
 
   useEffect(() => {
     const down = (e) => {
@@ -102,12 +103,19 @@ export default function useCanvasKeyboard() {
         pasteClipboard()
         return
       }
+
+      // Keyboard shortcuts cheat-sheet
+      if (e.shiftKey && e.key === '?') {
+        e.preventDefault()
+        toggleShortcuts()
+        return
+      }
     }
     const up = (e) => { if (e.code === 'Space') setSpaceDown(false) }
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
-  }, [selection, calibration, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement, furniture, walls, openings, setClipboard, pasteClipboard, pushToast])
+  }, [selection, calibration, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement, furniture, walls, openings, setClipboard, pasteClipboard, pushToast, toggleShortcuts])
 
   return spaceDown
 }

@@ -17,6 +17,8 @@ import { computeLevelOffsets } from '../store/slices/levelsSlice'
 import { computeStairHolesForRooms } from '../components/viewer3d/stairFloorHoles'
 import { DEFAULT_CEILING_COLOR, getCeilingMaterial, resolveCeilingMaterialId } from '../components/canvas/ceilingMaterials'
 import { getCustomModelUrl } from '../utils/customModelUrls'
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
+import { registerSceneExport } from '../components/viewer3d/sceneExportHandle'
 
 const CAMERA_FOV = 60
 const FLOOR_SIZE = 100
@@ -188,6 +190,20 @@ export default function useThree(containerRef) {
     )
 
     stateRef.current = { scene, camera, renderer, controls, ro, raf: 0, detachPicking, onFrame: null }
+
+    // Register the GLB export function so Toolbar can trigger it without prop-threading.
+    registerSceneExport(() => {
+      const exporter = new GLTFExporter()
+      const group = new THREE.Group()
+      for (const mesh of wallMeshes.current.values()) group.add(mesh.clone())
+      for (const mesh of furnMeshes.current.values()) group.add(mesh.clone())
+      for (const mesh of roomMeshes.current.values()) group.add(mesh.clone())
+      for (const mesh of doorMeshes.current.values()) group.add(mesh.clone())
+      return new Promise((resolve, reject) => {
+        exporter.parse(group, resolve, reject, { binary: true })
+      })
+    })
+
     // doorAnims is read directly by the tick closure; no slot needed on stateRef.
     tick()
 
@@ -212,6 +228,7 @@ export default function useThree(containerRef) {
       if (s.renderer.domElement.parentNode) {
         s.renderer.domElement.parentNode.removeChild(s.renderer.domElement)
       }
+      registerSceneExport(null)
       stateRef.current = null
     }
   }, [containerRef, select, clearSelection, toggleDoorOpen, toggleWindowOpen])   // lighting not in deps — initial values only
