@@ -120,7 +120,7 @@ interior-studio/
 │   │   ├── useApiKey.js         # sessionStorage-backed [key, setKey] for the Anthropic API key — never persisted
 │   │   ├── useAiProposalSync.js # watches the latest assistant message; parses ```json → validates → diffs → setAiProposal; returns helpers for the panel UI
 │   │   ├── useFurnitureDrop3D.js  # 3D sidebar drag-drop: furniture (floor raycast + 0.5m snap) + openings (wall raycast → wallPositionFrom → addOpening); exports wallPositionFrom for tests
-│   │   └── useThree.js          # the only file outside viewer3d/ that imports `three`; owns scene/camera/renderer/controls/RAF/resize, reconciles walls + furniture + rooms from the store via useEffect
+│   │   └── useThree.js          # the only file outside viewer3d/ that imports `three`; owns scene/camera/renderer/composer/controls/RAF/resize; EffectComposer chain: RenderPass→SSAOPass→UnrealBloomPass; reconciles walls + furniture + rooms from the store via useEffect
 │   ├── store/
 │   │   ├── useStore.js          # composer: imports slices, wires persist + zundo, holds loadProject + getSelectedFurniture
 │   │   └── slices/              # one file per state concern
@@ -594,6 +594,13 @@ interior-studio/
   - Lifted `lockAspectRatio` from local `useState` in `FurnitureProps` into `uiSlice` (not persisted, default `true`).
   - `CanvasArea.jsx` reads `lockAspectRatio` from store and passes `lockRatio={lockAspectRatio || shiftDown}` to `ResizeHandle`.
   - `ResizeHandle.jsx`: renamed `shiftDown` prop to `lockRatio`; Shift key still works as override via the combined expression in CanvasArea.
+
+- [x] Post-processing — SSAO + bloom (branch claude/object-resize-models-bikg3, 2026-05-25)
+  - **`useThree.js`**: imports `EffectComposer`, `RenderPass`, `SSAOPass`, `UnrealBloomPass` from `three/addons/postprocessing/`.
+  - `EffectComposer` replaces the bare `renderer.render()` call in the RAF tick. Passes: `RenderPass` (base render) → `SSAOPass` (ambient occlusion, kernelRadius 0.5, maxDistance 0.05) → `UnrealBloomPass` (strength 0.15, radius 0.4, threshold 0.9 — subtle glow on bright spots only).
+  - `composer.setSize(w, h)` called in the `ResizeObserver` alongside `renderer.setSize` so post-processing buffers stay in sync with window resize.
+  - `composer` stored on `stateRef` and disposed via `s.composer.dispose()` on unmount.
+  - Viewer3D chunk: ~195 kB → ~225 kB gzip (post-processing modules).
 
 ### 🚧 In Progress
 - (nothing active)
