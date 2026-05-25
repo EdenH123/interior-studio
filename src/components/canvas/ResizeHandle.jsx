@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Group, Rect } from 'react-konva'
 import { PIXELS_PER_METER } from './constants'
 
@@ -16,7 +15,7 @@ export default function ResizeHandle({ item, scale, shiftDown, onResize }) {
   const cos = Math.cos(rad)
   const sin = Math.sin(rad)
 
-  // Corners: [sx, sy, cursor] — cursor alternates diagonals per corner.
+  // Cursor alternates diagonal direction per corner.
   const corners = [
     [-1, -1, 'nwse-resize'],
     [ 1, -1, 'nesw-resize'],
@@ -33,13 +32,57 @@ export default function ResizeHandle({ item, scale, shiftDown, onResize }) {
         const wy = item.y + lx * sin + ly * cos
 
         return (
-          <CornerHandle
+          <Rect
             key={i}
-            wx={wx} wy={wy} hs={hs} scale={scale}
-            cursor={cursor}
-            item={item} rad={rad}
-            shiftDown={shiftDown}
-            onResize={onResize}
+            x={wx - hs / 2}
+            y={wy - hs / 2}
+            width={hs}
+            height={hs}
+            fill="#ffffff"
+            stroke="#3b82f6"
+            strokeWidth={1.5 / scale}
+            cornerRadius={2 / scale}
+            draggable
+            // Pin the handle visually; read actual pointer in onDragMove.
+            dragBoundFunc={() => ({ x: wx - hs / 2, y: wy - hs / 2 })}
+            onMouseEnter={(e) => {
+              e.target.fill('#3b82f6')
+              e.target.getLayer()?.batchDraw()
+              e.target.getStage().container().style.cursor = cursor
+            }}
+            onMouseLeave={(e) => {
+              e.target.fill('#ffffff')
+              e.target.getLayer()?.batchDraw()
+              e.target.getStage().container().style.cursor = 'default'
+            }}
+            onDragStart={(e) => {
+              e.target.getStage().container().style.cursor = cursor
+            }}
+            onDragEnd={(e) => {
+              e.target.fill('#ffffff')
+              e.target.getLayer()?.batchDraw()
+              e.target.getStage().container().style.cursor = 'default'
+            }}
+            onDragMove={(e) => {
+              const p = e.target.getStage()?.getRelativePointerPosition()
+              if (!p) return
+              const dx = p.x - item.x
+              const dy = p.y - item.y
+              const invCos = Math.cos(-rad)
+              const invSin = Math.sin(-rad)
+              const lxP = dx * invCos - dy * invSin
+              const lyP = dx * invSin + dy * invCos
+              const newHW = Math.max(Math.abs(lxP), (MIN_M * PIXELS_PER_METER) / 2)
+              const newHD = Math.max(Math.abs(lyP), (MIN_M * PIXELS_PER_METER) / 2)
+              let newW = Math.round((newHW * 2 / PIXELS_PER_METER) * 100) / 100
+              let newD = Math.round((newHD * 2 / PIXELS_PER_METER) * 100) / 100
+              if (shiftDown) {
+                const ratio = Math.max(newW / item.width, newD / item.depth)
+                newW = Math.round(item.width  * ratio * 100) / 100
+                newD = Math.round(item.depth  * ratio * 100) / 100
+              }
+              onResize({ width: newW, depth: newD })
+            }}
           />
         )
       })}
@@ -47,56 +90,4 @@ export default function ResizeHandle({ item, scale, shiftDown, onResize }) {
   )
 }
 
-function CornerHandle({ wx, wy, hs, scale, cursor, item, rad, shiftDown, onResize }) {
-  const [hovered, setHovered] = useState(false)
-
-  return (
-    <Rect
-      x={wx - hs / 2}
-      y={wy - hs / 2}
-      width={hs}
-      height={hs}
-      fill={hovered ? '#3b82f6' : '#ffffff'}
-      stroke="#3b82f6"
-      strokeWidth={1.5 / scale}
-      cornerRadius={2 / scale}
-      draggable
-      dragBoundFunc={() => ({ x: wx - hs / 2, y: wy - hs / 2 })}
-      onMouseEnter={(e) => {
-        setHovered(true)
-        e.target.getStage().container().style.cursor = cursor
-      }}
-      onMouseLeave={(e) => {
-        setHovered(false)
-        e.target.getStage().container().style.cursor = 'default'
-      }}
-      onDragStart={(e) => {
-        e.target.getStage().container().style.cursor = cursor
-      }}
-      onDragEnd={(e) => {
-        e.target.getStage().container().style.cursor = 'default'
-      }}
-      onDragMove={(e) => {
-        const p = e.target.getStage()?.getRelativePointerPosition()
-        if (!p) return
-        const dx = p.x - item.x
-        const dy = p.y - item.y
-        const invCos = Math.cos(-rad)
-        const invSin = Math.sin(-rad)
-        const lxP = dx * invCos - dy * invSin
-        const lyP = dx * invSin + dy * invCos
-        const newHW = Math.max(Math.abs(lxP), (MIN_M * PIXELS_PER_METER) / 2)
-        const newHD = Math.max(Math.abs(lyP), (MIN_M * PIXELS_PER_METER) / 2)
-        let newW = Math.round((newHW * 2 / PIXELS_PER_METER) * 100) / 100
-        let newD = Math.round((newHD * 2 / PIXELS_PER_METER) * 100) / 100
-        if (shiftDown) {
-          const ratio = Math.max(newW / item.width, newD / item.depth)
-          newW = Math.round(item.width  * ratio * 100) / 100
-          newD = Math.round(item.depth  * ratio * 100) / 100
-        }
-        onResize({ width: newW, depth: newD })
-      }}
-    />
-  )
-}
 
