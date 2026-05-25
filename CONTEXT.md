@@ -583,12 +583,17 @@ interior-studio/
   - Uses the same `dragBoundFunc` pin-and-read-pointer pattern as `RotationHandle`.
   - Wired into `CanvasArea.jsx` alongside the existing `RotationHandle`; no store changes needed.
 
-- [x] Door swing direction control (2026-05-25)
-  - `openingsSlice.js`: new doors default to `swingDir: 'left'`.
-  - `OpeningProps.jsx`: "Swing" row with Left / Right toggle buttons, visible only for `type === 'door'` (single-leaf hinged).
-  - `OpeningGlyphs.jsx` `DoorGlyph`: `swingDir` prop flips the panel line and arc to the right jamb for right-swing.
-  - `Opening.jsx`: passes `opening.swingDir` down to `DoorGlyph`.
-  - `reconcileDoors.js`: `swingDir === 'right'` moves hinge to right edge, sets open angle to `wallYaw − π/2`, offsets panel mesh leftward, places knob at the free (left) edge. A `swingFp` fingerprint (includes swingDir + dimensions) triggers a full group rebuild on any of those changes; material-only changes still do an in-place update.
+- [x] Door swing direction + open-side controls (2026-05-25)
+  - `openingsSlice.js`: new doors default to `swingDir: 'left'` and `openSide: 'front'`.
+  - `OpeningProps.jsx`: "Swing" row (← Left / Right →) and "Opens toward" row (↑ Front / ↓ Back), both visible only for `type === 'door'` (single-leaf hinged).
+  - `OpeningGlyphs.jsx` `DoorGlyph`: `swingDir` flips panel/arc to right jamb; `openSide='back'` mirrors the arc to the opposite side of the wall (positive Y in wall-local space, arc sweep flag inverted).
+  - `Opening.jsx`: passes both `swingDir` and `openSide` down to `DoorGlyph`.
+  - `reconcileDoors.js`: `swingDir` controls hinge edge; `openSide='back'` negates the sideSign so `openAngle = wallYaw ∓ π/2` flips to the other wall face. Both fields included in `swingFp` fingerprint.
+
+- [x] Lock-ratio checkbox wired to corner resize handles (2026-05-25)
+  - Lifted `lockAspectRatio` from local `useState` in `FurnitureProps` into `uiSlice` (not persisted, default `true`).
+  - `CanvasArea.jsx` reads `lockAspectRatio` from store and passes `lockRatio={lockAspectRatio || shiftDown}` to `ResizeHandle`.
+  - `ResizeHandle.jsx`: renamed `shiftDown` prop to `lockRatio`; Shift key still works as override via the combined expression in CanvasArea.
 
 ### 🚧 In Progress
 - (nothing active)
@@ -627,7 +632,8 @@ interior-studio/
 // Opening — levelId inherited from parent wall at creation.
 { id, type: 'door'|'window', wallId, position, width, height, sillHeight,
   levelId: string, open?: boolean /* doors only */,
-  swingDir?: 'left'|'right' /* single hinged door only, default 'left' */ }
+  swingDir?: 'left'|'right'       /* single hinged door only, default 'left' */,
+  openSide?: 'front'|'back'       /* single hinged door only, default 'front' */ }
 
 // Opening (door or window on a wall — current shape in useStore.js)
 // position is normalised 0..1 along the parent wall (0 = wall start).
