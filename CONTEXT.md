@@ -602,6 +602,16 @@ interior-studio/
   - `composer` stored on `stateRef` and disposed via `s.composer.dispose()` on unmount.
   - Viewer3D chunk: ~195 kB → ~225 kB gzip (post-processing modules).
 
+- [x] Improved bathroom 3D models — oval/round geometry (branch claude/object-resize-models-bikg3, 2026-05-25)
+  - Added `ellipse`, `innerEllipse`, `ring`, `disk` primitive helpers to `generate-bathroom-kitchen-glbs.mjs`.
+  - **Toilet**: oval ellipse bowl (18-seg) + flat ring seat + oval pedestal base. Replaces rectangular box bowl.
+  - **Basin**: round pedestal column + wide oval outer bowl wall + visible inner surface (`innerEllipse` + `disk` floor). Chrome tap with riser + spout + handles.
+  - **Bathtub**: outer shell + inset inner basin (visible depth) + headrest slope at one end. Chrome taps and drain.
+  - **Vanity unit**: oval integrated basin (`ellipse` + `innerEllipse` + `disk`) replacing the box basin.
+  - **Laundry basket**: oval ellipse body with horizontal band details + domed lid with knob.
+  - **Shower tray / towel rack / mirror**: minor polish only.
+  - Triangle counts: toilet 260, basin 408, laundry 334, bathtub 240. Build green.
+
 ### 🚧 In Progress
 - (nothing active)
 
