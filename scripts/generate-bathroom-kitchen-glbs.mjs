@@ -326,7 +326,6 @@ console.log('Generating bathroom & kitchen GLBs…\n')
 // ─── BATHROOM ─────────────────────────────────────────────────────────────────
 
 // TOILET  0.38W × 0.70D × 0.80H   (-Z = wall / tank side)
-// Bowl is an oval ellipse; seat is a flat ring; tank is a box at back.
 writeGLB('toilet', [
   { parts: [
     ellipse(0, 0.09, 0.00, 0.09, 0.15, 0.12, 14),       // oval pedestal base
@@ -336,8 +335,18 @@ writeGLB('toilet', [
   ], color: C_WHITE, roughness: 0.12, name: 'body' },
   { parts: [
     ring(0, 0.09, 0.38, 0.18, 0.23, 0.10, 0.17, 18),   // seat top ring
-    ellipse(0, 0.09, 0.37, 0.38, 0.18, 0.23, 18),       // seat outer rim wall (thin)
+    ellipse(0, 0.09, 0.37, 0.38, 0.18, 0.23, 18),       // seat outer rim (thin)
   ], color: [0.97, 0.97, 0.97, 1], roughness: 0.22, name: 'seat' },
+  { parts: [
+    innerEllipse(0, 0.09, 0.13, 0.37, 0.13, 0.18, 16), // inner bowl wall
+    disk(0, 0.09, 0.13, 0.13, 0.18, 16),               // water surface
+  ], color: [0.82, 0.90, 0.95, 1], roughness: 0.03, name: 'water' },
+  { parts: [
+    box(-0.09, 0.77, -0.36, 0.01, 0.79, -0.27),         // flush lever arm
+    cyl(-0.04, -0.33, 0.77, 0.81, 0.011, 8),            // flush lever pivot
+    cyl( 0.13, 0.02, 0.00, 0.05, 0.011, 8),             // floor bolt R
+    cyl(-0.13, 0.02, 0.00, 0.05, 0.011, 8),             // floor bolt L
+  ], color: C_CHROME, roughness: 0.15, metallic: 0.85, name: 'chrome' },
 ])
 
 // BASIN  0.55W × 0.45D × 0.85H
@@ -363,7 +372,6 @@ writeGLB('basin', [
 ])
 
 // BATHTUB  1.70W × 0.75D × 0.55H  (-Z = wall side)
-// Outer shell + visible inner basin + headrest + chrome fittings.
 writeGLB('bathtub', [
   { parts: [
     box(-0.85, 0.00, -0.375,  0.85, 0.07,  0.375),      // base slab
@@ -374,20 +382,25 @@ writeGLB('bathtub', [
     box(-0.85, 0.50, -0.375,  0.85, 0.55,  0.375),      // rim cap
   ], color: C_WHITE, roughness: 0.12, name: 'body' },
   { parts: [
-    // Inner basin (slightly inset — creates visible depth)
     box(-0.79, 0.08, -0.315, -0.73, 0.50,  0.315),      // inner left wall
     box( 0.73, 0.08, -0.315,  0.79, 0.50,  0.315),      // inner right wall
     box(-0.79, 0.08, -0.315,  0.79, 0.50, -0.255),      // inner back wall
     box(-0.79, 0.08,  0.255,  0.79, 0.50,  0.315),      // inner front wall
     box(-0.79, 0.08, -0.315,  0.79, 0.13,  0.315),      // inner floor
-    // Headrest slope at one end
-    box( 0.62, 0.13,  -0.28,  0.79, 0.45,  0.28),       // headrest cushion end
-  ], color: [0.93, 0.94, 0.95, 1], roughness: 0.10, name: 'inner' },
+    box( 0.62, 0.13, -0.28,   0.79, 0.45,  0.28),       // headrest end
+  ], color: [0.93, 0.94, 0.95, 1], roughness: 0.08, name: 'inner' },
   { parts: [
-    cyl( 0.55, -0.28, 0.46, 0.53, 0.018, 8),            // hot tap riser
-    cyl( 0.38, -0.28, 0.46, 0.53, 0.018, 8),            // cold tap riser
+    // Wooden bath tray across the rim
+    box(-0.84, 0.53, -0.08,  0.84, 0.57,  0.00),        // tray board 1
+    box(-0.84, 0.53,  0.06,  0.84, 0.57,  0.14),        // tray board 2
+    box(-0.86, 0.50, -0.09,  0.84, 0.54, -0.07),        // tray end cap L
+    box(-0.86, 0.50,  0.14,  0.84, 0.54,  0.16),        // tray end cap R
+  ], color: [0.55, 0.36, 0.18, 1], roughness: 0.65, name: 'tray' },
+  { parts: [
+    cyl( 0.55, -0.28, 0.46, 0.53, 0.018, 8),            // hot tap
+    cyl( 0.38, -0.28, 0.46, 0.53, 0.018, 8),            // cold tap
     cyl( 0.00, -0.28, 0.48, 0.51, 0.010, 8),            // drain
-  ], color: C_CHROME, roughness: 0.15, metallic: 0.85, name: 'taps' },
+  ], color: C_CHROME, roughness: 0.15, metallic: 0.85, name: 'chrome' },
 ])
 
 // SHOWER TRAY  0.90W × 0.90D × 0.15H
@@ -426,25 +439,29 @@ writeGLB('bathroom-mirror', [
 ])
 
 // VANITY UNIT  0.90W × 0.50D × 0.85H
-// Cabinet with doors + oval integrated basin on countertop.
+// Oak cabinet + white marble counter + ceramic basin + chrome tap & handles.
 writeGLB('vanity-unit', [
   { parts: [
-    box(-0.45, 0.00, -0.25,  0.45, 0.72,  0.25),        // cabinet body
-    box(-0.45, 0.72, -0.25,  0.45, 0.77,  0.25),        // countertop
+    box(-0.45, 0.00, -0.25,  0.45, 0.72,  0.24),        // cabinet carcass
     box(-0.43, 0.02,  0.24, -0.03, 0.70,  0.26),        // left door
     box( 0.03, 0.02,  0.24,  0.43, 0.70,  0.26),        // right door
+  ], color: [0.62, 0.43, 0.22, 1], roughness: 0.55, name: 'wood' },
+  { parts: [
+    box(-0.45, 0.72, -0.25,  0.45, 0.77,  0.25),        // countertop
     box(-0.45, 0.72, -0.25,  0.45, 0.85, -0.22),        // backsplash
-    ellipse(0, 0, 0.77, 0.85, 0.18, 0.13, 18),          // oval basin outer wall
+    ellipse(0, 0, 0.77, 0.85, 0.18, 0.13, 18),          // basin outer wall
     ring(0, 0, 0.85, 0.18, 0.13, 0.15, 0.10, 18),       // basin rim
-  ], color: C_WHITE, roughness: 0.15, name: 'body' },
+  ], color: [0.96, 0.95, 0.94, 1], roughness: 0.12, name: 'counter' },
   { parts: [
     innerEllipse(0, 0, 0.79, 0.85, 0.15, 0.10, 18),     // basin inner wall
     disk(0, 0, 0.79, 0.15, 0.10, 18),                   // basin floor
-  ], color: [0.88, 0.90, 0.92, 1], roughness: 0.10, name: 'inner' },
+  ], color: [0.88, 0.90, 0.92, 1], roughness: 0.08, name: 'inner' },
   { parts: [
     box(-0.25, 0.34,  0.25, -0.14, 0.36,  0.27),        // left handle
     box( 0.14, 0.34,  0.25,  0.25, 0.36,  0.27),        // right handle
-  ], color: C_CHROME, roughness: 0.15, metallic: 0.85, name: 'handles' },
+    cyl(0, -0.08, 0.83, 0.91, 0.011, 8),                // tap riser
+    box(-0.006, 0.90, -0.08, 0.006, 0.92, -0.02),       // tap spout
+  ], color: C_CHROME, roughness: 0.12, metallic: 0.88, name: 'chrome' },
 ])
 
 // LAUNDRY BASKET  0.45W × 0.40D × 0.55H  oval wicker shape
@@ -460,8 +477,10 @@ writeGLB('laundry-basket', [
   { parts: [
     ellipse(0, 0, 0.49, 0.55, 0.22, 0.20, 14),          // lid outer rim
     disk(0, 0, 0.55, 0.22, 0.20, 14),                   // lid top face
-    cyl(0, 0, 0.55, 0.59, 0.040, 10),                   // lid knob
   ], color: [0.62, 0.48, 0.32, 1], roughness: 0.88, name: 'lid' },
+  { parts: [
+    cyl(0, 0, 0.55, 0.59, 0.030, 10),                   // lid knob
+  ], color: C_CHROME, roughness: 0.15, metallic: 0.85, name: 'knob' },
 ])
 
 // ─── KITCHEN ──────────────────────────────────────────────────────────────────
