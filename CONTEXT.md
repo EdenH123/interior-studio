@@ -583,6 +583,13 @@ interior-studio/
   - Uses the same `dragBoundFunc` pin-and-read-pointer pattern as `RotationHandle`.
   - Wired into `CanvasArea.jsx` alongside the existing `RotationHandle`; no store changes needed.
 
+- [x] Door swing direction control (2026-05-25)
+  - `openingsSlice.js`: new doors default to `swingDir: 'left'`.
+  - `OpeningProps.jsx`: "Swing" row with Left / Right toggle buttons, visible only for `type === 'door'` (single-leaf hinged).
+  - `OpeningGlyphs.jsx` `DoorGlyph`: `swingDir` prop flips the panel line and arc to the right jamb for right-swing.
+  - `Opening.jsx`: passes `opening.swingDir` down to `DoorGlyph`.
+  - `reconcileDoors.js`: `swingDir === 'right'` moves hinge to right edge, sets open angle to `wallYaw − π/2`, offsets panel mesh leftward, places knob at the free (left) edge. A `swingFp` fingerprint (includes swingDir + dimensions) triggers a full group rebuild on any of those changes; material-only changes still do an in-place update.
+
 ### 🚧 In Progress
 - (nothing active)
 
@@ -619,7 +626,8 @@ interior-studio/
 
 // Opening — levelId inherited from parent wall at creation.
 { id, type: 'door'|'window', wallId, position, width, height, sillHeight,
-  levelId: string, open?: boolean /* doors only */ }
+  levelId: string, open?: boolean /* doors only */,
+  swingDir?: 'left'|'right' /* single hinged door only, default 'left' */ }
 
 // Opening (door or window on a wall — current shape in useStore.js)
 // position is normalised 0..1 along the parent wall (0 = wall start).
