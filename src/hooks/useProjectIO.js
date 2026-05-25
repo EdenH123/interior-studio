@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import useStore from '../store/useStore'
 import { getStage } from '../components/canvas/stageHandle'
+import { getSceneExport } from '../components/viewer3d/sceneExportHandle'
 import {
   buildExportData, validateImport, downloadBlob, downloadDataUrl,
   readJsonFile, timestampForFilename,
@@ -117,5 +118,21 @@ export default function useProjectIO() {
     }
   }
 
-  return { exportPng, exportPdf, exportJson, openJson, importInputRef, handleImportFile }
+  async function exportGlb() {
+    const exportFn = getSceneExport()
+    if (!exportFn) {
+      pushToast('Open the 3D view first, then export GLB.', 'error')
+      return
+    }
+    try {
+      pushToast('Exporting GLB…', 'info')
+      const buffer = await exportFn()
+      const blob = new Blob([buffer], { type: 'model/gltf-binary' })
+      downloadBlob(`interior-studio-${timestampForFilename()}.glb`, blob)
+    } catch (err) {
+      pushToast(err?.message ?? 'GLB export failed.', 'error')
+    }
+  }
+
+  return { exportPng, exportPdf, exportJson, openJson, exportGlb, importInputRef, handleImportFile }
 }

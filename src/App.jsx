@@ -7,6 +7,7 @@ import CanvasArea from './components/CanvasArea'
 import PropertiesPanel from './components/PropertiesPanel'
 import AiPanel from './components/AiPanel'
 import Toast from './components/Toast'
+import KeyboardShortcutsModal from './components/KeyboardShortcutsModal'
 
 // Viewer3D pulls in three.js (~500 kB gzipped). Lazy-load so 2D-only
 // sessions never download it. See `three-scene` skill, "code-split".
@@ -15,6 +16,7 @@ const Viewer3D = lazy(() => import('./components/viewer3d/Viewer3D'))
 export default function App() {
   const show3d = useStore((s) => s.show3d)
   const aiPanelOpen = useStore((s) => s.aiPanelOpen)
+  const showShortcuts = useStore((s) => s.showShortcuts)
   return (
     <div className="flex flex-col h-full bg-gray-950 text-white">
       <Toolbar />
@@ -32,6 +34,7 @@ export default function App() {
         {aiPanelOpen ? <AiPanel /> : <PropertiesPanel />}
       </div>
       <Toast />
+      {showShortcuts && <KeyboardShortcutsModal />}
     </div>
   )
 }
