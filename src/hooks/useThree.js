@@ -4,7 +4,6 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
-import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import useStore from '../store/useStore'
 import {
@@ -157,18 +156,12 @@ export default function useThree(containerRef) {
     scene.add(floor)
     scene.add(new THREE.GridHelper(FLOOR_SIZE, FLOOR_SIZE, 0x374151, 0x1f2937))
 
-    // Post-processing: SSAO for contact shadows + subtle bloom for light edges.
+    // Subtle bloom: only fires on HDR-bright spots (lights/windows), not on walls.
+    // Threshold 1.2 in ACES linear space sits above white painted walls (~0.85)
+    // but below actual emissive light sources (>2.0).
     const composer = new EffectComposer(renderer)
     composer.addPass(new RenderPass(scene, camera))
-
-    const ssaoPass = new SSAOPass(scene, camera, width, height)
-    ssaoPass.kernelRadius = 0.5
-    ssaoPass.minDistance  = 0.001
-    ssaoPass.maxDistance  = 0.05
-    composer.addPass(ssaoPass)
-
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0.15, 0.4, 0.9)
-    composer.addPass(bloomPass)
+    composer.addPass(new UnrealBloomPass(new THREE.Vector2(width, height), 0.3, 0.5, 1.2))
 
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping  = true
