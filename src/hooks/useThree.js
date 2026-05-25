@@ -9,6 +9,7 @@ import {
 import { reconcileDoors, tickDoorAnims } from '../components/viewer3d/reconcileDoors'
 import { applySelectionHighlight } from '../components/viewer3d/selectionHighlight'
 import { attachPicking } from '../components/viewer3d/picking'
+import { attachFurnitureDrag } from '../components/viewer3d/furnitureDrag'
 import { detectRooms } from '../components/canvas/roomDetection'
 import { getFloorMaterial, resolveFloorMaterialId } from '../components/canvas/floorMaterials'
 import { kelvinToRgb } from '../utils/colorTemp'
@@ -189,7 +190,16 @@ export default function useThree(containerRef) {
       { onSelect: select, onClear: clearSelection, onToggleDoor: toggleDoorOpen, onToggleWindow: toggleWindowOpen },
     )
 
-    stateRef.current = { scene, camera, renderer, controls, ro, raf: 0, detachPicking, onFrame: null }
+    const detachDragging = attachFurnitureDrag(
+      renderer, camera, furnMeshes.current, controls,
+      {
+        onDragEnd: (id, x, y) => useStore.getState().updateFurniture(id, { x, y }),
+        getSelection: () => useStore.getState().selection,
+        isAllowed: () => !stateRef.current?.onFrame,  // disabled during walkthrough
+      },
+    )
+
+    stateRef.current = { scene, camera, renderer, controls, ro, raf: 0, detachPicking, detachDragging, onFrame: null }
 
     // Register the GLB export function so Toolbar can trigger it without prop-threading.
     registerSceneExport(() => {
@@ -213,6 +223,7 @@ export default function useThree(containerRef) {
       cancelAnimationFrame(s.raf)
       s.ro.disconnect()
       s.detachPicking()
+      s.detachDragging?.()
       s.controls.dispose()
       disposeAll(s.scene, wallMeshes.current)
       disposeAll(s.scene, furnMeshes.current)
