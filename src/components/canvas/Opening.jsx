@@ -69,7 +69,7 @@ export default function Opening({ opening, wall, view, selected, onSelect, onShi
         width={p.widthPx} height={24 / view.scale}
         fill="rgba(0,0,0,0.001)"
       />
-      {opening.type === 'door'           && <DoorGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
+      {opening.type === 'door'           && <DoorGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} swingDir={opening.swingDir ?? 'left'} />}
       {opening.type === 'door-double'   && <DoubleDoorGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
       {opening.type === 'door-sliding'  && <SlidingDoorGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
       {opening.type === 'window'        && <WindowGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}

@@ -4,16 +4,21 @@ import { Group, Line, Path, Rect } from 'react-konva'
 // coordinates are in wall-local space: X is along the wall, Y is perpendicular
 // (positive away from the room). widthPx is the opening footprint in pixels.
 
-export function DoorGlyph({ widthPx, scale, selected }) {
+export function DoorGlyph({ widthPx, scale, selected, swingDir = 'left' }) {
   const half = widthPx / 2
   const stroke = selected ? '#3b82f6' : '#e5e7eb'
   const jamb = selected ? 2 / scale : 1.5 / scale
-  const arcData = `M ${half} 0 A ${widthPx} ${widthPx} 0 0 0 ${-half} ${-widthPx}`
+  const right = swingDir === 'right'
+  // Panel line from hinge jamb outward; arc from opposite jamb to panel tip
+  const panelX = right ? half : -half
+  const arcData = right
+    ? `M ${-half} 0 A ${widthPx} ${widthPx} 0 0 1 ${half} ${-widthPx}`
+    : `M ${half} 0 A ${widthPx} ${widthPx} 0 0 0 ${-half} ${-widthPx}`
   return (
     <Group listening={false}>
       <Line points={[-half, -4 / scale, -half, 4 / scale]} stroke={stroke} strokeWidth={jamb} />
       <Line points={[half, -4 / scale, half, 4 / scale]} stroke={stroke} strokeWidth={jamb} />
-      <Line points={[-half, 0, -half, -widthPx]} stroke={stroke} strokeWidth={jamb} />
+      <Line points={[panelX, 0, panelX, -widthPx]} stroke={stroke} strokeWidth={jamb} />
       <Path data={arcData} stroke={stroke} strokeWidth={1 / scale} opacity={0.6} fill="" />
     </Group>
   )

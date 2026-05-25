@@ -306,33 +306,44 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
     }
 
     if (o.type === 'door') {
-      // Hinge at the left edge of the opening.
-      const hingeLX = centerLX - o.width / 2
+      const swingRight = o.swingDir === 'right'
+
+      // Hinge at the left or right edge depending on swingDir
+      const hingeLX = swingRight ? centerLX + o.width / 2 : centerLX - o.width / 2
       const hingeWX = wallCX + hingeLX * cosYaw
       const hingeWZ = wallCZ - hingeLX * sinYaw
 
       const closedAngle = wallYaw
-      const openAngle   = wallYaw + Math.PI / 2
+      const openAngle   = swingRight ? wallYaw - Math.PI / 2 : wallYaw + Math.PI / 2
       const targetAngle = o.open ? openAngle : closedAngle
 
+      // Fingerprint includes swing direction so any change triggers a rebuild
+      const swingFp = `${matFp}:${o.swingDir ?? 'left'}:${o.width.toFixed(3)}:${o.height.toFixed(3)}`
+
       let group = meshMap.get(o.id)
-      if (!group) {
+      if (!group || group.userData.swingFp !== swingFp) {
+        if (group) { scene.remove(group); disposeMeshes(group); doorAnims.delete(o.id) }
+
+        const panelOffsetX = swingRight ? -o.width / 2 : o.width / 2
+        const knobX        = swingRight ? -(o.width - 0.07) : (o.width - 0.07)
+
         const panel = new THREE.Mesh(
           new THREE.BoxGeometry(o.width, o.height, DOOR_THICKNESS),
           buildPanelMaterial(materialId, doorColor),
         )
-        panel.position.set(o.width / 2, o.height / 2, 0)
+        panel.position.set(panelOffsetX, o.height / 2, 0)
         panel.castShadow = true
         panel.receiveShadow = true
 
         group = new THREE.Group()
-        group.userData.kind = 'door'
-        group.userData.id = o.id
-        group.userData.matFp = matFp
-        group.userData.panel = panel
+        group.userData.kind    = 'door'
+        group.userData.id      = o.id
+        group.userData.matFp   = matFp
+        group.userData.swingFp = swingFp
+        group.userData.panel   = panel
         group.add(panel)
-        // Knob near the free edge (opposite the hinge at x=0)
-        attachKnobPair(group, o.width - 0.07, 1.0)
+        // Knob near the free edge (opposite the hinge)
+        attachKnobPair(group, knobX, 1.0)
         group.rotation.y = targetAngle
         group.userData.targetAngle = targetAngle
         scene.add(group)
@@ -342,6 +353,7 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
           const panel = group.userData.panel ?? group.children[0]
           if (panel?.material) { panel.material.dispose(); panel.material = buildPanelMaterial(materialId, doorColor) }
           group.userData.matFp = matFp
+          group.userData.swingFp = swingFp
         }
         const prev = group.userData.targetAngle
         if (prev !== targetAngle) {
