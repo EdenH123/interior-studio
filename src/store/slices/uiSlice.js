@@ -63,6 +63,11 @@ export const createUiSlice = (set) => ({
   setClipboard: (items) => set({ clipboard: items }),
   clearClipboard: () => set({ clipboard: null }),
 
+  // Whether the W/D/H dimension inputs + corner-drag resize handle should
+  // maintain the item's aspect ratio. Defaults to true. Not persisted.
+  lockAspectRatio: true,
+  setLockAspectRatio: (val) => set({ lockAspectRatio: val }),
+
   // AI panel takes over the right-hand slot when open (replaces
   // PropertiesPanel). Not persisted — opening on each fresh session is fine.
   aiPanelOpen: false,

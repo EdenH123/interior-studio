@@ -5,9 +5,9 @@ const HANDLE_PX = 10  // screen-space size of each corner square
 const MIN_M = 0.05    // minimum dimension in metres
 
 // Four corner drag handles for the selected furniture item. Dragging any corner
-// resizes width + depth symmetrically around the centroid. Hold Shift for
-// proportional (locked-ratio) resize.
-export default function ResizeHandle({ item, scale, shiftDown, onResize }) {
+// resizes width + depth symmetrically around the centroid. lockRatio=true keeps
+// the W/D ratio fixed (driven by the "lock ratio" checkbox in FurnitureProps).
+export default function ResizeHandle({ item, scale, lockRatio, onResize }) {
   const hw = (item.width  * PIXELS_PER_METER) / 2
   const hd = (item.depth  * PIXELS_PER_METER) / 2
   const hs = HANDLE_PX / scale
@@ -76,7 +76,7 @@ export default function ResizeHandle({ item, scale, shiftDown, onResize }) {
               const newHD = Math.max(Math.abs(lyP), (MIN_M * PIXELS_PER_METER) / 2)
               let newW = Math.round((newHW * 2 / PIXELS_PER_METER) * 100) / 100
               let newD = Math.round((newHD * 2 / PIXELS_PER_METER) * 100) / 100
-              if (shiftDown) {
+              if (lockRatio) {
                 const ratio = Math.max(newW / item.width, newD / item.depth)
                 newW = Math.round(item.width  * ratio * 100) / 100
                 newD = Math.round(item.depth  * ratio * 100) / 100

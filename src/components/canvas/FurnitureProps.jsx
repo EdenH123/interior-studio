@@ -5,13 +5,15 @@ import { getFurnitureSpec } from './furnitureCatalog'
 import { FURNITURE_MATERIALS, resolveFurnitureMaterialId } from './furnitureMaterials'
 import { getModelStatus, onCacheChange } from '../viewer3d/furnitureModelCache'
 import MaterialPicker from './MaterialPicker'
+import useStore from '../../store/useStore'
 
 // Properties-panel editor for a selected furniture item. Editable dimensions
 // (W/D/H) plus read-only stats, material override picker, and 3D model status.
 export default function FurnitureProps({ item, onUpdate }) {
   const spec = getFurnitureSpec(item.type)
   const [, bump] = useState(0)
-  const [locked, setLocked] = useState(true)
+  const locked = useStore((s) => s.lockAspectRatio)
+  const setLocked = useStore((s) => s.setLockAspectRatio)
   useEffect(() => onCacheChange(() => bump((v) => v + 1)), [])
 
   function commitDim(dim, newVal) {

@@ -77,6 +77,7 @@ export default function CanvasArea() {
   const furniture = allFurniture.filter(onLevel)
   const openings = allOpenings.filter(onLevel)
 
+  const lockAspectRatio = useStore((s) => s.lockAspectRatio)
   const { view, recenterIfUnset, handleWheel, handleStageDragEnd } = useViewport()
   const spaceDown = useCanvasKeyboard()
   const { shiftDown, altDown } = useModifierKeys()
@@ -204,7 +205,7 @@ export default function CanvasArea() {
             ))}
             {selectedFurniture && (
               <ResizeHandle item={selectedFurniture} scale={view.scale}
-                shiftDown={shiftDown}
+                lockRatio={lockAspectRatio || shiftDown}
                 onResize={(dims) => updateFurniture(selectedFurniture.id, dims)} />
             )}
             {selectedFurniture && (
