@@ -624,6 +624,13 @@ interior-studio/
   - **Oven / microwave / range hood**: unchanged — already multi-material.
   - `furnitureCatalog.js`: updated `parts` keys for all 10 kitchen items to match new GLB material names (enables per-part color override in FurnitureProps).
 
+- [x] Multi-color living room 3D models (branch claude/object-resize-models-bikg3, 2026-05-25)
+  - **Sofa / Loveseat / Armchair / Chaise** (3 groups each): split solid structural upholstery ("frame") from seat + back cushions ("cushions") into separate material groups. Cushions default to a slightly lighter warm linen tone; frame stays the original warmer tone. Users can now independently override fabric color per part.
+  - **Coffee table** (3 groups): stone/marble top (low roughness, near-white) + wood lower shelf + dark gunmetal metal legs. Previously all wood.
+  - **TV** (3 groups): dark frame + near-black screen panel + brushed aluminium stand column/base. Previously stand was same dark color as frame.
+  - `generate-furniture-glbs.mjs`: added `SOFA_PARTS` helper constant; all affected items now emit `frame`/`cushions`/`legs` material names.
+  - `furnitureCatalog.js`: added `SOFA_PARTS` constant; sofa/loveseat/chaise/armchair → 3-part; coffee-table → 3-part (top/shelf/legs); TV → 3-part (frame/screen/stand).
+
 ### 🚧 In Progress
 - (nothing active)
 

@@ -14,16 +14,17 @@ const glb = (file) => new URL(`../../assets/furniture/${file}`, import.meta.url)
 
 // Parts define the named material groups in the GLB. Keys match material names
 // baked into the file by the generator scripts. Users can override per-part colors.
+const SOFA_PARTS    = [{ key: 'frame', label: 'Frame' }, { key: 'cushions', label: 'Cushions' }, { key: 'legs', label: 'Legs' }]
 const SEAT_PARTS    = [{ key: 'fabric', label: 'Fabric' }, { key: 'legs', label: 'Legs' }]
 const TABLE_PARTS   = [{ key: 'top',    label: 'Top'    }, { key: 'legs', label: 'Legs' }]
 const BED_PARTS     = [{ key: 'frame',  label: 'Frame'  }, { key: 'mattress', label: 'Mattress' }]
 
 export const FURNITURE = [
   // ── Seating ───────────────────────────────────────────────────────────────
-  { type: 'sofa',         label: 'Sofa',          category: 'Seating', width: 2.0,  depth: 0.9,  height: 0.85, color: '#475569', model: glb('sofa.glb'),         parts: SEAT_PARTS },
-  { type: 'loveseat',     label: 'Loveseat',       category: 'Seating', width: 1.4,  depth: 0.85, height: 0.85, color: '#64748b', model: glb('loveseat.glb'),     parts: SEAT_PARTS },
-  { type: 'chaise',       label: 'Chaise lounge',  category: 'Seating', width: 1.8,  depth: 0.80, height: 0.85, color: '#94a3b8', model: glb('chaise.glb'),       parts: SEAT_PARTS },
-  { type: 'armchair',     label: 'Armchair',       category: 'Seating', width: 0.9,  depth: 0.9,  height: 0.85, color: '#64748b', model: glb('armchair.glb'),     parts: SEAT_PARTS },
+  { type: 'sofa',         label: 'Sofa',          category: 'Seating', width: 2.0,  depth: 0.9,  height: 0.85, color: '#475569', model: glb('sofa.glb'),         parts: SOFA_PARTS },
+  { type: 'loveseat',     label: 'Loveseat',       category: 'Seating', width: 1.4,  depth: 0.85, height: 0.85, color: '#64748b', model: glb('loveseat.glb'),     parts: SOFA_PARTS },
+  { type: 'chaise',       label: 'Chaise lounge',  category: 'Seating', width: 1.8,  depth: 0.80, height: 0.85, color: '#94a3b8', model: glb('chaise.glb'),       parts: SOFA_PARTS },
+  { type: 'armchair',     label: 'Armchair',       category: 'Seating', width: 0.9,  depth: 0.9,  height: 0.85, color: '#64748b', model: glb('armchair.glb'),     parts: SOFA_PARTS },
   { type: 'chair',        label: 'Chair',          category: 'Seating', width: 0.45, depth: 0.5,  height: 0.85, color: '#94a3b8', model: glb('chair.glb') },
   { type: 'dining-chair', label: 'Dining chair',   category: 'Seating', width: 0.48, depth: 0.50, height: 0.90, color: '#a16207', model: glb('dining-chair.glb'), parts: [{ key: 'seat', label: 'Seat' }, { key: 'frame', label: 'Frame' }] },
   { type: 'bench',        label: 'Bench',          category: 'Seating', width: 1.2,  depth: 0.45, height: 0.48, color: '#92400e', model: glb('bench.glb'),        parts: [{ key: 'seat', label: 'Seat' }, { key: 'frame', label: 'Frame' }] },
@@ -31,7 +32,7 @@ export const FURNITURE = [
   { type: 'pouf',         label: 'Pouf',           category: 'Seating', width: 0.65, depth: 0.65, height: 0.40, color: '#a8937a', model: glb('pouf.glb'),         parts: [{ key: 'body', label: 'Body' }, { key: 'top', label: 'Top' }] },
 
   // ── Tables ────────────────────────────────────────────────────────────────
-  { type: 'coffee-table',   label: 'Coffee table',   category: 'Tables', width: 1.1,  depth: 0.6,  height: 0.45, color: '#a16207', model: glb('coffee-table.glb'),  parts: TABLE_PARTS },
+  { type: 'coffee-table',   label: 'Coffee table',   category: 'Tables', width: 1.1,  depth: 0.6,  height: 0.45, color: '#a16207', model: glb('coffee-table.glb'),  parts: [{ key: 'top', label: 'Top' }, { key: 'shelf', label: 'Shelf' }, { key: 'legs', label: 'Legs' }] },
   { type: 'dining-table',   label: 'Dining table',   category: 'Tables', width: 1.6,  depth: 0.9,  height: 0.75, color: '#a16207', model: glb('dining-table.glb'),  parts: TABLE_PARTS },
   { type: 'desk',           label: 'Desk',           category: 'Tables', width: 1.4,  depth: 0.7,  height: 0.75, color: '#92400e', model: glb('desk.glb'),          parts: [{ key: 'body', label: 'Body' }, { key: 'legs', label: 'Legs' }] },
   { type: 'console-table',  label: 'Console table',  category: 'Tables', width: 1.2,  depth: 0.35, height: 0.80, color: '#a16207', model: glb('console-table.glb'), parts: TABLE_PARTS },
@@ -101,7 +102,7 @@ export const FURNITURE = [
   // ── Decor ─────────────────────────────────────────────────────────────────
   { type: 'rug',           label: 'Rug',           category: 'Decor', width: 2.0,  depth: 1.4,  height: 0.01, color: '#b45309', model: glb('rug.glb'),           parts: [{ key: 'field', label: 'Field' }, { key: 'border', label: 'Border' }] },
   { type: 'lamp',          label: 'Floor lamp',    category: 'Decor', width: 0.4,  depth: 0.4,  height: 1.5,  color: '#facc15', model: glb('lamp.glb'),          parts: [{ key: 'base', label: 'Base' }, { key: 'shade', label: 'Shade' }] },
-  { type: 'tv',            label: 'TV',            category: 'Decor', width: 1.2,  depth: 0.15, height: 0.7,  color: '#0f172a', model: glb('tv.glb'),            parts: [{ key: 'frame', label: 'Frame' }, { key: 'screen', label: 'Screen' }] },
+  { type: 'tv',            label: 'TV',            category: 'Decor', width: 1.2,  depth: 0.15, height: 0.7,  color: '#0f172a', model: glb('tv.glb'),            parts: [{ key: 'frame', label: 'Frame' }, { key: 'screen', label: 'Screen' }, { key: 'stand', label: 'Stand' }] },
   { type: 'plant-large',   label: 'Plant (large)', category: 'Decor', width: 0.5,  depth: 0.5,  height: 1.5,  color: '#166534', model: glb('plant-large.glb'),   parts: [{ key: 'pot', label: 'Pot' }, { key: 'foliage', label: 'Foliage' }] },
   { type: 'plant-small',   label: 'Plant (small)', category: 'Decor', width: 0.25, depth: 0.25, height: 0.40, color: '#166534', model: glb('plant-small.glb'),   parts: [{ key: 'pot', label: 'Pot' }, { key: 'foliage', label: 'Foliage' }] },
   { type: 'fireplace',     label: 'Fireplace',     category: 'Decor', width: 1.2,  depth: 0.30, height: 1.00, color: '#78716c', model: glb('fireplace.glb'),     parts: [{ key: 'surround', label: 'Surround' }, { key: 'firebox', label: 'Firebox' }] },
