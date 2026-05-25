@@ -307,6 +307,8 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
 
     if (o.type === 'door') {
       const swingRight = o.swingDir === 'right'
+      const flipOpen   = o.openSide === 'back'
+      const sideSign   = flipOpen ? -1 : 1
 
       // Hinge at the left or right edge depending on swingDir
       const hingeLX = swingRight ? centerLX + o.width / 2 : centerLX - o.width / 2
@@ -314,11 +316,13 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
       const hingeWZ = wallCZ - hingeLX * sinYaw
 
       const closedAngle = wallYaw
-      const openAngle   = swingRight ? wallYaw - Math.PI / 2 : wallYaw + Math.PI / 2
+      const openAngle   = swingRight
+        ? wallYaw - sideSign * Math.PI / 2
+        : wallYaw + sideSign * Math.PI / 2
       const targetAngle = o.open ? openAngle : closedAngle
 
-      // Fingerprint includes swing direction so any change triggers a rebuild
-      const swingFp = `${matFp}:${o.swingDir ?? 'left'}:${o.width.toFixed(3)}:${o.height.toFixed(3)}`
+      // Fingerprint includes swing direction + open side so any change triggers a rebuild
+      const swingFp = `${matFp}:${o.swingDir ?? 'left'}:${o.openSide ?? 'front'}:${o.width.toFixed(3)}:${o.height.toFixed(3)}`
 
       let group = meshMap.get(o.id)
       if (!group || group.userData.swingFp !== swingFp) {

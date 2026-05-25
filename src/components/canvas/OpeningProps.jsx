@@ -116,6 +116,27 @@ export default function OpeningProps({ opening, wall, onUpdate, pushToast }) {
         </div>
       )}
 
+      {opening.type === 'door' && (
+        <div className="mt-3">
+          <span className="text-gray-500 text-[11px] uppercase tracking-wider">Opens toward</span>
+          <div className="flex gap-1 mt-1">
+            {[{ id: 'front', label: '↑ Front' }, { id: 'back', label: '↓ Back' }].map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => onUpdate(opening.id, { openSide: id })}
+                className={`flex-1 px-2 py-1 text-[11px] rounded border transition-all ${
+                  (opening.openSide ?? 'front') === id
+                    ? 'bg-blue-600 border-blue-500 text-white'
+                    : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <p className="text-[10px] text-gray-500 mt-3 leading-snug">
         Drag the opening along its wall to reposition · Del to remove.
       </p>

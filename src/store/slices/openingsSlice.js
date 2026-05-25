@@ -30,7 +30,7 @@ export const createOpeningsSlice = (set, get) => ({
       position: positionT,
       width: spec.width, height: spec.height, sillHeight: spec.sillHeight,
       levelId: wall.levelId ?? state.activeLevel ?? null,
-      ...(type.startsWith('door') ? { open: false, swingDir: 'left' } : {}),
+      ...(type.startsWith('door') ? { open: false, swingDir: 'left', openSide: 'front' } : {}),
     }
     const wallLen = wallLengthPx(wall)
     if (candidate.width * PIXELS_PER_METER >= wallLen) {
