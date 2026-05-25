@@ -228,6 +228,89 @@ function writeGLB(name, partsOrGroups, legacyColor) {
   console.log(`  ✓  ${(name + '.glb').padEnd(26)}  ${(totalLen / 1024).toFixed(1).padStart(6)} kB  ${totalTris} tris`)
 }
 
+// Elliptical cylinder (oval in XZ, rx ≠ rz). Outward normals.
+function ellipse(cx, cz, y1, y2, rx, rz, segs = 16) {
+  const p = [], n = [], idx = []
+  const step = (2 * Math.PI) / segs
+  const angles = Array.from({ length: segs + 1 }, (_, i) => i * step)
+  for (let i = 0; i < segs; i++) {
+    const a0 = angles[i], a1 = angles[i + 1]
+    let nx0 = Math.cos(a0) / rx, nz0 = Math.sin(a0) / rz
+    let l0 = Math.sqrt(nx0*nx0 + nz0*nz0); nx0 /= l0; nz0 /= l0
+    let nx1 = Math.cos(a1) / rx, nz1 = Math.sin(a1) / rz
+    let l1 = Math.sqrt(nx1*nx1 + nz1*nz1); nx1 /= l1; nz1 /= l1
+    const b = p.length / 3
+    p.push(cx + rx*Math.cos(a0), y1, cz + rz*Math.sin(a0))
+    p.push(cx + rx*Math.cos(a1), y1, cz + rz*Math.sin(a1))
+    p.push(cx + rx*Math.cos(a1), y2, cz + rz*Math.sin(a1))
+    p.push(cx + rx*Math.cos(a0), y2, cz + rz*Math.sin(a0))
+    n.push(nx0, 0, nz0, nx1, 0, nz1, nx1, 0, nz1, nx0, 0, nz0)
+    idx.push(b, b+1, b+2, b, b+2, b+3)
+  }
+  // bottom cap
+  const bc = p.length / 3
+  p.push(cx, y1, cz); n.push(0, -1, 0)
+  for (let i = 0; i < segs; i++) { p.push(cx + rx*Math.cos(angles[i]), y1, cz + rz*Math.sin(angles[i])); n.push(0, -1, 0) }
+  for (let i = 0; i < segs; i++) { idx.push(bc, bc + 1 + ((i+1)%segs), bc + 1 + i) }
+  // top cap
+  const tc = p.length / 3
+  p.push(cx, y2, cz); n.push(0, 1, 0)
+  for (let i = 0; i < segs; i++) { p.push(cx + rx*Math.cos(angles[i]), y2, cz + rz*Math.sin(angles[i])); n.push(0, 1, 0) }
+  for (let i = 0; i < segs; i++) { idx.push(tc, tc + 1 + i, tc + 1 + ((i+1)%segs)) }
+  return { positions: p, normals: n, indices: idx }
+}
+
+// Like ellipse but normals point inward — use for visible bowl interiors.
+function innerEllipse(cx, cz, y1, y2, rx, rz, segs = 16) {
+  const p = [], n = [], idx = []
+  const step = (2 * Math.PI) / segs
+  const angles = Array.from({ length: segs + 1 }, (_, i) => i * step)
+  for (let i = 0; i < segs; i++) {
+    const a0 = angles[i], a1 = angles[i + 1]
+    let nx0 = -Math.cos(a0) / rx, nz0 = -Math.sin(a0) / rz
+    let l0 = Math.sqrt(nx0*nx0 + nz0*nz0); nx0 /= l0; nz0 /= l0
+    let nx1 = -Math.cos(a1) / rx, nz1 = -Math.sin(a1) / rz
+    let l1 = Math.sqrt(nx1*nx1 + nz1*nz1); nx1 /= l1; nz1 /= l1
+    const b = p.length / 3
+    // reversed winding for inward face
+    p.push(cx + rx*Math.cos(a1), y1, cz + rz*Math.sin(a1))
+    p.push(cx + rx*Math.cos(a0), y1, cz + rz*Math.sin(a0))
+    p.push(cx + rx*Math.cos(a0), y2, cz + rz*Math.sin(a0))
+    p.push(cx + rx*Math.cos(a1), y2, cz + rz*Math.sin(a1))
+    n.push(nx1, 0, nz1, nx0, 0, nz0, nx0, 0, nz0, nx1, 0, nz1)
+    idx.push(b, b+1, b+2, b, b+2, b+3)
+  }
+  return { positions: p, normals: n, indices: idx }
+}
+
+// Flat elliptical disk — top face (normal up). Matches cyl top-cap winding.
+function disk(cx, cz, y, rx, rz, segs = 16) {
+  const p = [], n = [], idx = []
+  const step = (2 * Math.PI) / segs
+  const tc = 0
+  p.push(cx, y, cz); n.push(0, 1, 0)
+  for (let i = 0; i < segs; i++) { p.push(cx + rx*Math.cos(i*step), y, cz + rz*Math.sin(i*step)); n.push(0, 1, 0) }
+  for (let i = 0; i < segs; i++) { idx.push(tc, tc + 1 + i, tc + 1 + ((i+1)%segs)) }
+  return { positions: p, normals: n, indices: idx }
+}
+
+// Flat annular ring — top face (normal up) between outer and inner ellipses.
+function ring(cx, cz, y, rxO, rzO, rxI, rzI, segs = 16) {
+  const p = [], n = [], idx = []
+  const step = (2 * Math.PI) / segs
+  for (let i = 0; i < segs; i++) {
+    const a0 = i * step, a1 = (i+1) * step
+    const b = p.length / 3
+    p.push(cx + rxO*Math.cos(a0), y, cz + rzO*Math.sin(a0))
+    p.push(cx + rxO*Math.cos(a1), y, cz + rzO*Math.sin(a1))
+    p.push(cx + rxI*Math.cos(a1), y, cz + rzI*Math.sin(a1))
+    p.push(cx + rxI*Math.cos(a0), y, cz + rzI*Math.sin(a0))
+    n.push(0,1,0, 0,1,0, 0,1,0, 0,1,0)
+    idx.push(b, b+1, b+2, b, b+2, b+3)
+  }
+  return { positions: p, normals: n, indices: idx }
+}
+
 // ─── Color palette (linear sRGB) ──────────────────────────────────────────────
 const C_WHITE    = [0.95, 0.95, 0.95, 1]   // ceramic white
 const C_CHROME   = [0.82, 0.82, 0.85, 1]   // chrome / stainless
@@ -242,59 +325,83 @@ console.log('Generating bathroom & kitchen GLBs…\n')
 
 // ─── BATHROOM ─────────────────────────────────────────────────────────────────
 
-// TOILET  0.38 × 0.70 × 0.80   (-Z = wall / tank side)
+// TOILET  0.38W × 0.70D × 0.80H   (-Z = wall / tank side)
+// Bowl is an oval ellipse; seat is a flat ring; tank is a box at back.
 writeGLB('toilet', [
   { parts: [
-    cyl(0, 0, 0, 0.36, 0.13, 12),                       // pedestal base
-    box(-0.17, 0.14, -0.05, 0.17, 0.35, 0.32),          // bowl body
-    box(-0.18, 0.33, -0.06, 0.18, 0.36, 0.33),          // seat lid
-    box(-0.15, 0.34, -0.35, 0.15, 0.78, -0.08),         // tank body
-    box(-0.17, 0.76, -0.37, 0.17, 0.80, -0.06),         // tank lid
-  ], color: C_WHITE, roughness: 0.15, name: 'body' },
+    ellipse(0, 0.09, 0.00, 0.09, 0.15, 0.12, 14),       // oval pedestal base
+    ellipse(0, 0.09, 0.09, 0.37, 0.17, 0.22, 18),       // oval bowl body
+    box(-0.13, 0.35, -0.35,  0.13, 0.77, -0.09),        // tank body
+    box(-0.14, 0.75, -0.36,  0.14, 0.80, -0.08),        // tank lid
+  ], color: C_WHITE, roughness: 0.12, name: 'body' },
+  { parts: [
+    ring(0, 0.09, 0.38, 0.18, 0.23, 0.10, 0.17, 18),   // seat top ring
+    ellipse(0, 0.09, 0.37, 0.38, 0.18, 0.23, 18),       // seat outer rim wall (thin)
+  ], color: [0.97, 0.97, 0.97, 1], roughness: 0.22, name: 'seat' },
 ])
 
-// BASIN  0.55 × 0.45 × 0.85
+// BASIN  0.55W × 0.45D × 0.85H
+// Round pedestal + wide oval bowl with visible inner surface.
 writeGLB('basin', [
   { parts: [
-    cyl(0, 0, 0, 0.65, 0.07, 10),                       // column
-    box(-0.27, 0.75, -0.22, 0.27, 0.85, 0.22),          // basin bowl outer
-  ], color: C_WHITE, roughness: 0.15, name: 'body' },
+    cyl(0, 0, 0.00, 0.04, 0.14, 14),                    // base flare
+    cyl(0, 0, 0.04, 0.67, 0.055, 12),                   // column shaft
+    cyl(0, 0, 0.67, 0.71, 0.14, 14),                    // column-bowl transition
+    ellipse(0, 0, 0.71, 0.85, 0.25, 0.20, 20),          // bowl outer wall
+    ring(0, 0, 0.85, 0.25, 0.20, 0.21, 0.16, 20),       // bowl rim
+  ], color: C_WHITE, roughness: 0.12, name: 'body' },
   { parts: [
-    cyl(0, -0.15, 0.83, 0.89, 0.014, 8),                // tap riser
-    box(-0.007, 0.87, -0.15, 0.007, 0.89, -0.04),       // tap spout
-    box( 0.04, 0.872, -0.18,  0.08, 0.888, -0.13),      // hot handle
-    box(-0.08, 0.872, -0.18, -0.04, 0.888, -0.13),      // cold handle
-  ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'taps' },
+    innerEllipse(0, 0, 0.74, 0.85, 0.21, 0.16, 20),     // bowl inner wall (visible from above)
+    disk(0, 0, 0.74, 0.21, 0.16, 20),                   // bowl floor
+  ], color: [0.88, 0.90, 0.92, 1], roughness: 0.10, name: 'inner' },
+  { parts: [
+    cyl(0, -0.11, 0.83, 0.91, 0.013, 8),                // tap riser
+    box(-0.007, 0.90, -0.11, 0.007, 0.92, -0.03),       // tap spout
+    box( 0.04, 0.875, -0.14,  0.08, 0.890, -0.10),      // hot handle
+    box(-0.08, 0.875, -0.14, -0.04, 0.890, -0.10),      // cold handle
+  ], color: C_CHROME, roughness: 0.15, metallic: 0.85, name: 'taps' },
 ])
 
-// BATHTUB  1.70 × 0.75 × 0.55  (-Z = wall side)
+// BATHTUB  1.70W × 0.75D × 0.55H  (-Z = wall side)
+// Outer shell + visible inner basin + headrest + chrome fittings.
 writeGLB('bathtub', [
   { parts: [
-    box(-0.85, 0,    -0.375,  0.85, 0.08,  0.375),      // base floor
-    box(-0.85, 0.08, -0.375, -0.79, 0.55,  0.375),      // left wall
-    box( 0.79, 0.08, -0.375,  0.85, 0.55,  0.375),      // right wall
-    box(-0.85, 0.08, -0.375,  0.85, 0.55, -0.31),       // back wall (wall side)
-    box(-0.85, 0.08,  0.31,   0.85, 0.55,  0.375),      // front wall
-    box(-0.85, 0.52, -0.375,  0.85, 0.55,  0.375),      // rim cap
-  ], color: C_WHITE, roughness: 0.15, name: 'body' },
+    box(-0.85, 0.00, -0.375,  0.85, 0.07,  0.375),      // base slab
+    box(-0.85, 0.07, -0.375, -0.79, 0.55,  0.375),      // left outer wall
+    box( 0.79, 0.07, -0.375,  0.85, 0.55,  0.375),      // right outer wall
+    box(-0.85, 0.07, -0.375,  0.85, 0.55, -0.315),      // back outer wall
+    box(-0.85, 0.07,  0.315,  0.85, 0.55,  0.375),      // front outer wall
+    box(-0.85, 0.50, -0.375,  0.85, 0.55,  0.375),      // rim cap
+  ], color: C_WHITE, roughness: 0.12, name: 'body' },
   { parts: [
-    cyl( 0.60, -0.30, 0.48, 0.54, 0.018, 8),            // hot tap
-    cyl( 0.40, -0.30, 0.48, 0.54, 0.018, 8),            // cold tap
-  ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'taps' },
+    // Inner basin (slightly inset — creates visible depth)
+    box(-0.79, 0.08, -0.315, -0.73, 0.50,  0.315),      // inner left wall
+    box( 0.73, 0.08, -0.315,  0.79, 0.50,  0.315),      // inner right wall
+    box(-0.79, 0.08, -0.315,  0.79, 0.50, -0.255),      // inner back wall
+    box(-0.79, 0.08,  0.255,  0.79, 0.50,  0.315),      // inner front wall
+    box(-0.79, 0.08, -0.315,  0.79, 0.13,  0.315),      // inner floor
+    // Headrest slope at one end
+    box( 0.62, 0.13,  -0.28,  0.79, 0.45,  0.28),       // headrest cushion end
+  ], color: [0.93, 0.94, 0.95, 1], roughness: 0.10, name: 'inner' },
+  { parts: [
+    cyl( 0.55, -0.28, 0.46, 0.53, 0.018, 8),            // hot tap riser
+    cyl( 0.38, -0.28, 0.46, 0.53, 0.018, 8),            // cold tap riser
+    cyl( 0.00, -0.28, 0.48, 0.51, 0.010, 8),            // drain
+  ], color: C_CHROME, roughness: 0.15, metallic: 0.85, name: 'taps' },
 ])
 
-// SHOWER TRAY  0.90 × 0.90 × 0.15
+// SHOWER TRAY  0.90W × 0.90D × 0.15H
 writeGLB('shower-tray', [
   { parts: [
-    box(-0.45, 0,    -0.45,  0.45, 0.06,  0.45),        // base
+    box(-0.45, 0.00, -0.45,  0.45, 0.06,  0.45),        // base
     box(-0.45, 0.06, -0.45, -0.41, 0.15,  0.45),        // left rim
     box( 0.41, 0.06, -0.45,  0.45, 0.15,  0.45),        // right rim
     box(-0.45, 0.06, -0.45,  0.45, 0.15, -0.41),        // back rim
     box(-0.45, 0.06,  0.41,  0.45, 0.15,  0.45),        // front rim
-  ], color: C_WHITE, roughness: 0.15, name: 'body' },
+  ], color: C_WHITE, roughness: 0.12, name: 'body' },
   { parts: [
-    cyl(0, 0, 0.06, 0.07, 0.030, 8),                    // drain
-  ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'drain' },
+    cyl(0, 0, 0.06, 0.07, 0.030, 10),                   // drain
+  ], color: C_CHROME, roughness: 0.15, metallic: 0.85, name: 'drain' },
 ])
 
 // TOWEL RACK  0.60 × 0.08 × 0.04  wallMounted  (-Z = wall)
@@ -302,47 +409,59 @@ writeGLB('towel-rack', [
   { parts: [
     box(-0.30, 0.005, -0.04, -0.26, 0.035,  0.03),      // left bracket
     box( 0.26, 0.005, -0.04,  0.30, 0.035,  0.03),      // right bracket
-    box(-0.26, 0.014,  0.024,  0.26, 0.026,  0.038),    // bar
-  ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'body' },
+    cyl(-0.26, 0.025, 0.007, 0.033, 0.010, 8),          // left joint
+    cyl( 0.26, 0.025, 0.007, 0.033, 0.010, 8),          // right joint
+    box(-0.26, 0.014, 0.024,  0.26, 0.026, 0.038),      // main bar
+  ], color: C_CHROME, roughness: 0.15, metallic: 0.85, name: 'body' },
 ])
 
 // BATHROOM MIRROR  0.60 × 0.05 × 0.80  wallMounted  (-Z = wall)
 writeGLB('bathroom-mirror', [
   { parts: [
-    box(-0.30, 0, -0.025, 0.30, 0.80,  0.010),          // backing / frame
-  ], color: C_CHROME, roughness: 0.30, metallic: 0.5, name: 'frame' },
+    box(-0.30, 0.00, -0.025, 0.30, 0.80,  0.010),       // backing / frame
+  ], color: C_CHROME, roughness: 0.25, metallic: 0.55, name: 'frame' },
   { parts: [
-    box(-0.27, 0.03, 0.008, 0.27, 0.77, 0.018),         // mirror face
-  ], color: C_MIRROR, roughness: 0.05, metallic: 0.9, name: 'mirror' },
+    box(-0.27, 0.03,  0.008, 0.27, 0.77, 0.018),        // mirror face
+  ], color: C_MIRROR, roughness: 0.04, metallic: 0.92, name: 'mirror' },
 ])
 
-// VANITY UNIT  0.90 × 0.50 × 0.85
+// VANITY UNIT  0.90W × 0.50D × 0.85H
+// Cabinet with doors + oval integrated basin on countertop.
 writeGLB('vanity-unit', [
   { parts: [
-    box(-0.45, 0,    -0.25,  0.45, 0.72,  0.25),        // cabinet body
+    box(-0.45, 0.00, -0.25,  0.45, 0.72,  0.25),        // cabinet body
     box(-0.45, 0.72, -0.25,  0.45, 0.77,  0.25),        // countertop
-    box(-0.20, 0.76, -0.15,  0.20, 0.85,  0.15),        // integrated basin
     box(-0.43, 0.02,  0.24, -0.03, 0.70,  0.26),        // left door
     box( 0.03, 0.02,  0.24,  0.43, 0.70,  0.26),        // right door
     box(-0.45, 0.72, -0.25,  0.45, 0.85, -0.22),        // backsplash
-  ], color: C_WHITE, roughness: 0.20, name: 'body' },
+    ellipse(0, 0, 0.77, 0.85, 0.18, 0.13, 18),          // oval basin outer wall
+    ring(0, 0, 0.85, 0.18, 0.13, 0.15, 0.10, 18),       // basin rim
+  ], color: C_WHITE, roughness: 0.15, name: 'body' },
+  { parts: [
+    innerEllipse(0, 0, 0.79, 0.85, 0.15, 0.10, 18),     // basin inner wall
+    disk(0, 0, 0.79, 0.15, 0.10, 18),                   // basin floor
+  ], color: [0.88, 0.90, 0.92, 1], roughness: 0.10, name: 'inner' },
   { parts: [
     box(-0.25, 0.34,  0.25, -0.14, 0.36,  0.27),        // left handle
     box( 0.14, 0.34,  0.25,  0.25, 0.36,  0.27),        // right handle
-  ], color: C_CHROME, roughness: 0.20, metallic: 0.8, name: 'handles' },
+  ], color: C_CHROME, roughness: 0.15, metallic: 0.85, name: 'handles' },
 ])
 
-// LAUNDRY BASKET  0.45 × 0.40 × 0.55
+// LAUNDRY BASKET  0.45W × 0.40D × 0.55H  oval wicker shape
 writeGLB('laundry-basket', [
   { parts: [
-    box(-0.22, 0,    -0.20,  0.22, 0.50,  0.20),        // body
-    box(-0.22, 0.12,  0.19,  0.22, 0.14,  0.20),        // weave band 1
-    box(-0.22, 0.25,  0.19,  0.22, 0.27,  0.20),        // weave band 2
-    box(-0.22, 0.38,  0.19,  0.22, 0.40,  0.20),        // weave band 3
-  ], color: C_WICKER, roughness: 0.90, name: 'body' },
+    ellipse(0, 0, 0.00, 0.05, 0.20, 0.18, 14),          // oval base
+    ellipse(0, 0, 0.05, 0.50, 0.22, 0.20, 14),          // body (slightly wider than base)
+    ring(0, 0, 0.10, 0.22, 0.20, 0.19, 0.17, 14),       // weave band 1 (rim detail)
+    ring(0, 0, 0.23, 0.22, 0.20, 0.19, 0.17, 14),       // weave band 2
+    ring(0, 0, 0.36, 0.22, 0.20, 0.19, 0.17, 14),       // weave band 3
+    ring(0, 0, 0.48, 0.22, 0.20, 0.19, 0.17, 14),       // top rim
+  ], color: C_WICKER, roughness: 0.92, name: 'body' },
   { parts: [
-    box(-0.23, 0.48, -0.21,  0.23, 0.55,  0.21),        // lid
-  ], color: [0.62, 0.48, 0.32, 1], roughness: 0.90, name: 'lid' },
+    ellipse(0, 0, 0.49, 0.55, 0.22, 0.20, 14),          // lid outer rim
+    disk(0, 0, 0.55, 0.22, 0.20, 14),                   // lid top face
+    cyl(0, 0, 0.55, 0.59, 0.040, 10),                   // lid knob
+  ], color: [0.62, 0.48, 0.32, 1], roughness: 0.88, name: 'lid' },
 ])
 
 // ─── KITCHEN ──────────────────────────────────────────────────────────────────
