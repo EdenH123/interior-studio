@@ -123,6 +123,8 @@ With an opening selected, the right panel shows:
 - **Sill height (m)** — windows only; how far above the floor the bottom of the glass sits.
 - **Color** — a row of color swatches. Doors offer Wood, White, Dark, Black, Gray. Windows offer White, Wood, Black, Gray. The change applies immediately in the 3D view.
 - **Material** (doors only) — three styles: **Painted** (smooth flat finish), **Wood Grain** (procedural vertical wood grain texture), **Glass** (frosted glass for modern sliding doors).
+- **Swing** (hinged door only) — **← Left** or **Right →** sets which edge the hinge is on. Left means the hinge is on the left jamb and the door swings from there; Right flips it.
+- **Opens toward** (hinged door only) — **↑ Front** or **↓ Back** controls which side of the wall the door opens to. Use this to make a door open into the room rather than out, or vice versa. Together with Swing, this gives you all four possible hinged-door orientations.
 
 Every door also has a visible wooden **casing** (jambs + header) framing the doorway in 3D, including inner jamb lining that wraps the cut wall edges — so the opening reads as a real doorway from any angle, even when the panel is closed or open. Single and double doors have metal knobs at handle height; sliding doors get a chrome vertical pull bar near the leading edge.
 
@@ -193,6 +195,14 @@ has more than 10 entries — type any part of a name or paint code
 The change applies in both the 2D footprint and the 3D box fallback.
 Loaded 3D models keep their own authored materials — the override is
 for the box stand-ins.
+
+### Resizing furniture
+
+Select a piece to reveal **four white corner handles** at the corners of its footprint. Drag any corner to resize the item symmetrically around its centre — both width and depth scale together from the centroid so the piece stays centred.
+
+**Lock ratio** (the checkbox in the right panel under Dimensions, on by default) keeps the W/D proportions fixed while you drag. Uncheck it to resize width and depth independently. The same lock also applies to the W/D/H numeric inputs: when locked, typing a new width scales depth and height proportionally.
+
+You can also type exact values directly in the **W**, **D**, **H** fields in the right panel — press Enter or click away to apply, Esc to cancel.
 
 ### Rotating furniture
 
