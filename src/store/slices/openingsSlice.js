@@ -30,7 +30,8 @@ export const createOpeningsSlice = (set, get) => ({
       position: positionT,
       width: spec.width, height: spec.height, sillHeight: spec.sillHeight,
       levelId: wall.levelId ?? state.activeLevel ?? null,
-      ...(type.startsWith('door') ? { open: false, swingDir: 'left', openSide: 'front' } : {}),
+      ...(type.startsWith('door') ? { open: false, swingDir: 'left', openSide: 'front' } :
+         type === 'window-casement' ? { open: false } : {}),
     }
     const wallLen = wallLengthPx(wall)
     if (candidate.width * PIXELS_PER_METER >= wallLen) {
@@ -85,6 +86,15 @@ export const createOpeningsSlice = (set, get) => ({
   toggleDoorOpen: (id) =>
     set((s) => {
       const idx = s.openings.findIndex((o) => o.id === id && o.type.startsWith('door'))
+      if (idx === -1) return s
+      const openings = s.openings.slice()
+      openings[idx] = { ...openings[idx], open: !openings[idx].open }
+      return { openings }
+    }),
+
+  toggleWindowOpen: (id) =>
+    set((s) => {
+      const idx = s.openings.findIndex((o) => o.id === id && o.type === 'window-casement')
       if (idx === -1) return s
       const openings = s.openings.slice()
       openings[idx] = { ...openings[idx], open: !openings[idx].open }

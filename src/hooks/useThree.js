@@ -78,8 +78,9 @@ export default function useThree(containerRef) {
   const layers          = useStore((s) => s.layers)
   const select          = useStore((s) => s.select)
   const clearSelection  = useStore((s) => s.clearSelection)
-  const toggleDoorOpen  = useStore((s) => s.toggleDoorOpen)
-  const pushToast       = useStore((s) => s.pushToast)
+  const toggleDoorOpen   = useStore((s) => s.toggleDoorOpen)
+  const toggleWindowOpen = useStore((s) => s.toggleWindowOpen)
+  const pushToast        = useStore((s) => s.pushToast)
 
   // ── mount / unmount ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -183,7 +184,7 @@ export default function useThree(containerRef) {
     const detachPicking = attachPicking(
       renderer, camera,
       [wallMeshes.current, furnMeshes.current, roomMeshes.current, doorMeshes.current],
-      { onSelect: select, onClear: clearSelection, onToggleDoor: toggleDoorOpen },
+      { onSelect: select, onClear: clearSelection, onToggleDoor: toggleDoorOpen, onToggleWindow: toggleWindowOpen },
     )
 
     stateRef.current = { scene, camera, renderer, controls, ro, raf: 0, detachPicking, onFrame: null }
@@ -213,7 +214,7 @@ export default function useThree(containerRef) {
       }
       stateRef.current = null
     }
-  }, [containerRef, select, clearSelection, toggleDoorOpen])   // lighting not in deps — initial values only
+  }, [containerRef, select, clearSelection, toggleDoorOpen, toggleWindowOpen])   // lighting not in deps — initial values only
 
   // ── walls ────────────────────────────────────────────────────────────────────
   useEffect(() => {

@@ -8,6 +8,9 @@ const DEFAULT_WALL_HALF = (WALL_THICKNESS * KONVA_TO_THREE) / 2  // 0.1 m
 const DOOR_ANIM_MS   = 300
 const WIN_FT = 0.055  // window frame bar thickness (m)
 const WIN_FD = 0.13   // window frame depth through wall (m)
+const WIN_SILL_H    = 0.038  // sill ledge thickness
+const WIN_SILL_PROJ = 0.10   // how far the sill projects beyond the room-side wall face
+const CASEMENT_OPEN_ANGLE = Math.PI * 0.65  // ~117° open swing
 const CASING_WIDTH = 0.07   // visible trim width around opening (m)
 const CASING_DEPTH = 0.018  // how far the casing sticks out from the wall face (m)
 const CASING_COLOR = 0xa8896a
@@ -136,11 +139,60 @@ function buildPanelMaterial(materialId, color) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0 })
 }
 
-function buildWindowFrame(w, h, frameColor = DEFAULT_WINDOW_COLOR) {
-  const FT = WIN_FT, FD = WIN_FD
+// Returns a frame material for a window or door based on material id.
+function buildFrameMat(color, materialId) {
+  if (materialId === 'wood') {
+    const tex = getDoorTexture()
+    return new THREE.MeshStandardMaterial({ map: tex, color: 0xffffff, roughness: 0.65, metalness: 0 })
+  }
+  if (materialId === 'aluminum') {
+    return new THREE.MeshStandardMaterial({ color, roughness: 0.2, metalness: 0.55 })
+  }
+  return new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0 })
+}
+
+// Window casing — wooden trim around the hole on both wall faces + inner jamb lining.
+// Mirrors buildDoorCasing but wraps all 4 sides (windows have no floor-level gap).
+function buildWindowCasing(w, h, wallHalfThick) {
+  const group = new THREE.Group()
+  const CT = CASING_WIDTH
+  const CD = CASING_DEPTH
+  const LT = 0.020
+  const wallThick = wallHalfThick * 2
+  const mat = new THREE.MeshStandardMaterial({ color: CASING_COLOR, roughness: 0.7, metalness: 0 })
+  const mk = (geo) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; return m }
+
+  for (const side of [1, -1]) {
+    const z = side * (wallHalfThick + CD / 2)
+    const top    = mk(new THREE.BoxGeometry(w + 2 * CT, CT, CD))
+    const left   = mk(new THREE.BoxGeometry(CT, h + 2 * CT, CD))
+    const right  = mk(new THREE.BoxGeometry(CT, h + 2 * CT, CD))
+    const bottom = mk(new THREE.BoxGeometry(w + 2 * CT, CT, CD))
+    top.position.set(0,             h + CT / 2, z)
+    left.position.set(-w/2 - CT/2,  h / 2,      z)
+    right.position.set(w/2 + CT/2,  h / 2,      z)
+    bottom.position.set(0,          -CT / 2,     z)
+    group.add(top, left, right, bottom)
+  }
+
+  const leftJamb   = mk(new THREE.BoxGeometry(LT, h, wallThick))
+  const rightJamb  = mk(new THREE.BoxGeometry(LT, h, wallThick))
+  const header     = mk(new THREE.BoxGeometry(w - 2 * LT, LT, wallThick))
+  const sillLining = mk(new THREE.BoxGeometry(w - 2 * LT, LT, wallThick))
+  leftJamb.position.set(-w/2 + LT/2, h/2,       0)
+  rightJamb.position.set(w/2 - LT/2, h/2,       0)
+  header.position.set(0,              h - LT/2,  0)
+  sillLining.position.set(0,          LT/2,      0)
+  group.add(leftJamb, rightJamb, header, sillLining)
+  return group
+}
+
+function buildWindowFrame(w, h, frameColor = DEFAULT_WINDOW_COLOR, materialId = 'painted', wallHalfThick = DEFAULT_WALL_HALF) {
+  const FT = materialId === 'aluminum' ? WIN_FT * 0.55 : WIN_FT
+  const FD = WIN_FD
   const group = new THREE.Group()
 
-  const frameMat = new THREE.MeshStandardMaterial({ color: frameColor, roughness: 0.55, metalness: 0 })
+  const frameMat = buildFrameMat(frameColor, materialId)
   const glassMat = new THREE.MeshStandardMaterial({
     color: 0xb8d8e8, transparent: true, opacity: 0.28,
     roughness: 0.05, metalness: 0.12, depthWrite: false,
@@ -152,16 +204,14 @@ function buildWindowFrame(w, h, frameColor = DEFAULT_WINDOW_COLOR) {
     return m
   }
 
-  const left  = mk(new THREE.BoxGeometry(FT, h, FD), frameMat)
-  const right = mk(new THREE.BoxGeometry(FT, h, FD), frameMat)
-  const top   = mk(new THREE.BoxGeometry(w, FT, FD), frameMat)
-  const sill  = mk(new THREE.BoxGeometry(w + 0.08, FT * 1.8, FD + 0.07), frameMat)
+  const left   = mk(new THREE.BoxGeometry(FT, h, FD), frameMat)
+  const right  = mk(new THREE.BoxGeometry(FT, h, FD), frameMat)
+  const top    = mk(new THREE.BoxGeometry(w, FT, FD), frameMat)
   const midBar = mk(new THREE.BoxGeometry(w - 2 * FT, FT * 0.7, FD), frameMat)
 
   left.position.set(-w / 2 + FT / 2,  h / 2, 0)
   right.position.set(w / 2 - FT / 2,  h / 2, 0)
   top.position.set(0,                  h - FT / 2, 0)
-  sill.position.set(0,                 FT * 0.9, 0)
   midBar.position.set(0,               h / 2, 0)
 
   const paneH = (h - 2 * FT - FT * 0.7) / 2
@@ -173,7 +223,71 @@ function buildWindowFrame(w, h, frameColor = DEFAULT_WINDOW_COLOR) {
   lowerGlass.renderOrder = 1
   upperGlass.renderOrder = 1
 
-  group.add(left, right, top, sill, midBar, lowerGlass, upperGlass)
+  // Projecting sill — extends beyond the room-side wall face
+  const sillD = wallHalfThick * 2 + WIN_SILL_PROJ
+  const sill  = mk(new THREE.BoxGeometry(w + 0.14, WIN_SILL_H, sillD), frameMat)
+  sill.position.set(0, -WIN_SILL_H / 2, WIN_SILL_PROJ / 2)
+
+  group.add(left, right, top, midBar, lowerGlass, upperGlass, sill)
+  return group
+}
+
+// Casement window: fixed outer frame + openable glass panel hinged at left jamb.
+// The panel group's rotation.y is animated by tickDoorAnims (kind='casement').
+function buildCasementWindow(w, h, wallHalfThick, frameColor = DEFAULT_WINDOW_COLOR, materialId = 'painted') {
+  const FT = materialId === 'aluminum' ? WIN_FT * 0.55 : WIN_FT
+  const FD = WIN_FD
+  const group = new THREE.Group()
+
+  const frameMat = buildFrameMat(frameColor, materialId)
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0xb8d8e8, transparent: true, opacity: 0.28,
+    roughness: 0.05, metalness: 0.12, depthWrite: false,
+  })
+  const mk = (geo, mat, shadow = true) => {
+    const m = new THREE.Mesh(geo, mat)
+    if (shadow) { m.castShadow = true; m.receiveShadow = true }
+    return m
+  }
+
+  // Fixed outer frame (left/right/top jambs — no bottom, sill covers it)
+  const left  = mk(new THREE.BoxGeometry(FT, h, FD), frameMat)
+  const right = mk(new THREE.BoxGeometry(FT, h, FD), frameMat)
+  const top   = mk(new THREE.BoxGeometry(w, FT, FD), frameMat)
+  left.position.set(-w/2 + FT/2,  h/2,       0)
+  right.position.set(w/2 - FT/2,  h/2,       0)
+  top.position.set(0,              h - FT/2,  0)
+  group.add(left, right, top)
+
+  // Projecting sill
+  const sillD = wallHalfThick * 2 + WIN_SILL_PROJ
+  const sill  = mk(new THREE.BoxGeometry(w + 0.14, WIN_SILL_H, sillD), frameMat)
+  sill.position.set(0, -WIN_SILL_H / 2, WIN_SILL_PROJ / 2)
+  group.add(sill)
+
+  // Openable panel — pivot at left inner edge, mesh extends rightward
+  const panelW = w - 2 * FT
+  const panelH = h - FT
+  const panel = new THREE.Group()
+  const pLeft  = mk(new THREE.BoxGeometry(FT,      panelH,       FD * 0.75), frameMat)
+  const pRight = mk(new THREE.BoxGeometry(FT,      panelH,       FD * 0.75), frameMat)
+  const pTop   = mk(new THREE.BoxGeometry(panelW,  FT,           FD * 0.75), frameMat)
+  const pBot   = mk(new THREE.BoxGeometry(panelW,  FT,           FD * 0.75), frameMat)
+  const glassW = panelW - 2 * FT
+  const glassH = panelH - 2 * FT
+  const glass  = mk(new THREE.BoxGeometry(glassW, glassH, 0.006), glassMat, false)
+  glass.renderOrder = 1
+  pLeft.position.set(FT / 2,           panelH / 2, 0)
+  pRight.position.set(panelW - FT / 2, panelH / 2, 0)
+  pTop.position.set(panelW / 2,        panelH - FT / 2, 0)
+  pBot.position.set(panelW / 2,        FT / 2, 0)
+  glass.position.set(panelW / 2,       panelH / 2, 0)
+  panel.add(pLeft, pRight, pTop, pBot, glass)
+
+  // Position pivot at left inner jamb face
+  panel.position.set(-w / 2 + FT, FT / 2, 0)
+  group.add(panel)
+  group.userData.panel = panel
   return group
 }
 
@@ -461,19 +575,73 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
       // All window-* types: raised by sill height, centred on opening.
       const sillH = o.sillHeight ?? 0.9
 
-      let group = meshMap.get(o.id)
-      if (!group || group.userData.matFp !== matFp ||
-          group.userData.width !== o.width || group.userData.height !== o.height) {
-        if (group) { scene.remove(group); disposeMeshes(group) }
-        group = buildWindowFrame(o.width, o.height, windowColor)
-        group.userData.kind   = 'window'
-        group.userData.id     = o.id
-        group.userData.matFp  = matFp
-        group.userData.width  = o.width
-        group.userData.height = o.height
-        scene.add(group)
-        meshMap.set(o.id, group)
+      // Window casing — wooden jambs + header + inner lining on all sides.
+      const winCasingKey = `${o.id}:casing`
+      present.add(winCasingKey)
+      let winCasing = meshMap.get(winCasingKey)
+      const winCasingFp = `${o.width.toFixed(3)}:${o.height.toFixed(3)}:${wallHalfThick.toFixed(3)}`
+      if (!winCasing || winCasing.userData.casingFp !== winCasingFp) {
+        if (winCasing) { scene.remove(winCasing); disposeMeshes(winCasing) }
+        winCasing = buildWindowCasing(o.width, o.height, wallHalfThick)
+        winCasing.userData.kind     = 'window-casing'
+        winCasing.userData.id       = o.id
+        winCasing.userData.casingFp = winCasingFp
+        scene.add(winCasing)
+        meshMap.set(winCasingKey, winCasing)
       }
+      winCasing.position.set(openCX, yOffset + sillH, openCZ)
+      winCasing.rotation.y = wallYaw
+      winCasing.visible = visible
+
+      // Window frame or casement panel
+      const winFp = `${matFp}:${o.width.toFixed(3)}:${o.height.toFixed(3)}:${wallHalfThick.toFixed(3)}`
+      let group = meshMap.get(o.id)
+
+      if (o.type === 'window-casement') {
+        if (!group || group.userData.winFp !== winFp) {
+          if (group) { scene.remove(group); disposeMeshes(group); doorAnims.delete(o.id) }
+          group = buildCasementWindow(o.width, o.height, wallHalfThick, windowColor, materialId)
+          group.userData.kind   = 'window'
+          group.userData.type   = o.type
+          group.userData.id     = o.id
+          group.userData.matFp  = matFp
+          group.userData.winFp  = winFp
+          group.userData.width  = o.width
+          group.userData.height = o.height
+          const initAngle = o.open ? CASEMENT_OPEN_ANGLE : 0
+          group.userData.panel.rotation.y = initAngle
+          group.userData.targetAngle = initAngle
+          scene.add(group)
+          meshMap.set(o.id, group)
+        } else {
+          const targetAngle = o.open ? CASEMENT_OPEN_ANGLE : 0
+          if (group.userData.targetAngle !== targetAngle) {
+            doorAnims.set(o.id, {
+              kind: 'casement',
+              panel: group.userData.panel,
+              startAngle: group.userData.panel.rotation.y,
+              targetAngle,
+              startTime: performance.now(),
+            })
+            group.userData.targetAngle = targetAngle
+          }
+        }
+      } else {
+        if (!group || group.userData.winFp !== winFp) {
+          if (group) { scene.remove(group); disposeMeshes(group) }
+          group = buildWindowFrame(o.width, o.height, windowColor, materialId, wallHalfThick)
+          group.userData.kind   = 'window'
+          group.userData.type   = o.type
+          group.userData.id     = o.id
+          group.userData.matFp  = matFp
+          group.userData.winFp  = winFp
+          group.userData.width  = o.width
+          group.userData.height = o.height
+          scene.add(group)
+          meshMap.set(o.id, group)
+        }
+      }
+
       group.position.set(openCX, yOffset + sillH, openCZ)
       group.rotation.y = wallYaw
       group.visible = visible
@@ -501,6 +669,8 @@ export function tickDoorAnims(doorAnims) {
     } else if (anim.kind === 'slide') {
       anim.group.position.x = anim.startX + (anim.targetX - anim.startX) * s
       anim.group.position.z = anim.startZ + (anim.targetZ - anim.startZ) * s
+    } else if (anim.kind === 'casement') {
+      anim.panel.rotation.y = anim.startAngle + (anim.targetAngle - anim.startAngle) * s
     } else {
       anim.group.rotation.y = anim.startAngle + (anim.targetAngle - anim.startAngle) * s
     }

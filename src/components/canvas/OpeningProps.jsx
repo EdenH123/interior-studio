@@ -21,9 +21,16 @@ const DOOR_MATERIALS = [
   { id: 'glass',   label: 'Glass' },
 ]
 
+const WINDOW_FRAME_MATERIALS = [
+  { id: 'painted',  label: 'Painted' },
+  { id: 'aluminum', label: 'Aluminum' },
+  { id: 'wood',     label: 'Wood' },
+]
+
 export default function OpeningProps({ opening, wall, onUpdate, pushToast }) {
   const spec = getOpeningSpec(opening.type)
   const isDoor = opening.type.startsWith('door')
+  const isWindow = opening.type.startsWith('window')
   const colors = isDoor ? DOOR_COLORS : WINDOW_COLORS
   const currentMaterial = opening.material ?? 'painted'
 
@@ -79,6 +86,27 @@ export default function OpeningProps({ opening, wall, onUpdate, pushToast }) {
           <span className="text-gray-500 text-[11px] uppercase tracking-wider">Material</span>
           <div className="flex gap-1 mt-1">
             {DOOR_MATERIALS.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => onUpdate(opening.id, { material: id })}
+                className={`flex-1 px-2 py-1 text-[11px] rounded border transition-all ${
+                  currentMaterial === id
+                    ? 'bg-blue-600 border-blue-500 text-white'
+                    : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isWindow && (
+        <div className="mt-3">
+          <span className="text-gray-500 text-[11px] uppercase tracking-wider">Frame</span>
+          <div className="flex gap-1 mt-1">
+            {WINDOW_FRAME_MATERIALS.map(({ id, label }) => (
               <button
                 key={id}
                 onClick={() => onUpdate(opening.id, { material: id })}
