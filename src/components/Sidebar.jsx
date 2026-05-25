@@ -6,13 +6,15 @@ import LayersPanel from './LayersPanel'
 import LevelsPanel from './LevelsPanel'
 import IkeaProductSearch from './IkeaProductSearch'
 import ImportModelModal from './ImportModelModal'
+import CreateModelModal from './CreateModelModal'
 import { CUSTOM_MODEL_DRAG_MIME } from '../hooks/useCustomModelDrop'
 
 export const FURNITURE_DRAG_MIME = 'application/x-interior-studio-furniture'
 
 export default function Sidebar() {
-  const [showImport, setShowImport] = useState(false)
-  const [editModel,  setEditModel]  = useState(null)
+  const [showImport,  setShowImport]  = useState(false)
+  const [showCreate,  setShowCreate]  = useState(false)
+  const [editModel,   setEditModel]   = useState(null)
   const [search, setSearch] = useState('')
 
   const query = search.trim().toLowerCase()
@@ -57,6 +59,7 @@ export default function Sidebar() {
             <OpeningsGroup />
             <MyModelsGroup
               onImport={() => setShowImport(true)}
+              onCreate={() => setShowCreate(true)}
               onEdit={(model) => setEditModel(model)}
             />
             {CATEGORIES.map((cat) => (
@@ -75,11 +78,12 @@ export default function Sidebar() {
       </div>
       {showImport && <ImportModelModal onClose={() => setShowImport(false)} />}
       {editModel  && <ImportModelModal editModel={editModel} onClose={() => setEditModel(null)} />}
+      {showCreate && <CreateModelModal onClose={() => setShowCreate(false)} />}
     </aside>
   )
 }
 
-function MyModelsGroup({ onImport, onEdit }) {
+function MyModelsGroup({ onImport, onCreate, onEdit }) {
   const customModels    = useStore((s) => s.customModels)
   const removeCustomModel = useStore((s) => s.removeCustomModel)
   const setDragGhostCustom = useStore((s) => s.setDragGhostCustom)
@@ -89,13 +93,16 @@ function MyModelsGroup({ onImport, onEdit }) {
     <div>
       <div className="px-1 pb-1 flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-widest text-gray-500">My Models</span>
-        <button
-          onClick={onImport}
-          title="Import a .glb file"
-          className="text-gray-500 hover:text-gray-300 transition-colors text-[11px] leading-none px-1"
-        >
-          + Import
-        </button>
+        <div className="flex gap-2">
+          <button onClick={onCreate} title="Build a model from shapes"
+            className="text-gray-500 hover:text-gray-300 transition-colors text-[11px] leading-none px-1">
+            + Create
+          </button>
+          <button onClick={onImport} title="Import a .glb file"
+            className="text-gray-500 hover:text-gray-300 transition-colors text-[11px] leading-none px-1">
+            + Import
+          </button>
+        </div>
       </div>
       {customModels.length === 0 ? (
         <p className="text-[10px] text-gray-600 px-1 pb-1 leading-snug">
