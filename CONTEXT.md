@@ -612,6 +612,18 @@ interior-studio/
   - **Shower tray / towel rack / mirror**: minor polish only.
   - Triangle counts: toilet 260, basin 408, laundry 334, bathtub 240. Build green.
 
+- [x] Multi-color kitchen 3D models (branch claude/object-resize-models-bikg3, 2026-05-25)
+  - Added `C_MARBLE` + `C_PAINT_W` constants to `generate-bathroom-kitchen-glbs.mjs`.
+  - **Kitchen sink** (3 groups): oak wood cabinet + stainless countertop/sink basin + chrome taps/handles (hot+cold handles added).
+  - **Fridge** (3 groups): dark gunmetal body + stainless steel doors + chrome handles. Was previously all-chrome.
+  - **Dishwasher** (3 groups): dark body + stainless control strip + chrome handle. Control strip split from door panel.
+  - **Kitchen island** (3 groups): oak wood cabinet + marble countertop (white marble tone) + chrome handles on all 4 sides (back handles added).
+  - **Pantry unit**: painted warm white body + chrome handles (was beige/off-white).
+  - **Upper cabinet**: painted warm white body + chrome handle.
+  - **Bar stool** (3 groups): fabric seat + wood base column + chrome footrest (footrest split from base).
+  - **Oven / microwave / range hood**: unchanged — already multi-material.
+  - `furnitureCatalog.js`: updated `parts` keys for all 10 kitchen items to match new GLB material names (enables per-part color override in FurnitureProps).
+
 ### 🚧 In Progress
 - (nothing active)
 
