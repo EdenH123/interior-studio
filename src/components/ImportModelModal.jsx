@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import useStore from '../store/useStore'
@@ -7,6 +8,7 @@ import { arrayBufferToBase64 } from '../utils/customModelUrls'
 // Pass `editModel` (a customModels entry) to open in edit-dimensions mode
 // instead of import mode. No file picker shown; only name/dims/color editable.
 export default function ImportModelModal({ onClose, editModel }) {
+  const { t } = useTranslation()
   const addCustomModel    = useStore((s) => s.addCustomModel)
   const updateCustomModel = useStore((s) => s.updateCustomModel)
 
@@ -25,7 +27,7 @@ export default function ImportModelModal({ onClose, editModel }) {
 
   const processFile = useCallback(async (f) => {
     if (!f.name.toLowerCase().endsWith('.glb')) {
-      setError('Only .glb files are supported.')
+      setError(t('import_model.err_glb_only'))
       return
     }
     setLoading(true)
@@ -41,7 +43,7 @@ export default function ImportModelModal({ onClose, editModel }) {
         setHeight(dims.height.toFixed(2))
       }
     } catch {
-      setError('Could not read the file. Make sure it is a valid .glb.')
+      setError(t('import_model.err_read_file'))
     } finally {
       setLoading(false)
     }
@@ -61,10 +63,10 @@ export default function ImportModelModal({ onClose, editModel }) {
 
   function handleSubmit() {
     const w = parseFloat(width), d = parseFloat(depth), h = parseFloat(height)
-    if (!isEdit && !file)   { setError('Please select a .glb file.'); return }
-    if (!label.trim())      { setError('Please enter a name.'); return }
+    if (!isEdit && !file)   { setError(t('import_model.err_no_file')); return }
+    if (!label.trim())      { setError(t('import_model.err_no_name')); return }
     if (!w || w <= 0 || !d || d <= 0 || !h || h <= 0) {
-      setError('Width, depth, and height must be positive numbers.')
+      setError(t('import_model.err_dims'))
       return
     }
     if (isEdit) {
@@ -84,7 +86,7 @@ export default function ImportModelModal({ onClose, editModel }) {
       >
         <div className="flex items-center justify-between">
           <h2 className="text-gray-200 text-sm font-semibold">
-            {isEdit ? `Edit "${editModel.label}"` : 'Import 3D Model'}
+            {isEdit ? t('import_model.title_edit', { label: editModel.label }) : t('import_model.title_new')}
           </h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg leading-none">×</button>
         </div>
@@ -102,16 +104,16 @@ export default function ImportModelModal({ onClose, editModel }) {
           >
             <input ref={inputRef} type="file" accept=".glb" className="hidden" onChange={handleFileInput} />
             {loading ? (
-              <p className="text-gray-400 text-sm">Analysing model…</p>
+              <p className="text-gray-400 text-sm">{t('import_model.analyzing')}</p>
             ) : file ? (
               <div>
                 <p className="text-green-400 text-sm font-mono truncate">{file.name}</p>
-                <p className="text-gray-500 text-[11px] mt-1">dimensions auto-detected below</p>
+                <p className="text-gray-500 text-[11px] mt-1">{t('import_model.auto_detected')}</p>
               </div>
             ) : (
               <div>
-                <p className="text-gray-400 text-sm">Drop a <span className="font-mono text-gray-300">.glb</span> file here</p>
-                <p className="text-gray-600 text-[11px] mt-1">or click to browse</p>
+                <p className="text-gray-400 text-sm">{t('import_model.drop_hint')}</p>
+                <p className="text-gray-600 text-[11px] mt-1">{t('import_model.click_browse')}</p>
               </div>
             )}
           </div>
@@ -119,19 +121,19 @@ export default function ImportModelModal({ onClose, editModel }) {
 
         {/* Name */}
         <label className="flex flex-col gap-1">
-          <span className="text-gray-500 text-[11px] uppercase tracking-wider">Name</span>
+          <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('import_model.name')}</span>
           <input
             type="text"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            placeholder="My Chair"
+            placeholder={t('import_model.name_placeholder')}
             className="bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-gray-200 text-sm focus:border-blue-500 focus:outline-none"
           />
         </label>
 
         {/* Dimensions */}
         <div>
-          <span className="text-gray-500 text-[11px] uppercase tracking-wider">Dimensions (metres)</span>
+          <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('import_model.dimensions')}</span>
           <div className="grid grid-cols-3 gap-2 mt-1">
             {[['W', width, setWidth], ['D', depth, setDepth], ['H', height, setHeight]].map(([l, v, s]) => (
               <label key={l} className="flex flex-col gap-0.5">
@@ -149,7 +151,7 @@ export default function ImportModelModal({ onClose, editModel }) {
 
         {/* Color */}
         <label className="flex items-center gap-3">
-          <span className="text-gray-500 text-[11px] uppercase tracking-wider">Tile color</span>
+          <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('import_model.tile_color')}</span>
           <div className="relative">
             <div className="w-6 h-6 rounded border border-gray-600" style={{ background: color }} />
             <input
@@ -167,14 +169,14 @@ export default function ImportModelModal({ onClose, editModel }) {
             onClick={onClose}
             className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors"
           >
-            Cancel
+            {t('import_model.cancel')}
           </button>
           <button
             onClick={handleSubmit}
             disabled={!isEdit && (!file || loading)}
             className="px-4 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded transition-colors"
           >
-            {isEdit ? 'Save Changes' : 'Add to Library'}
+            {isEdit ? t('import_model.save') : t('import_model.add_to_library')}
           </button>
         </div>
       </div>

@@ -9,6 +9,9 @@ export default function useLanguageSync() {
   useEffect(() => {
     i18n.changeLanguage(language)
     document.documentElement.lang = language
-    document.documentElement.dir = language === 'he' ? 'rtl' : 'ltr'
+    // Layout stays LTR for both languages — only text translates, button
+    // positions never shift. Hebrew characters still render right-to-left
+    // within their own text containers thanks to Unicode BiDi.
+    document.documentElement.dir = 'ltr'
   }, [language, i18n])
 }

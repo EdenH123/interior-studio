@@ -1,35 +1,39 @@
+import { useTranslation } from 'react-i18next'
 import { formatMeters } from './constants'
 import { getSingleItem, selectionItems } from '../../store/selectionHelpers'
 
 // Small floating chips shown over the 2D canvas: zoom % and cursor coords
 // in meters (bottom-left) and a context-sensitive hint (bottom-right).
 export default function HudOverlay({ view, cursor, drawing, spaceDown, selection, calibration, shiftDown, altDown }) {
+  const { t } = useTranslation()
   const single = getSingleItem(selection)
   const count = selectionItems(selection).length
-  const snapModeHint = altDown ? 'free angle' : shiftDown ? '90° only' : '45° snap · Shift=90° · Alt=free'
+  const snapModeHint = altDown
+    ? t('hud.snap_free')
+    : shiftDown ? t('hud.snap_90') : t('hud.snap_45')
   const hint = spaceDown
-    ? 'pan'
+    ? t('hud.hint_pan')
     : calibration
       ? !calibration.p1
-        ? 'click first calibration point · esc to cancel'
+        ? t('hud.hint_calib_p1')
         : !calibration.p2
-          ? 'click second calibration point · esc to cancel'
-          : 'enter real distance to apply'
+          ? t('hud.hint_calib_p2')
+          : t('hud.hint_calib_distance')
       : drawing
-        ? `click to extend · esc to end · ${snapModeHint}`
+        ? t('hud.hint_drawing', { snap: snapModeHint })
         : count > 1
-          ? `${count} items selected · del to remove · shift+click to deselect`
+          ? t('hud.hint_multi', { count })
           : single?.kind === 'furniture'
-            ? 'drag to move · R/Shift+R rotate · del to remove'
+            ? t('hud.hint_furniture')
             : single?.kind === 'wall'
-              ? 'del to remove wall'
+              ? t('hud.hint_wall')
               : single?.kind === 'opening'
-                ? 'drag along wall to reposition · edit size on the right · del to remove'
+                ? t('hud.hint_opening')
                 : single?.kind === 'room'
-                  ? 'edit name + floor material on the right'
+                  ? t('hud.hint_room')
                   : single?.kind === 'underlay'
-                    ? 'underlay selected · adjust on the right · drag to move (unlocked only)'
-                    : 'click to start wall · alt+click wall to draw from it · right-click wall to delete · space+drag pan'
+                    ? t('hud.hint_underlay')
+                    : t('hud.hint_default')
   return (
     <div className="pointer-events-none absolute inset-0 text-[11px] text-gray-400 font-mono">
       <div className="absolute bottom-2 left-2 bg-gray-900/80 border border-gray-700 rounded px-2 py-1">

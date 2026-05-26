@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import useStore from '../../store/useStore'
 import { TOURS, OPTIONAL_TOUR_IDS } from './tourSteps'
 import { useTargetRect } from './useTargetRect'
@@ -8,9 +9,10 @@ import TourTooltip from './TourTooltip'
 
 // Inline "take another tour?" card shown after the core tour finishes
 function FollowupCard({ onStart, onClose }) {
+  const { t } = useTranslation()
   return (
     <div className="mt-3 border-t border-gray-700 pt-3">
-      <p className="text-[11px] text-gray-400 mb-2">Want to explore more?</p>
+      <p className="text-[11px] text-gray-400 mb-2">{t('tour.ui.explore_more')}</p>
       <div className="flex flex-col gap-1">
         {OPTIONAL_TOUR_IDS.map((id) => (
           <button
@@ -19,8 +21,8 @@ function FollowupCard({ onStart, onClose }) {
             onClick={() => onStart(id)}
             className="text-left text-xs px-2 py-1.5 rounded border border-gray-700 bg-gray-800 text-gray-300 hover:border-blue-500 hover:text-white transition-colors"
           >
-            {TOURS[id].label}
-            <span className="text-gray-500 ml-1 text-[10px]">— {TOURS[id].description}</span>
+            {t(`tour.${id}.label`, { defaultValue: TOURS[id].label })}
+            <span className="text-gray-500 ml-1 text-[10px]">— {t(`tour.${id}.desc`, { defaultValue: TOURS[id].description })}</span>
           </button>
         ))}
       </div>
@@ -29,19 +31,24 @@ function FollowupCard({ onStart, onClose }) {
         onClick={onClose}
         className="mt-2 text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
       >
-        Close
+        {t('tour.ui.close')}
       </button>
     </div>
   )
 }
 
 // Missing-target fallback card shown when a step's selector finds nothing
-function MissingCard({ step, onNext, onSkip }) {
+function MissingCard({ tourId, step, onNext, onSkip }) {
+  const { t } = useTranslation()
   const toggle3d = useStore((s) => s.toggle3d)
   const toggleAiPanel = useStore((s) => s.toggleAiPanel)
 
   const autoFixActions = { toggle3d, toggleAiPanel }
   const fix = step.prerequisite?.autoFix ? autoFixActions[step.prerequisite.autoFix] : null
+  const prereqKey = `tour.${tourId}.steps.${step.key}.prereq`
+  const message = step.prerequisite
+    ? t(prereqKey, { defaultValue: step.prerequisite.message })
+    : t('tour.ui.missing_default')
 
   return (
     <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
@@ -49,18 +56,16 @@ function MissingCard({ step, onNext, onSkip }) {
       pointer-events-auto"
       style={{ zIndex: 'inherit' }}
     >
-      <p className="text-xs text-gray-400 mb-3">
-        {step.prerequisite?.message ?? 'This element is not visible right now.'}
-      </p>
+      <p className="text-xs text-gray-400 mb-3">{message}</p>
       <div className="flex gap-2 justify-end">
-        <button type="button" onClick={onSkip} className="text-xs text-gray-500 hover:text-gray-300">Skip tour</button>
+        <button type="button" onClick={onSkip} className="text-xs text-gray-500 hover:text-gray-300">{t('tour.ui.skip')}</button>
         {fix && (
           <button
             type="button"
             onClick={fix}
             className="text-xs px-3 py-1 rounded border border-gray-600 bg-gray-800 text-gray-300 hover:border-gray-400"
           >
-            {step.prerequisite.autoFix === 'toggle3d' ? 'Switch to 3D' : 'Open panel'}
+            {step.prerequisite.autoFix === 'toggle3d' ? t('tour.ui.switch_3d') : t('tour.ui.open_panel')}
           </button>
         )}
         <button
@@ -68,7 +73,7 @@ function MissingCard({ step, onNext, onSkip }) {
           onClick={onNext}
           className="text-xs px-3 py-1 rounded bg-blue-600 border border-blue-500 text-white hover:bg-blue-500"
         >
-          Next →
+          {t('tour.ui.next')}
         </button>
       </div>
     </div>
@@ -129,9 +134,10 @@ export default function TourOverlay() {
       <TourSpotlight rect={spotlightRect} padding={step.padding ?? 8} />
       {missing && !noSpotlight
         ? (
-          <MissingCard step={step} onNext={nextStep} onSkip={skipTour} />
+          <MissingCard tourId={tourId} step={step} onNext={nextStep} onSkip={skipTour} />
         ) : (
           <TourTooltip
+            tourId={tourId}
             step={step}
             rect={noSpotlight ? null : rect}
             stepIndex={stepIndex}
