@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Stage, Layer, Rect } from 'react-konva'
+import { Stage, Layer, Line, Rect } from 'react-konva'
 import useStore from '../store/useStore'
 import useElementSize from '../hooks/useElementSize'
 import useViewport from '../hooks/useViewport'
@@ -46,6 +46,7 @@ export default function CanvasArea() {
   const allFurniture = useStore((s) => s.furniture)
   const allOpenings = useStore((s) => s.openings)
   const activeLevel = useStore((s) => s.activeLevel)
+  const levels = useStore((s) => s.levels)
   const layers = useStore((s) => s.layers)
   const updateOpening = useStore((s) => s.updateOpening)
   const removeOpening = useStore((s) => s.removeOpening)
@@ -96,6 +97,18 @@ export default function CanvasArea() {
   useEffect(() => recenterIfUnset(size.width, size.height), [size.width, size.height, recenterIfUnset])
 
   const rooms = useMemo(() => detectRooms(walls), [walls])
+
+  // Ghost rooms: the room shapes from the level directly below the active one.
+  // Shown as faint dashed outlines so you know where the floor below sits
+  // while placing walls on the current level.
+  const belowLevelRooms = useMemo(() => {
+    const sorted = [...levels].sort((a, b) => a.order - b.order)
+    const activeIdx = sorted.findIndex((l) => l.id === activeLevel)
+    if (activeIdx <= 0) return [] // ground floor has nothing below
+    const belowId = sorted[activeIdx - 1].id
+    const belowWalls = allWalls.filter((w) => w.levelId === belowId)
+    return detectRooms(belowWalls)
+  }, [levels, activeLevel, allWalls])
   // Rotation handle only for a single selected furniture item.
   const singleSel = getSingleItem(selection)
   const selectedFurniture = layers.furniture && singleSel?.kind === 'furniture'
@@ -162,6 +175,19 @@ export default function CanvasArea() {
           </Layer>
           <Layer listening={false}>{layers.grid && <Grid />}</Layer>
           <Layer>
+            {belowLevelRooms.map((room) => (
+              <Line
+                key={`ghost-${room.id}`}
+                points={room.verts.flatMap((v) => [v.x, v.y])}
+                closed
+                fill="rgba(148,163,184,0.06)"
+                stroke="#6b7280"
+                strokeWidth={1.5 / view.scale}
+                dash={[8 / view.scale, 5 / view.scale]}
+                dashEnabled
+                listening={false}
+              />
+            ))}
             {layers.rooms && rooms.map((room) => {
               const meta = roomMeta[room.id]
               const material = meta?.floorMaterial ? getFloorMaterial(meta.floorMaterial) : null

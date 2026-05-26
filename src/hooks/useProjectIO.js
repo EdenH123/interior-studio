@@ -17,8 +17,11 @@ const KONVA_PX_PER_M = 50
 export default function useProjectIO() {
   const walls = useStore((s) => s.walls)
   const furniture = useStore((s) => s.furniture)
+  const openings = useStore((s) => s.openings)
   const roomMeta = useStore((s) => s.roomMeta)
   const underlay = useStore((s) => s.underlay)
+  const levels = useStore((s) => s.levels)
+  const activeLevel = useStore((s) => s.activeLevel)
   const loadProject = useStore((s) => s.loadProject)
   const pushToast = useStore((s) => s.pushToast)
   const importInputRef = useRef(null)
@@ -91,7 +94,7 @@ export default function useProjectIO() {
   }
 
   function exportJson() {
-    const payload = buildExportData({ walls, furniture, roomMeta, underlay })
+    const payload = buildExportData({ walls, furniture, openings, roomMeta, underlay, levels, activeLevel })
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     downloadBlob(`interior-studio-${timestampForFilename()}.studio.json`, blob)
   }
