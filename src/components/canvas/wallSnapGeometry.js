@@ -36,7 +36,12 @@ export function findWallSnap(item, walls, scale, thresholdScreen = 60) {
   const thresholdWorld = thresholdScreen / scale
   const cx = item.x
   const cy = item.y
-  const halfDepth = (item.depth * PIXELS_PER_METER) / 2
+  const hw = (item.width * PIXELS_PER_METER) / 2
+  const hd = (item.depth * PIXELS_PER_METER) / 2
+  // Use current item rotation so the correct face snaps flush — don't force rotation.
+  const rot = ((item.rotation ?? 0) * Math.PI) / 180
+  const cosR = Math.cos(rot)
+  const sinR = Math.sin(rot)
 
   let bestDist = thresholdWorld
   let bestSnap = null
@@ -68,16 +73,18 @@ export function findWallSnap(item, walls, scale, thresholdScreen = 60) {
     const dot = (cx - px) * nx + (cy - py) * ny
     const side = dot === 0 ? 1 : Math.sign(dot)
 
-    // Snapped centroid: wall face + halfDepth offset outward.
-    const snapX = px + side * nx * (halfDepth + WALL_HALF_THICK + 1)
-    const snapY = py + side * ny * (halfDepth + WALL_HALF_THICK + 1)
+    // Half-extent of the rotated rectangle projected onto the wall normal.
+    // This is the support function of the OBB: picks the correct face regardless
+    // of which way the item is currently rotated.
+    const halfExtent = hw * Math.abs(cosR * nx + sinR * ny)
+                     + hd * Math.abs(-sinR * nx + cosR * ny)
 
-    // Rotation: furniture face flush against wall.
-    const wallAngleDeg = Math.atan2(dy, dx) * (180 / Math.PI)
-    const rotation = normalizeAngle(wallAngleDeg + (side > 0 ? 90 : -90))
+    const snapX = px + side * nx * (halfExtent + WALL_HALF_THICK + 1)
+    const snapY = py + side * ny * (halfExtent + WALL_HALF_THICK + 1)
 
     bestDist = dist
-    bestSnap = { x: snapX, y: snapY, rotation }
+    // rotation: null → preserve item's current rotation, only reposition.
+    bestSnap = { x: snapX, y: snapY, rotation: null }
   }
 
   return bestSnap
