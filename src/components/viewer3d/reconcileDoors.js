@@ -484,9 +484,11 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
 
     } else if (o.type === 'door-double') {
       // Group centred on the opening. Each panel pivots from its outer edge.
-      // Open: left panel -π/2, right panel +π/2 (both swing into the +Z / room side).
-      const targetLeft  = o.open ? -Math.PI / 2 : 0
-      const targetRight = o.open ?  Math.PI / 2 : 0
+      // openSide='front' (default): left panel -π/2, right panel +π/2 → both swing into +Z side.
+      // openSide='back': signs flip so both panels swing into -Z side instead.
+      const sideSign    = o.openSide === 'back' ? -1 : 1
+      const targetLeft  = o.open ? -sideSign * Math.PI / 2 : 0
+      const targetRight = o.open ?  sideSign * Math.PI / 2 : 0
 
       let group = meshMap.get(o.id)
       if (!group || group.userData.matFp !== matFp ||
@@ -529,8 +531,11 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
     } else if (o.type === 'door-sliding') {
       // Closed: panel centred on the opening, riding the room-side wall face.
       // Open: panel slid one full width along the wall (same face, different position).
-      const slideX = o.open ? o.width * cosYaw : 0
-      const slideZ = o.open ? -o.width * sinYaw : 0
+      // swingDir='left' (default): slides toward wall's start direction (+cosYaw / -sinYaw).
+      // swingDir='right': slides the opposite way.
+      const slideSign = o.swingDir === 'right' ? -1 : 1
+      const slideX = o.open ?  slideSign * o.width * cosYaw : 0
+      const slideZ = o.open ? -slideSign * o.width * sinYaw : 0
       const targetX = openCX + slideX
       const targetZ = openCZ + slideZ
 

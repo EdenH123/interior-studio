@@ -2,6 +2,7 @@ import useStore from '../store/useStore'
 import {
   SNAP_RADIUS_SCREEN, snapTo90, snapTo45, findNearestSnapPoint, snapParallelWallLength,
 } from '../components/canvas/constants'
+import { nearestWallSnap } from '../components/canvas/openingGeometry'
 
 // Owns the click-to-draw-walls flow. Returns a handler for the Stage's
 // onMouseDown that:
@@ -32,18 +33,28 @@ export default function useDrawWalls(stageRef, viewScale, spaceDown, shiftDown =
     if (evt.button === 1 || (evt.button === 0 && spaceDown)) return
     if (evt.button !== 0) return
     if (calibration) return
-    // Allow shape clicks when a wall chain is in progress, or when the click
+    // Allow shape clicks when a wall chain is in progress, when the click
     // landed on a room polygon (enables starting interior partition walls
-    // by clicking inside an existing room).
+    // by clicking inside an existing room), or when the user is holding Alt
+    // (lets them start a new chain by Alt-clicking on an existing wall — the
+    // start point projects onto the wall, so T-junctions are one click).
     const targetIsRoom = e.target?.getAttr?.('name') === 'room-fill'
-    if (e.target !== stageRef.current && !drawStart && !targetIsRoom) return
+    if (e.target !== stageRef.current && !drawStart && !targetIsRoom && !altDown) return
     clearSelection()
     const p = stageRef.current.getRelativePointerPosition()
     if (!p) return
     const threshold = SNAP_RADIUS_SCREEN / viewScale
     const snap = findNearestSnapPoint(p, walls, threshold)
     if (!drawStart) {
-      setDrawStart(snap ?? p)
+      // Endpoint/midpoint snap wins. Otherwise, if Alt+click landed on a
+      // wall body, project the cursor onto that wall so the chain starts
+      // exactly on the wall.
+      let start = snap ?? p
+      if (!snap && altDown && e.target !== stageRef.current) {
+        const wallProj = nearestWallSnap(p, walls, Infinity)
+        if (wallProj) start = { x: wallProj.point.x, y: wallProj.point.y }
+      }
+      setDrawStart(start)
       return
     }
     let end

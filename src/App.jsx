@@ -23,9 +23,9 @@ export default function App() {
   return (
     <div className="flex flex-col h-full bg-gray-950 text-white">
       <Toolbar />
-      <div className="flex flex-1 overflow-hidden rtl:flex-row-reverse">
+      <div className="flex flex-1 overflow-hidden">
         <Sidebar />
-        <div className="flex flex-1 overflow-hidden" dir="ltr">
+        <div className="flex flex-1 overflow-hidden">
           {show3d ? (
             <Suspense fallback={<ViewerFallback />}>
               <Viewer3D />

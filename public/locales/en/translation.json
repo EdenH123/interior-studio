@@ -31,9 +31,73 @@
     "drop_hint": "drop on a wall — snaps automatically",
     "my_models": "My Models",
     "import": "+ Import",
+    "import_title": "Import a .glb file",
     "no_models_hint": "Import a .glb from any AI 3D generator",
     "edit_dimensions": "Edit dimensions",
     "remove_from_library": "Remove from library"
+  },
+  "calibration": {
+    "title": "Calibrate underlay",
+    "intro": "Two points marked. Enter their real-world distance to scale the image so the canvas grid stays accurate.",
+    "pixel_dist": "current pixel distance ≈ {{m}} m at the canvas scale",
+    "real_distance": "Real distance (meters)",
+    "cancel": "Cancel",
+    "apply": "Apply"
+  },
+  "ai_settings": {
+    "warning": "⚠ Dev-mode feature. Pasting a Google API key into a browser-side app exposes it to any script on this page, browser extensions, and anyone with access to dev tools. We store the key only in sessionStorage — it clears when you close this tab — but that doesn't protect against the above. Use a key restricted to the Generative Language API only.",
+    "label": "Google Gemini API key",
+    "clear": "Clear key",
+    "done": "Done"
+  },
+  "ai_proposal": {
+    "no_changes": "Proposal matches current state — nothing to apply.",
+    "dismiss": "dismiss",
+    "preview": "Preview changes",
+    "walls": "walls",
+    "furniture": "furniture",
+    "rooms": "room names + materials",
+    "no_change": "no change",
+    "apply": "Apply",
+    "discard": "Discard",
+    "undo_hint": "Applies in one history step. Press {{key}} to undo."
+  },
+  "material_picker": {
+    "search_placeholder": "Search colors or codes…",
+    "default": "Default"
+  },
+  "ikea": {
+    "add_custom": "Add custom item",
+    "place_pending": "Click canvas to place \"{{label}}\"",
+    "label_code": "Article code",
+    "label_search": "Search by name or paste a code",
+    "search_placeholder": "KALLAX 2×2  or  803.518.72",
+    "look_up": "Look up",
+    "looking": "…",
+    "place": "Place on canvas",
+    "place_disabled": "Search a product above",
+    "fetch_no_dims": "Found \"{{name}}\" but dimensions weren't returned. Search by name instead.",
+    "model_ready": "3D model ready"
+  },
+  "import_model": {
+    "title_edit": "Edit \"{{label}}\"",
+    "title_new": "Import 3D Model",
+    "analyzing": "Analysing model…",
+    "auto_detected": "dimensions auto-detected below",
+    "drop_hint": "Drop a .glb file here",
+    "click_browse": "or click to browse",
+    "name": "Name",
+    "name_placeholder": "My Chair",
+    "dimensions": "Dimensions (metres)",
+    "tile_color": "Tile color",
+    "cancel": "Cancel",
+    "save": "Save Changes",
+    "add_to_library": "Add to Library",
+    "err_glb_only": "Only .glb files are supported.",
+    "err_read_file": "Could not read the file. Make sure it is a valid .glb.",
+    "err_no_file": "Please select a .glb file.",
+    "err_no_name": "Please enter a name.",
+    "err_dims": "Width, depth, and height must be positive numbers."
   },
   "properties": {
     "header": "Properties",
@@ -217,7 +281,22 @@
     "esc_to_exit": "Esc to exit",
     "walk_hint": "WASD to move · Shift to run · Space to jump · Esc to exit",
     "loading_3d": "loading 3D…",
-    "loading_models": "loading models…"
+    "loading_models": "loading models…",
+    "snap_free": "free angle",
+    "snap_90": "90° only",
+    "snap_45": "45° snap · Shift=90° · Alt=free",
+    "hint_pan": "pan",
+    "hint_calib_p1": "click first calibration point · esc to cancel",
+    "hint_calib_p2": "click second calibration point · esc to cancel",
+    "hint_calib_distance": "enter real distance to apply",
+    "hint_drawing": "click to extend · esc to end · {{snap}}",
+    "hint_multi": "{{count}} items selected · del to remove · shift+click to deselect",
+    "hint_furniture": "drag to move · R/Shift+R rotate · del to remove",
+    "hint_wall": "del to remove wall",
+    "hint_opening": "drag along wall to reposition · edit size on the right · del to remove",
+    "hint_room": "edit name + floor material on the right",
+    "hint_underlay": "underlay selected · adjust on the right · drag to move (unlocked only)",
+    "hint_default": "click to start wall · alt+click wall to draw from it · right-click wall to delete · space+drag pan"
   },
   "lighting_toolbar": {
     "solo": "Solo",
@@ -254,5 +333,158 @@
     "shortcut_run": "Run (hold while moving)",
     "shortcut_jump": "Jump",
     "shortcut_exit_walk": "Exit walkthrough mode"
+  },
+  "tour": {
+    "ui": {
+      "skip": "Skip tour",
+      "back": "← Back",
+      "next": "Next →",
+      "finish": "Finish",
+      "take_tour": "Take a tour",
+      "deep_dives": "Deep dives",
+      "explore_more": "Want to explore more?",
+      "close": "Close",
+      "switch_3d": "Switch to 3D",
+      "open_panel": "Open panel",
+      "missing_default": "This element is not visible right now."
+    },
+    "core": {
+      "label": "Getting Started",
+      "desc": "Learn the basics in about 2 minutes.",
+      "steps": {
+        "welcome": {
+          "title": "Welcome to Interior Studio",
+          "description": "A quick tour of the key features.\n\nFollow along to start designing your first floor plan."
+        },
+        "sidebar": {
+          "title": "The Catalog",
+          "description": "Browse furniture, openings (doors & windows), and custom models here.\n\nDrag any tile onto the canvas to place it."
+        },
+        "canvas": {
+          "title": "Your Floor Plan",
+          "description": "This is the 2D canvas. Click to start drawing a wall, then click again to finish it.\n\nScroll to zoom · Space + drag to pan."
+        },
+        "draw-wall": {
+          "title": "Drawing Walls",
+          "description": "Walls snap to 45° angle increments by default.\n\nHold Shift for 90° only · Hold Alt for free angle.\n\nWalls chain automatically — click to keep extending."
+        },
+        "properties": {
+          "title": "Properties Panel",
+          "description": "Select any wall, furniture item, room, or opening to edit its properties here.\n\nDimensions, materials, colors, and more."
+        },
+        "view-3d": {
+          "title": "Switch to 3D",
+          "description": "Press this button to see your floor plan as a fully rendered 3D room.\n\nLighting, textures, and furniture all appear in 3D."
+        },
+        "save": {
+          "title": "Save Your Work",
+          "description": "Save exports your project as a .studio.json file you can reopen later.\n\nYour work is also kept in browser storage automatically."
+        },
+        "done": {
+          "title": "You're Ready!",
+          "description": "That covers the basics. Want to go deeper?\n\nPick a topic below or close to start designing."
+        }
+      }
+    },
+    "materials": {
+      "label": "Materials & Colors",
+      "desc": "Apply floor, ceiling, and wall finishes.",
+      "steps": {
+        "mat-intro": {
+          "title": "Materials & Colors",
+          "description": "Learn how to apply floor finishes, ceiling materials, and wall colors to your design."
+        },
+        "mat-room": {
+          "title": "Select a Room",
+          "description": "Click inside any enclosed room polygon on the canvas to select it.\n\nThe room highlight turns blue when selected."
+        },
+        "mat-floor-picker": {
+          "title": "Floor Material",
+          "description": "Choose from wood, tile, marble, carpet, concrete and more.\n\nHover any swatch to see the material name.",
+          "prereq": "Select a room on the canvas first to see the floor picker."
+        },
+        "mat-ceiling": {
+          "title": "Ceiling Material",
+          "description": "The ceiling picker works the same way.\n\nCeilings are visible in the 3D view.",
+          "prereq": "Select a room on the canvas first to see the ceiling picker."
+        },
+        "mat-3d": {
+          "title": "Preview in 3D",
+          "description": "Switch to 3D to see your materials rendered with full PBR textures."
+        }
+      }
+    },
+    "viewer3d": {
+      "label": "3D Viewer & Walkthrough",
+      "desc": "Orbit, navigate, and walk through your room.",
+      "steps": {
+        "3d-intro": {
+          "title": "3D Viewer",
+          "description": "Click here to switch to the 3D view. Your floor plan becomes a fully rendered room."
+        },
+        "3d-canvas": {
+          "title": "Orbit & Navigate",
+          "description": "Left-drag to orbit · Right-drag to pan · Scroll to zoom.\n\nClick any wall, furniture, or room to select it from 3D.",
+          "prereq": "Switch to 3D first."
+        },
+        "3d-lighting": {
+          "title": "Lighting Controls",
+          "description": "Toggle lights · Drag the time slider to change the sun angle and color · Adjust ambient strength.",
+          "prereq": "Switch to 3D first."
+        },
+        "3d-walk": {
+          "title": "Walkthrough Mode",
+          "description": "Press Walk to lock the cursor and move through your room in first-person.\n\nWASD to move · Shift to run · Space to jump · Esc to exit.",
+          "prereq": "Switch to 3D first."
+        }
+      }
+    },
+    "openings": {
+      "label": "Doors & Windows",
+      "desc": "Place and configure openings on walls.",
+      "steps": {
+        "op-intro": {
+          "title": "Doors & Windows",
+          "description": "Find doors, windows, and arch openings in the Openings section of the catalog."
+        },
+        "op-drop": {
+          "title": "Place on a Wall",
+          "description": "Drag any opening tile onto the canvas and hover over a wall.\n\nA blue snap preview appears when you're close enough to a wall."
+        },
+        "op-props": {
+          "title": "Opening Properties",
+          "description": "Select a door or window to edit width, height, color, and material.\n\nDoors have swing direction and open-toward controls."
+        },
+        "op-drag": {
+          "title": "Reposition Openings",
+          "description": "Drag a placed door or window along its wall to reposition it.\n\nIt stays clamped within the wall and away from other openings."
+        }
+      }
+    },
+    "ai": {
+      "label": "AI Assistant",
+      "desc": "Get design suggestions from Claude.",
+      "steps": {
+        "ai-button": {
+          "title": "AI Assistant",
+          "description": "Click AI to open the assistant panel. It can suggest layouts, materials, and furniture arrangements."
+        },
+        "ai-key": {
+          "title": "API Key",
+          "description": "Enter your Google Gemini API key (free at aistudio.google.com).\n\nThe key is kept in this browser session only — never sent anywhere except Google.",
+          "prereq": "Open the AI panel first."
+        },
+        "ai-prompt": {
+          "title": "Ask Anything",
+          "description": "Describe what you want: \"add a sofa and coffee table to the living room\" or \"suggest a color palette\".\n\nThe AI sees your current floor plan.",
+          "prereq": "Open the AI panel first."
+        },
+        "ai-apply": {
+          "title": "Apply Proposals",
+          "description": "When the AI suggests layout changes, an Apply button appears.\n\nPreview the diff overlay on the canvas, then apply or discard.",
+          "prereq": "Open the AI panel first."
+        }
+      }
+    }
   }
 }

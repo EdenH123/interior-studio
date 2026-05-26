@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { pixelDistanceMeters } from './CalibrationOverlay'
 
 // Centred floating prompt that appears once both calibration points are
@@ -6,6 +7,7 @@ import { pixelDistanceMeters } from './CalibrationOverlay'
 // world; on confirm, hands the value back to the store via onConfirm.
 // Autofocuses the input; Enter submits, Esc cancels.
 export default function CalibrationPrompt({ p1, p2, onConfirm, onCancel }) {
+  const { t } = useTranslation()
   const [value, setValue] = useState('')
   const ref = useRef(null)
   useEffect(() => { ref.current?.focus() }, [])
@@ -19,16 +21,13 @@ export default function CalibrationPrompt({ p1, p2, onConfirm, onCancel }) {
   return (
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
       <div className="pointer-events-auto bg-gray-900 border border-gray-700 rounded-md shadow-lg p-4 min-w-[260px] text-sm">
-        <h3 className="text-gray-100 text-sm font-semibold mb-1">Calibrate underlay</h3>
-        <p className="text-gray-400 text-[11px] mb-3 leading-snug">
-          Two points marked. Enter their real-world distance to scale the
-          image so the canvas grid stays accurate.
-        </p>
+        <h3 className="text-gray-100 text-sm font-semibold mb-1">{t('calibration.title')}</h3>
+        <p className="text-gray-400 text-[11px] mb-3 leading-snug">{t('calibration.intro')}</p>
         <p className="text-gray-500 text-[11px] font-mono mb-3">
-          current pixel distance ≈ {pixelDistanceMeters(p1, p2).toFixed(2)} m at the canvas scale
+          {t('calibration.pixel_dist', { m: pixelDistanceMeters(p1, p2).toFixed(2) })}
         </p>
         <label className="block">
-          <span className="text-gray-400 text-[10px] uppercase tracking-wider">Real distance (meters)</span>
+          <span className="text-gray-400 text-[10px] uppercase tracking-wider">{t('calibration.real_distance')}</span>
           <input
             ref={ref}
             type="number" step="0.01" min="0.01"
@@ -45,11 +44,11 @@ export default function CalibrationPrompt({ p1, p2, onConfirm, onCancel }) {
         <div className="flex gap-2 mt-3 justify-end">
           <button type="button" onClick={onCancel}
             className="text-xs px-2 py-1 rounded bg-gray-800 border border-gray-700 text-gray-300 hover:border-gray-500">
-            Cancel
+            {t('calibration.cancel')}
           </button>
           <button type="button" onClick={submit}
             className="text-xs px-2 py-1 rounded bg-blue-600 border border-blue-500 text-white hover:bg-blue-500">
-            Apply
+            {t('calibration.apply')}
           </button>
         </div>
       </div>

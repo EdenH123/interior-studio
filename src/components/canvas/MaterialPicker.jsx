@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Swatch from './Swatch'
 
 // Categorised material picker shared by Wall / Room / Furniture editors.
@@ -21,10 +22,12 @@ export default function MaterialPicker({
   materials,
   currentId,
   resolveId,
-  defaultLabel = 'Default',
+  defaultLabel,
   onChange,
 }) {
+  const { t } = useTranslation()
   const groups = useMemo(() => groupByCategory(materials), [materials])
+  const resolvedDefaultLabel = defaultLabel ?? t('material_picker.default')
   const showSearch = useMemo(
     () => Object.values(groups).some((g) => g.length > SEARCH_THRESHOLD),
     [groups],
@@ -56,13 +59,13 @@ export default function MaterialPicker({
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search colors or codes…"
+          placeholder={t('material_picker.search_placeholder')}
           className="w-full mb-2 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-[12px] focus:border-blue-500 focus:outline-none"
         />
       )}
       <div className="grid grid-cols-3 gap-1.5">
         <Swatch
-          label={defaultLabel}
+          label={resolvedDefaultLabel}
           color={null}
           active={!resolved}
           onClick={() => onChange(null)}

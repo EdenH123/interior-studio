@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import useStore from '../store/useStore'
 import { searchIkeaCatalog } from '../utils/ikeaCatalog'
 import { normalizeArticleNumber, fetchIkeaProduct } from '../utils/ikeaApi'
@@ -6,6 +7,7 @@ import { getFurnitureSpec } from './canvas/furnitureCatalog'
 import { TEMPLATES, generateModelBlobUrl } from '../utils/glbGenerator'
 
 export default function IkeaProductSearch() {
+  const { t } = useTranslation()
   const [open, setOpen]       = useState(false)
   const pendingPlacement      = useStore((s) => s.pendingPlacement)
   const clearPendingPlacement = useStore((s) => s.clearPendingPlacement)
@@ -16,14 +18,14 @@ export default function IkeaProductSearch() {
         className="w-full flex items-center justify-between px-4 py-2 text-[10px] uppercase tracking-widest text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors"
         onClick={() => setOpen((v) => !v)}
       >
-        <span>Add custom item</span>
+        <span>{t('ikea.add_custom')}</span>
         <span className="text-gray-600">{open ? '▲' : '▼'}</span>
       </button>
 
       {pendingPlacement && (
         <div className="px-3 py-1.5 flex items-center justify-between gap-2 bg-blue-950/60">
           <span className="text-[10px] text-blue-300 leading-snug truncate">
-            Click canvas to place "{pendingPlacement.label}"
+            {t('ikea.place_pending', { label: pendingPlacement.label })}
           </span>
           <button onClick={clearPendingPlacement} className="text-[10px] text-gray-400 hover:text-gray-200 shrink-0">
             ✕
@@ -43,6 +45,7 @@ function looksLikeCode(v) {
 
 
 function SearchForm() {
+  const { t } = useTranslation()
   const setPendingPlacement = useStore((s) => s.setPendingPlacement)
 
   const [query,    setQuery]    = useState('')
@@ -69,7 +72,7 @@ function SearchForm() {
     try {
       const p = await fetchIkeaProduct(query)
       if (!p.width || !p.depth || !p.height) {
-        setFetchErr(`Found "${p.name}" but dimensions weren't returned. Search by name instead.`)
+        setFetchErr(t('ikea.fetch_no_dims', { name: p.name }))
       } else {
         setSelected({
           n: p.name,
@@ -115,12 +118,12 @@ function SearchForm() {
       {/* Search / code input */}
       <div className="relative">
         <label className="text-[9px] uppercase tracking-wider text-gray-500 block mb-0.5">
-          {isCode ? 'Article code' : 'Search by name or paste a code'}
+          {isCode ? t('ikea.label_code') : t('ikea.label_search')}
         </label>
         <div className="flex gap-1">
           <input
             type="text"
-            placeholder="KALLAX 2×2  or  803.518.72"
+            placeholder={t('ikea.search_placeholder')}
             value={query}
             onChange={(e) => { setQuery(e.target.value); setSelected(null); setFetchErr(null); setDropOpen(true) }}
             onFocus={() => setDropOpen(true)}
@@ -133,7 +136,7 @@ function SearchForm() {
               disabled={fetching}
               className="px-2 py-1 bg-blue-700 hover:bg-blue-600 disabled:bg-gray-700 text-white text-[10px] rounded transition-colors shrink-0"
             >
-              {fetching ? '…' : 'Look up'}
+              {fetching ? t('ikea.looking') : t('ikea.look_up')}
             </button>
           )}
         </div>
@@ -171,7 +174,7 @@ function SearchForm() {
           <p className="text-[10px] text-gray-400">
             {selected.w} × {selected.d} × {selected.h} cm
             {selected.fType && (
-              <span className="text-green-500"> · 3D model ready</span>
+              <span className="text-green-500"> · {t('ikea.model_ready')}</span>
             )}
           </p>
         </div>
@@ -182,7 +185,7 @@ function SearchForm() {
         disabled={!selected}
         className="w-full py-1.5 text-[11px] bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded transition-colors font-medium"
       >
-        {selected ? 'Place on canvas' : 'Search a product above'}
+        {selected ? t('ikea.place') : t('ikea.place_disabled')}
       </button>
     </div>
   )

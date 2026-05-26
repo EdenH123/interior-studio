@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { computeTooltipPosition } from './tourPlacement'
 
 const TOOLTIP_W = 320
@@ -39,9 +40,10 @@ function Arrow({ side, rect, tooltipX, tooltipY, tooltipH }) {
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)) }
 
 export default function TourTooltip({
-  step, rect, stepIndex, totalSteps,
+  tourId, step, rect, stepIndex, totalSteps,
   onPrev, onNext, onSkip, isLast, children,
 }) {
+  const { t } = useTranslation()
   const cardRef = useRef(null)
   const [tooltipH, setTooltipH] = useState(180)
 
@@ -56,6 +58,9 @@ export default function TourTooltip({
     tooltipH,
   })
 
+  const titleKey = `tour.${tourId}.steps.${step.key}.title`
+  const descKey  = `tour.${tourId}.steps.${step.key}.description`
+
   return (
     <div
       ref={cardRef}
@@ -64,8 +69,8 @@ export default function TourTooltip({
     >
       <Arrow side={side} rect={rect} tooltipX={x} tooltipY={y} tooltipH={tooltipH} />
 
-      <h3 className="text-sm font-semibold text-white mb-1">{step.title}</h3>
-      <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap mb-3">{step.description}</p>
+      <h3 className="text-sm font-semibold text-white mb-1">{t(titleKey, { defaultValue: step.title })}</h3>
+      <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap mb-3">{t(descKey, { defaultValue: step.description })}</p>
 
       {children}
 
@@ -77,7 +82,7 @@ export default function TourTooltip({
             onClick={onSkip}
             className="text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
           >
-            Skip tour
+            {t('tour.ui.skip')}
           </button>
         </div>
         <div className="flex gap-2">
@@ -87,7 +92,7 @@ export default function TourTooltip({
               onClick={onPrev}
               className="text-xs px-3 py-1 rounded border border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-500 transition-colors"
             >
-              ← Back
+              {t('tour.ui.back')}
             </button>
           )}
           <button
@@ -95,7 +100,7 @@ export default function TourTooltip({
             onClick={onNext}
             className="text-xs px-3 py-1 rounded bg-blue-600 border border-blue-500 text-white hover:bg-blue-500 transition-colors"
           >
-            {isLast ? 'Finish' : 'Next →'}
+            {isLast ? t('tour.ui.finish') : t('tour.ui.next')}
           </button>
         </div>
       </div>

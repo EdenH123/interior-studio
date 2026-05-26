@@ -25,6 +25,10 @@ export default function Wall({ wall, segments, onContextMenu, onClick, onShiftSe
       onContextMenu={(e) => { e.evt.preventDefault(); onContextMenu?.(wall.id) }}
       onClick={(e) => {
         if (e.evt.button === 0) {
+          // Alt+click on a wall starts a new draw chain from the projected
+          // point on the wall (handled by the stage's onMouseDown). Skip
+          // selection here so the click only starts drawing.
+          if (e.evt.altKey) return
           if (e.evt.shiftKey) onShiftSelect?.(wall.id)
           else onClick?.(wall.id)
         }

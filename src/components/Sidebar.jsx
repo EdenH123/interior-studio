@@ -95,7 +95,7 @@ function MyModelsGroup({ onImport, onEdit }) {
         <span className="text-[10px] uppercase tracking-widest text-gray-500">{t('sidebar.my_models')}</span>
         <button
           onClick={onImport}
-          title="Import a .glb file"
+          title={t('sidebar.import_title')}
           className="text-gray-500 hover:text-gray-300 transition-colors text-[11px] leading-none px-1"
         >
           {t('sidebar.import')}
