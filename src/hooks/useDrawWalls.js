@@ -33,13 +33,15 @@ export default function useDrawWalls(stageRef, viewScale, spaceDown, shiftDown =
     if (evt.button === 1 || (evt.button === 0 && spaceDown)) return
     if (evt.button !== 0) return
     if (calibration) return
-    // Allow shape clicks when a wall chain is in progress, when the click
-    // landed on a room polygon (enables starting interior partition walls
-    // by clicking inside an existing room), or when the user is holding Alt
-    // (lets them start a new chain by Alt-clicking on an existing wall — the
-    // start point projects onto the wall, so T-junctions are one click).
+    // Allow shape clicks when a wall chain is in progress, or when the user
+    // is holding Alt (lets them start a new chain by Alt-clicking on an
+    // existing wall — the start point projects onto the wall, so T-junctions
+    // are one click). Room-fill clicks with no chain in progress fall through
+    // to the Room component's onClick so the room gets selected instead of
+    // accidentally starting a wall chain.
     const targetIsRoom = e.target?.getAttr?.('name') === 'room-fill'
-    if (e.target !== stageRef.current && !drawStart && !targetIsRoom && !altDown) return
+    if (targetIsRoom && !drawStart) return
+    if (e.target !== stageRef.current && !drawStart && !altDown) return
     clearSelection()
     const p = stageRef.current.getRelativePointerPosition()
     if (!p) return
