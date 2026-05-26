@@ -14,6 +14,7 @@ import useModifierKeys from '../hooks/useModifierKeys'
 import { isSelected, getSingleItem } from '../store/selectionHelpers'
 import Grid from './canvas/Grid'
 import Wall from './canvas/Wall'
+import WallLengthLabel from './canvas/WallLengthLabel'
 import Opening from './canvas/Opening'
 import Furniture from './canvas/Furniture'
 import { wallSegmentsForRendering } from './canvas/openingGeometry'
@@ -181,6 +182,9 @@ export default function CanvasArea() {
                 onClick={(id) => select('wall', id)}
                 onShiftSelect={(id) => addToSelection('wall', id)}
                 onContextMenu={removeWall} />
+            ))}
+            {layers.walls && walls.map((w) => (
+              <WallLengthLabel key={`len-${w.id}`} wall={w} scale={view.scale} />
             ))}
             {layers.openings && openings.map((o) => {
               const wall = walls.find((w) => w.id === o.wallId)
