@@ -81,7 +81,7 @@ export default function CanvasArea() {
   const openings = allOpenings.filter(onLevel)
 
   const lockAspectRatio = useStore((s) => s.lockAspectRatio)
-  const { view, recenterIfUnset, handleWheel, handleStageDragEnd } = useViewport()
+  const { view, recenterIfUnset, handleWheel, handleStageDragEnd, setPanPosition } = useViewport()
   const spaceDown = useCanvasKeyboard()
   const { shiftDown, altDown } = useModifierKeys()
   const handleStageMouseDown = useDrawWalls(stageRef, view.scale, spaceDown, shiftDown, altDown)
@@ -94,6 +94,31 @@ export default function CanvasArea() {
   const { marquee, onMouseDown: onMarqueeDown, onMouseMove: onMarqueeMove, onMouseUp: onMarqueeUp }
     = useMarquee({ stageRef, spaceDown, setDrawStart })
   const [cursorWorld, setCursorWorld] = useState(null)
+
+  // Manual pan for select mode: track pointer globally so panning works even
+  // if the cursor leaves the canvas, and keep Stage non-draggable so child-
+  // shape click events are never swallowed by Konva's drag machinery.
+  const panRef = useRef(null)
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!panRef.current || !stageRef.current) return
+      stageRef.current.position({
+        x: panRef.current.sx + (e.clientX - panRef.current.cx),
+        y: panRef.current.sy + (e.clientY - panRef.current.cy),
+      })
+    }
+    const onUp = (e) => {
+      if (!panRef.current || !stageRef.current) return
+      setPanPosition(
+        panRef.current.sx + (e.clientX - panRef.current.cx),
+        panRef.current.sy + (e.clientY - panRef.current.cy),
+      )
+      panRef.current = null
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [setPanPosition])
 
   useEffect(() => recenterIfUnset(size.width, size.height), [size.width, size.height, recenterIfUnset])
 
@@ -130,14 +155,14 @@ export default function CanvasArea() {
       data-tour="canvas"
       {...dragHandlers}
       className="flex-1 bg-gray-950 overflow-hidden relative"
-      style={{ cursor: spaceDown ? 'grab' : activeTool === 'select' ? 'default' : calibration || drawStart || pendingPlacement ? 'crosshair' : 'crosshair' }}
+      style={{ cursor: spaceDown ? 'grab' : activeTool === 'select' ? 'default' : 'crosshair' }}
     >
       {size.width > 0 && size.height > 0 && (
         <Stage
           ref={(node) => { stageRef.current = node; registerStage(node) }}
           width={size.width} height={size.height}
           scaleX={view.scale} scaleY={view.scale} x={view.x} y={view.y}
-          draggable={activeTool === 'select' || spaceDown}
+          draggable={spaceDown}
           onDragEnd={handleStageDragEnd}
           onWheel={handleWheel(stageRef)}
           onMouseDown={(e) => {
@@ -155,6 +180,12 @@ export default function CanvasArea() {
                 clearPendingPlacement()
                 return
               }
+            }
+            // Manual pan: in select mode, dragging the stage background pans
+            // the canvas. We track this ourselves (instead of Konva draggable)
+            // so child-shape click events are never swallowed by Konva's drag.
+            if (activeTool === 'select' && !spaceDown && e.evt.button === 0 && e.target === stageRef.current) {
+              panRef.current = { cx: e.evt.clientX, cy: e.evt.clientY, sx: stageRef.current.x(), sy: stageRef.current.y() }
             }
             handleStageMouseDown(e)
             onMarqueeDown(e)

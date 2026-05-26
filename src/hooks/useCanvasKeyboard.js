@@ -40,7 +40,7 @@ export default function useCanvasKeyboard() {
         if (calibration) cancelCalibration()
         else { setDrawStart(null); clearSelection() }
       }
-      if (e.code === 'Enter') {
+      if (e.code === 'Enter' && !e.repeat) {
         e.preventDefault()
         toggleActiveTool()
         setDrawStart(null)
