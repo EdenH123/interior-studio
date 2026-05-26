@@ -35,14 +35,15 @@ describe('findWallSnap', () => {
     expect(findWallSnap(item, verticalWall, scale, 60)).toBeNull()
   })
 
-  it('vertical wall — item to the right snaps to right face', () => {
+  it('vertical wall — item to the right snaps to right face (uses half-width at rotation 0)', () => {
     // Item is 40 px to the right of the wall — within threshold.
-    const item = { x: 140, y: 100, width: 1, depth: 0.5 }
-    const halfDepth = (0.5 * PIXELS_PER_METER) / 2 // 12.5
+    // Wall normal points along ±X. At rotation 0, the OBB extent in the X
+    // direction is half the item's width.
+    const item = { x: 140, y: 100, width: 1, depth: 0.5, rotation: 0 }
+    const halfWidth = (1 * PIXELS_PER_METER) / 2 // 25
     const snap = findWallSnap(item, verticalWall, scale, 60)
     expect(snap).not.toBeNull()
-    // Snapped x should be wall_x + WALL_HALF_THICK + halfDepth + 1.
-    const expectedX = 100 + WALL_HALF_THICK + halfDepth + 1
+    const expectedX = 100 + WALL_HALF_THICK + halfWidth + 1
     expect(snap.x).toBeCloseTo(expectedX, 3)
     expect(snap.y).toBeCloseTo(100, 3)
   })
@@ -74,13 +75,12 @@ describe('findWallSnap', () => {
     expect(snap.y).toBeCloseTo(WALL_HALF_THICK + halfDepth + 1, 3)
   })
 
-  it('item on left side of vertical wall snaps to left face', () => {
-    // Item is 40 px to the left.
-    const item = { x: 60, y: 100, width: 1, depth: 0.5 }
-    const halfDepth = (0.5 * PIXELS_PER_METER) / 2
+  it('item on left side of vertical wall snaps to left face (uses half-width at rotation 0)', () => {
+    const item = { x: 60, y: 100, width: 1, depth: 0.5, rotation: 0 }
+    const halfWidth = (1 * PIXELS_PER_METER) / 2
     const snap = findWallSnap(item, verticalWall, scale, 60)
     expect(snap).not.toBeNull()
-    const expectedX = 100 - WALL_HALF_THICK - halfDepth - 1
+    const expectedX = 100 - WALL_HALF_THICK - halfWidth - 1
     expect(snap.x).toBeCloseTo(expectedX, 3)
   })
 })

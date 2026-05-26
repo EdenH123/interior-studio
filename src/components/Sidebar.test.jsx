@@ -55,7 +55,7 @@ describe('Sidebar', () => {
   })
 
   it('shows all opening items', () => {
-    expect(OPENINGS).toHaveLength(7)
+    expect(OPENINGS).toHaveLength(9)
     render(<Sidebar />)
     expect(screen.getByText('Hinged Door')).toBeInTheDocument()
     expect(screen.getByText('Window')).toBeInTheDocument()
