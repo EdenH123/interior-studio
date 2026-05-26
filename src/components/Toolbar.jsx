@@ -44,6 +44,8 @@ export default function Toolbar() {
   const pushToast = useStore((s) => s.pushToast)
   const language = useStore((s) => s.language)
   const setLanguage = useStore((s) => s.setLanguage)
+  const activeTool = useStore((s) => s.activeTool)
+  const setActiveTool = useStore((s) => s.setActiveTool)
   const fileRef = useRef(null)
   const { exportPng, exportPdf, exportJson, openJson, exportGlb, importInputRef, handleImportFile } = useProjectIO()
   const { canUndo, canRedo, undo, redo } = useUndoRedo()
@@ -97,6 +99,34 @@ export default function Toolbar() {
       <div className="ms-3 flex gap-1">
         <UndoRedoButton label={t('toolbar.undo')} title={t('toolbar.undo_title')} onClick={undo} disabled={!canUndo} />
         <UndoRedoButton label={t('toolbar.redo')} title={t('toolbar.redo_title')} onClick={redo} disabled={!canRedo} />
+      </div>
+      {/* Select / Draw tool toggle */}
+      <div className="ms-2 flex rounded border border-gray-700 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setActiveTool('select')}
+          title={t('toolbar.tool_select_title')}
+          className={`text-xs font-mono px-2.5 py-1.5 transition-colors ${
+            activeTool === 'select'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-800 text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          ↖ {t('toolbar.tool_select')}
+        </button>
+        <div className="w-px bg-gray-700" />
+        <button
+          type="button"
+          onClick={() => setActiveTool('draw')}
+          title={t('toolbar.tool_draw_title')}
+          className={`text-xs font-mono px-2.5 py-1.5 transition-colors ${
+            activeTool === 'draw'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-800 text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          ✏ {t('toolbar.tool_draw')}
+        </button>
       </div>
       <div className="flex-1" />
       <input ref={fileRef} type="file" accept="image/png,image/jpeg" hidden onChange={handleFile} />
