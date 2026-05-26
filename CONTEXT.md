@@ -600,6 +600,10 @@ interior-studio/
   - Root cause: zundo's `undo(steps=1)` uses `steps` in `Array.splice(-steps, steps)`. Passing the function directly as `onClick={undo}` caused React to call it with the `SyntheticEvent` as `steps`; `splice(NaN, NaN)` returns `[]`, so `nextState = undefined`, `userSet(undefined)` set the entire Zustand state to `undefined`, and every selector threw. Keyboard shortcut was unaffected because it called `t.undo()` with no arguments.
   - `useUndoRedo.js`: wrapped undo/redo in `useCallback(() => useStore.temporal.getState().undo(), [])` arrow functions so they're always invoked with no arguments.
 
+- [x] Auto-launch Getting Started tour on first visit (2026-05-26)
+  - `TourOverlay.jsx`: added a mount-time `useEffect` that checks `localStorage.getItem('interior-studio:welcomed')` and `useStore.getState().walls.length === 0`. If neither is set, the core tour starts automatically and the welcomed flag is written so the auto-launch only happens once (not on every return visit).
+  - Wrapped in try/catch so private-browsing environments where `localStorage` throws skip the auto-launch gracefully.
+
 - [x] Lock-ratio checkbox wired to corner resize handles (2026-05-25)
   - Lifted `lockAspectRatio` from local `useState` in `FurnitureProps` into `uiSlice` (not persisted, default `true`).
   - `CanvasArea.jsx` reads `lockAspectRatio` from store and passes `lockRatio={lockAspectRatio || shiftDown}` to `ResizeHandle`.
