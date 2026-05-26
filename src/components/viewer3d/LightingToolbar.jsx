@@ -23,7 +23,7 @@ export default function LightingToolbar() {
   const setCeilingsVisible = useStore((s) => s.setCeilingsVisible)
 
   return (
-    <div className="pointer-events-auto absolute top-2 right-2 w-44 bg-gray-900/90 border border-gray-700 rounded p-2.5 space-y-2.5 text-[11px] text-gray-300 font-mono select-none">
+    <div data-tour="lighting-toolbar" className="pointer-events-auto absolute top-2 right-2 w-44 bg-gray-900/90 border border-gray-700 rounded p-2.5 space-y-2.5 text-[11px] text-gray-300 font-mono select-none">
 
       {/* Level view toggles */}
       <div className="flex items-center justify-between gap-1">

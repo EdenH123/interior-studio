@@ -31,7 +31,7 @@ export default function Viewer3D() {
   }, [])
 
   return (
-    <section className="flex-1 bg-gray-950 relative overflow-hidden"
+    <section data-tour="viewer3d-canvas" className="flex-1 bg-gray-950 relative overflow-hidden"
       {...dropHandlers}>
       <div ref={containerRef} className="absolute inset-0" />
 

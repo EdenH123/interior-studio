@@ -590,6 +590,16 @@ interior-studio/
   - `Opening.jsx`: passes both `swingDir` and `openSide` down to `DoorGlyph`.
   - `reconcileDoors.js`: `swingDir` controls hinge edge; `openSide='back'` negates the sideSign so `openAngle = wallYaw ∓ π/2` flips to the other wall face. Both fields included in `swingFp` fingerprint.
 
+- [x] Sliding door + double door property controls (2026-05-26)
+  - `OpeningProps.jsx`: "Swing" row now also shown for `door-sliding`; "Opens toward" row now also shown for `door-double`. Previously both rows were single-leaf door only.
+  - `OpeningGlyphs.jsx` `DoubleDoorGlyph`: added `openSide` prop; `panelY` and arc sweep flags flip when `openSide='back'`.
+  - `OpeningGlyphs.jsx` `SlidingDoorGlyph`: added `swingDir` prop; panel rests on the slide-toward side; arrow direction flips.
+  - `Opening.jsx`: passes `openSide` to `DoubleDoorGlyph` and `swingDir` to `SlidingDoorGlyph`.
+
+- [x] Fix undo/redo toolbar buttons crashing app (2026-05-26)
+  - Root cause: zundo's `undo(steps=1)` uses `steps` in `Array.splice(-steps, steps)`. Passing the function directly as `onClick={undo}` caused React to call it with the `SyntheticEvent` as `steps`; `splice(NaN, NaN)` returns `[]`, so `nextState = undefined`, `userSet(undefined)` set the entire Zustand state to `undefined`, and every selector threw. Keyboard shortcut was unaffected because it called `t.undo()` with no arguments.
+  - `useUndoRedo.js`: wrapped undo/redo in `useCallback(() => useStore.temporal.getState().undo(), [])` arrow functions so they're always invoked with no arguments.
+
 - [x] Lock-ratio checkbox wired to corner resize handles (2026-05-25)
   - Lifted `lockAspectRatio` from local `useState` in `FurnitureProps` into `uiSlice` (not persisted, default `true`).
   - `CanvasArea.jsx` reads `lockAspectRatio` from store and passes `lockRatio={lockAspectRatio || shiftDown}` to `ResizeHandle`.
@@ -668,8 +678,8 @@ interior-studio/
 // Opening — levelId inherited from parent wall at creation.
 { id, type: 'door'|'window', wallId, position, width, height, sillHeight,
   levelId: string, open?: boolean /* doors only */,
-  swingDir?: 'left'|'right'       /* single hinged door only, default 'left' */,
-  openSide?: 'front'|'back'       /* single hinged door only, default 'front' */ }
+  swingDir?: 'left'|'right'       /* door + door-sliding, default 'left' */,
+  openSide?: 'front'|'back'       /* door + door-double, default 'front' */ }
 
 // Opening (door or window on a wall — current shape in useStore.js)
 // position is normalised 0..1 along the parent wall (0 = wall start).
