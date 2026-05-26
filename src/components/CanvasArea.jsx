@@ -48,6 +48,7 @@ export default function CanvasArea() {
   const activeLevel = useStore((s) => s.activeLevel)
   const levels = useStore((s) => s.levels)
   const layers = useStore((s) => s.layers)
+  const activeTool = useStore((s) => s.activeTool)
   const updateOpening = useStore((s) => s.updateOpening)
   const removeOpening = useStore((s) => s.removeOpening)
   const pushToast = useStore((s) => s.pushToast)
@@ -129,14 +130,14 @@ export default function CanvasArea() {
       data-tour="canvas"
       {...dragHandlers}
       className="flex-1 bg-gray-950 overflow-hidden relative"
-      style={{ cursor: spaceDown ? 'grab' : calibration || drawStart || pendingPlacement ? 'crosshair' : 'default' }}
+      style={{ cursor: spaceDown ? 'grab' : activeTool === 'select' ? 'default' : calibration || drawStart || pendingPlacement ? 'crosshair' : 'crosshair' }}
     >
       {size.width > 0 && size.height > 0 && (
         <Stage
           ref={(node) => { stageRef.current = node; registerStage(node) }}
           width={size.width} height={size.height}
           scaleX={view.scale} scaleY={view.scale} x={view.x} y={view.y}
-          draggable={spaceDown}
+          draggable={activeTool === 'select' || spaceDown}
           onDragEnd={handleStageDragEnd}
           onWheel={handleWheel(stageRef)}
           onMouseDown={(e) => {

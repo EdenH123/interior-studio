@@ -23,6 +23,7 @@ import { nearestWallSnap } from '../components/canvas/openingGeometry'
 export default function useDrawWalls(stageRef, viewScale, spaceDown, shiftDown = false, altDown = false) {
   const walls = useStore((s) => s.walls)
   const calibration = useStore((s) => s.calibration)
+  const activeTool = useStore((s) => s.activeTool)
   const drawStart = useStore((s) => s.drawStart)
   const setDrawStart = useStore((s) => s.setDrawStart)
   const addWall = useStore((s) => s.addWall)
@@ -33,6 +34,7 @@ export default function useDrawWalls(stageRef, viewScale, spaceDown, shiftDown =
     if (evt.button === 1 || (evt.button === 0 && spaceDown)) return
     if (evt.button !== 0) return
     if (calibration) return
+    if (activeTool === 'select') return
     // Allow shape clicks when a wall chain is in progress, when the click
     // landed on a room polygon (enables starting interior partition walls
     // by clicking inside an existing room), or when the user is holding Alt
