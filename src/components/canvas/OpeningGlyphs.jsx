@@ -27,48 +27,56 @@ export function DoorGlyph({ widthPx, scale, selected, swingDir = 'left', openSid
   )
 }
 
-export function DoubleDoorGlyph({ widthPx, scale, selected }) {
+export function DoubleDoorGlyph({ widthPx, scale, selected, openSide = 'front' }) {
   const half = widthPx / 2
   const qtr = widthPx / 4
   const stroke = selected ? '#3b82f6' : '#e5e7eb'
   const sw = selected ? 2 / scale : 1.5 / scale
-  const arcL = `M ${-half} 0 A ${qtr * 2} ${qtr * 2} 0 0 0 ${-half + qtr * 2} ${-qtr * 2}`
-  const arcR = `M ${half} 0 A ${qtr * 2} ${qtr * 2} 0 0 1 ${half - qtr * 2} ${-qtr * 2}`
+  const back = openSide === 'back'
+  const panelY = back ? qtr * 2 : -qtr * 2
+  const arcL = `M ${-half} 0 A ${qtr * 2} ${qtr * 2} 0 0 ${back ? 1 : 0} ${-half + qtr * 2} ${panelY}`
+  const arcR = `M ${half} 0 A ${qtr * 2} ${qtr * 2} 0 0 ${back ? 0 : 1} ${half - qtr * 2} ${panelY}`
   return (
     <Group listening={false}>
       <Line points={[-half, -4 / scale, -half, 4 / scale]} stroke={stroke} strokeWidth={sw} />
       <Line points={[half, -4 / scale, half, 4 / scale]} stroke={stroke} strokeWidth={sw} />
       <Line points={[0, -4 / scale, 0, 4 / scale]} stroke={stroke} strokeWidth={sw * 0.6} />
-      <Line points={[-half, 0, -half + qtr * 2, -qtr * 2]} stroke={stroke} strokeWidth={sw} />
-      <Line points={[half, 0, half - qtr * 2, -qtr * 2]} stroke={stroke} strokeWidth={sw} />
+      <Line points={[-half, 0, -half + qtr * 2, panelY]} stroke={stroke} strokeWidth={sw} />
+      <Line points={[half, 0, half - qtr * 2, panelY]} stroke={stroke} strokeWidth={sw} />
       <Path data={arcL} stroke={stroke} strokeWidth={1 / scale} opacity={0.5} fill="" />
       <Path data={arcR} stroke={stroke} strokeWidth={1 / scale} opacity={0.5} fill="" />
     </Group>
   )
 }
 
-export function SlidingDoorGlyph({ widthPx, scale, selected }) {
+export function SlidingDoorGlyph({ widthPx, scale, selected, swingDir = 'left' }) {
   const half = widthPx / 2
   const stroke = selected ? '#3b82f6' : '#e5e7eb'
   const sw = selected ? 2 / scale : 1.5 / scale
   const arrow = 8 / scale
+  const left = swingDir === 'left'
+  // Panel rests on the side it slides toward
+  const panelX = left ? -half : 0
+  // Arrow tip is at the destination end; base sits one arrowhead-length back
+  const tipX = left ? -half + arrow : half - arrow
+  const baseX = left ? -half + arrow * 2 : half - arrow * 2
   return (
     <Group listening={false}>
       <Line points={[-half, -4 / scale, -half, 4 / scale]} stroke={stroke} strokeWidth={sw} />
       <Line points={[half, -4 / scale, half, 4 / scale]} stroke={stroke} strokeWidth={sw} />
       <Rect
-        x={0} y={-5 / scale}
+        x={panelX} y={-5 / scale}
         width={half} height={10 / scale}
         stroke={stroke} strokeWidth={1.5 / scale}
         fill="rgba(255,255,255,0.06)"
       />
       <Line
-        points={[-half + arrow, 0, half - arrow, 0]}
+        points={[left ? half - arrow : -half + arrow, 0, tipX, 0]}
         stroke={stroke} strokeWidth={1 / scale}
         opacity={0.6}
       />
       <Line
-        points={[half - arrow, 0, half - arrow * 2, -arrow * 0.6, half - arrow * 2, arrow * 0.6, half - arrow, 0]}
+        points={[tipX, 0, baseX, -arrow * 0.6, baseX, arrow * 0.6, tipX, 0]}
         closed fill={stroke} opacity={0.6}
       />
     </Group>
