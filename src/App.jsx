@@ -8,6 +8,7 @@ import PropertiesPanel from './components/PropertiesPanel'
 import AiPanel from './components/AiPanel'
 import Toast from './components/Toast'
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal'
+import TourOverlay from './components/tour/TourOverlay'
 
 // Viewer3D pulls in three.js (~500 kB gzipped). Lazy-load so 2D-only
 // sessions never download it. See `three-scene` skill, "code-split".
@@ -35,6 +36,7 @@ export default function App() {
       </div>
       <Toast />
       {showShortcuts && <KeyboardShortcutsModal />}
+      <TourOverlay />
     </div>
   )
 }

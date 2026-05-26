@@ -14,6 +14,7 @@ import { createLightingSlice } from './slices/lightingSlice'
 import { createWalkthroughSlice } from './slices/walkthroughSlice'
 import { createLevelsSlice, GROUND_FLOOR_ID, DEFAULT_LEVEL_HEIGHT } from './slices/levelsSlice'
 import { createCustomModelsSlice } from './slices/customModelsSlice'
+import { createTourSlice } from './slices/tourSlice'
 
 // Tiny debounce — used by zundo's handleSet so a continuous flow (rotation
 // drag, name typing) collapses into one history entry per pause instead
@@ -68,6 +69,7 @@ const useStore = create(persist(
     ...createWalkthroughSlice(set, get),
     ...createLevelsSlice(set, get),
     ...createCustomModelsSlice(set, get),
+    ...createTourSlice(set, get),
 
     // Cross-slice action: hydrate the project from an imported file. Clears
     // transient state so the user lands on a clean view. `show3d` is left

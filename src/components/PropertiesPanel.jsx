@@ -78,7 +78,7 @@ export default function PropertiesPanel() {
   }
 
   return (
-    <aside className="w-56 shrink-0 bg-gray-900 border-l border-gray-700 flex flex-col">
+    <aside data-tour="properties-panel" className="w-56 shrink-0 bg-gray-900 border-l border-gray-700 flex flex-col">
       <div className="px-4 py-3 border-b border-gray-700">
         <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Properties</span>
       </div>
@@ -115,7 +115,7 @@ function RoomProps({ room, meta, onUpdate }) {
           className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-sm focus:border-blue-500 focus:outline-none"
         />
       </label>
-      <div className="mt-3">
+      <div className="mt-3" data-tour="material-floor">
         <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Floor material</div>
         <MaterialPicker
           materials={FLOOR_MATERIALS}
@@ -124,7 +124,7 @@ function RoomProps({ room, meta, onUpdate }) {
           onChange={(id) => onUpdate(room.id, { floorMaterial: id })}
         />
       </div>
-      <div className="mt-3">
+      <div className="mt-3" data-tour="material-ceiling">
         <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Ceiling material</div>
         <MaterialPicker
           materials={CEILING_MATERIALS}

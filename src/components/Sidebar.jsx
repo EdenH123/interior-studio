@@ -21,7 +21,7 @@ export default function Sidebar() {
     : null
 
   return (
-    <aside className="w-60 shrink-0 bg-gray-900 border-r border-gray-700 flex flex-col">
+    <aside data-tour="sidebar" className="w-60 shrink-0 bg-gray-900 border-r border-gray-700 flex flex-col">
       <LevelsPanel />
       <div className="px-4 py-2 border-b border-gray-700">
         <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Elements</span>

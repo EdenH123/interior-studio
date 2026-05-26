@@ -112,6 +112,7 @@ export default function CanvasArea() {
   return (
     <main
       ref={containerRef}
+      data-tour="canvas"
       {...dragHandlers}
       className="flex-1 bg-gray-950 overflow-hidden relative"
       style={{ cursor: spaceDown ? 'grab' : calibration || drawStart || pendingPlacement ? 'crosshair' : 'default' }}

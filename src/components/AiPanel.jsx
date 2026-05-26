@@ -70,7 +70,7 @@ export default function AiPanel() {
   }
 
   return (
-    <aside className="w-72 shrink-0 bg-gray-900 border-l border-gray-700 flex flex-col">
+    <aside data-tour="ai-panel" className="w-72 shrink-0 bg-gray-900 border-l border-gray-700 flex flex-col">
       <Header onClose={closeAiPanel} />
       {showSettings
         ? <AiSettings apiKey={apiKey} setApiKey={setApiKey} onDismiss={() => setShowSettings(false)} />
@@ -106,6 +106,7 @@ export default function AiPanel() {
         </button>
         <div className="flex gap-2">
           <textarea value={prompt}
+            data-tour="ai-prompt"
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(prompt) } }}
             placeholder={apiKey ? 'Ask anything…  (Enter to send, Shift+Enter for newline)' : 'Set your API key first'}

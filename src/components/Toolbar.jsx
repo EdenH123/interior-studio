@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import useStore from '../store/useStore'
+import TourMenu from './tour/TourMenu'
 import { downscaleDataUrl, QUOTA_WARN_BYTES } from './canvas/imageDownscale'
 import useProjectIO from '../hooks/useProjectIO'
 import useUndoRedo from '../hooks/useUndoRedo'
@@ -36,6 +37,8 @@ export default function Toolbar() {
   const toggleWalkthrough = useStore((s) => s.toggleWalkthrough)
   const aiPanelOpen = useStore((s) => s.aiPanelOpen)
   const toggleAiPanel = useStore((s) => s.toggleAiPanel)
+  const tourMenuOpen = useStore((s) => s.tourMenuOpen)
+  const toggleTourMenu = useStore((s) => s.toggleTourMenu)
   const underlay = useStore((s) => s.underlay)
   const setUnderlay = useStore((s) => s.setUnderlay)
   const select = useStore((s) => s.select)
@@ -105,6 +108,7 @@ export default function Toolbar() {
         Open
       </button>
       <button type="button" onClick={exportJson}
+        data-tour="toolbar-save"
         className="text-xs font-mono px-3 py-1.5 rounded border bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500">
         Save
       </button>
@@ -128,6 +132,7 @@ export default function Toolbar() {
         {underlay ? (underlay.locked ? 'Underlay · locked' : 'Underlay') : 'Upload underlay'}
       </button>
       <button type="button" onClick={toggle3d} aria-pressed={show3d}
+        data-tour="toolbar-3d"
         className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
           show3d ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
         }`}>
@@ -136,13 +141,26 @@ export default function Toolbar() {
       {show3d && (
         <button type="button" onClick={toggleWalkthrough} aria-pressed={walkthrough}
           title="Walkthrough mode — WASD to move, Shift to run, Space to jump, Esc to exit"
+          data-tour="toolbar-walk"
           className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
             walkthrough ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
           }`}>
           Walk
         </button>
       )}
+      <div className="relative">
+        <button type="button" onClick={toggleTourMenu} aria-pressed={tourMenuOpen}
+          data-tour="toolbar-help"
+          title="Take a tour"
+          className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
+            tourMenuOpen ? 'bg-gray-700 border-gray-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
+          }`}>
+          ?
+        </button>
+        {tourMenuOpen && <TourMenu />}
+      </div>
       <button type="button" onClick={toggleAiPanel} aria-pressed={aiPanelOpen}
+        data-tour="toolbar-ai"
         className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
           aiPanelOpen ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
         }`}>
