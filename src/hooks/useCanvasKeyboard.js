@@ -1,17 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import useStore from '../store/useStore'
 import { selectionItems } from '../store/selectionHelpers'
 
-// Wires global keyboard shortcuts for the canvas: space-to-pan, Esc cancel,
-// Delete/Backspace remove all selected, R / Shift+R rotate selected furniture,
-// Ctrl/Cmd+A select all visible items.
+// Wires global keyboard shortcuts for the canvas: Space toggle tool, Esc
+// cancel, Delete/Backspace remove selected, R / Shift+R rotate furniture,
+// Ctrl/Cmd+A select all.
 // Ignores key events that originate from form inputs.
-//
-// Returns `spaceDown` so the canvas can switch cursor + draggable mode.
 export default function useCanvasKeyboard() {
-  const [spaceDown, setSpaceDown] = useState(false)
   const selection = useStore((s) => s.selection)
   const calibration = useStore((s) => s.calibration)
+  const walkthrough = useStore((s) => s.walkthrough)
   const setDrawStart = useStore((s) => s.setDrawStart)
   const clearSelection = useStore((s) => s.clearSelection)
   const removeWall = useStore((s) => s.removeWall)
@@ -34,16 +32,15 @@ export default function useCanvasKeyboard() {
     const down = (e) => {
       const tag = e.target?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
-      if (e.code === 'Space' && !e.repeat) { e.preventDefault(); setSpaceDown(true) }
+      // Space toggles Select ↔ Draw. Skip during 3D walkthrough (Space = jump there).
+      if (e.code === 'Space' && !e.repeat && !walkthrough) {
+        e.preventDefault()
+        toggleActiveTool()
+      }
       if (e.code === 'Escape') {
         clearPendingPlacement()
         if (calibration) cancelCalibration()
         else { setDrawStart(null); clearSelection() }
-      }
-      if (e.code === 'Enter' && !e.repeat) {
-        e.preventDefault()
-        toggleActiveTool()
-        setDrawStart(null)
       }
       if (e.code === 'Delete' || e.code === 'Backspace') {
         // Delete every selected item. Walls cascade-remove their openings,
@@ -64,9 +61,7 @@ export default function useCanvasKeyboard() {
         e.preventDefault()
         selectAll()
       }
-      // Undo / redo — Cmd on macOS, Ctrl elsewhere. The input/textarea guard
-      // above means Cmd+Z still hits native text-undo when typing in a field
-      // (room name, calibration distance, wall length).
+      // Undo / redo — Cmd on macOS, Ctrl elsewhere.
       if ((e.metaKey || e.ctrlKey) && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault()
         const t = useStore.temporal.getState()
@@ -117,11 +112,7 @@ export default function useCanvasKeyboard() {
         return
       }
     }
-    const up = (e) => { if (e.code === 'Space') setSpaceDown(false) }
     window.addEventListener('keydown', down)
-    window.addEventListener('keyup', up)
-    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
-  }, [selection, calibration, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement, furniture, walls, openings, setClipboard, pasteClipboard, pushToast, toggleShortcuts, toggleActiveTool])
-
-  return spaceDown
+    return () => window.removeEventListener('keydown', down)
+  }, [selection, calibration, walkthrough, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement, furniture, walls, openings, setClipboard, pasteClipboard, pushToast, toggleShortcuts, toggleActiveTool])
 }

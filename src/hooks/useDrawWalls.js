@@ -20,7 +20,7 @@ import { nearestWallSnap } from '../components/canvas/openingGeometry'
 //       3. parallel-wall length snap — snaps the length to match a parallel
 //          existing wall of similar length (Issue 1)
 //     then either advances the chain or ends it on a zero-length commit
-export default function useDrawWalls(stageRef, viewScale, spaceDown, shiftDown = false, altDown = false) {
+export default function useDrawWalls(stageRef, viewScale, shiftDown = false, altDown = false) {
   const walls = useStore((s) => s.walls)
   const calibration = useStore((s) => s.calibration)
   const activeTool = useStore((s) => s.activeTool)
@@ -31,7 +31,7 @@ export default function useDrawWalls(stageRef, viewScale, spaceDown, shiftDown =
 
   return function handleStageMouseDown(e) {
     const evt = e.evt
-    if (evt.button === 1 || (evt.button === 0 && spaceDown)) return
+    if (evt.button === 1) return
     if (evt.button !== 0) return
     if (calibration) return
     if (activeTool === 'select') return
