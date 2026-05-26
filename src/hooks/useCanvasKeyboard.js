@@ -28,6 +28,7 @@ export default function useCanvasKeyboard() {
   const pasteClipboard = useStore((s) => s.pasteClipboard)
   const pushToast = useStore((s) => s.pushToast)
   const toggleShortcuts = useStore((s) => s.toggleShortcuts)
+  const toggleActiveTool = useStore((s) => s.toggleActiveTool)
 
   useEffect(() => {
     const down = (e) => {
@@ -38,6 +39,11 @@ export default function useCanvasKeyboard() {
         clearPendingPlacement()
         if (calibration) cancelCalibration()
         else { setDrawStart(null); clearSelection() }
+      }
+      if (e.code === 'Enter') {
+        e.preventDefault()
+        toggleActiveTool()
+        setDrawStart(null)
       }
       if (e.code === 'Delete' || e.code === 'Backspace') {
         // Delete every selected item. Walls cascade-remove their openings,
@@ -115,7 +121,7 @@ export default function useCanvasKeyboard() {
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
-  }, [selection, calibration, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement, furniture, walls, openings, setClipboard, pasteClipboard, pushToast, toggleShortcuts])
+  }, [selection, calibration, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement, furniture, walls, openings, setClipboard, pasteClipboard, pushToast, toggleShortcuts, toggleActiveTool])
 
   return spaceDown
 }
