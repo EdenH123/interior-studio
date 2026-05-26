@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { formatMeters } from './constants'
 import { getFurnitureSpec } from './furnitureCatalog'
 
@@ -7,9 +8,8 @@ import { getModelStatus, onCacheChange } from '../viewer3d/furnitureModelCache'
 import MaterialPicker from './MaterialPicker'
 import useStore from '../../store/useStore'
 
-// Properties-panel editor for a selected furniture item. Editable dimensions
-// (W/D/H) plus read-only stats, material override picker, and 3D model status.
 export default function FurnitureProps({ item, onUpdate }) {
+  const { t } = useTranslation()
   const spec = getFurnitureSpec(item.type)
   const [, bump] = useState(0)
   const locked = useStore((s) => s.lockAspectRatio)
@@ -23,10 +23,10 @@ export default function FurnitureProps({ item, onUpdate }) {
   return (
     <div>
       <h3 className="text-gray-200 text-xs uppercase tracking-widest mb-2">{spec?.label ?? item.label ?? item.type}</h3>
-      <Row label="ID" value={item.id} />
-      <Row label="Type" value={item.type} />
+      <Row label={t('furniture.id')} value={item.id} />
+      <Row label={t('furniture.type')} value={item.type} />
       <div className="flex justify-between items-center py-1 border-b border-gray-800">
-        <span className="text-gray-500 text-[11px] uppercase tracking-wider">Dimensions</span>
+        <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('furniture.dimensions')}</span>
         <label className="flex items-center gap-1.5 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -34,36 +34,37 @@ export default function FurnitureProps({ item, onUpdate }) {
             onChange={(e) => setLocked(e.target.checked)}
             className="w-3 h-3 accent-blue-500"
           />
-          <span className="text-gray-500 text-[10px]">lock ratio</span>
+          <span className="text-gray-500 text-[10px]">{t('furniture.lock_ratio')}</span>
         </label>
       </div>
-      <DimField label="W" dim="width"  item={item} onCommit={(v) => commitDim('width',  v)} />
-      <DimField label="D" dim="depth"  item={item} onCommit={(v) => commitDim('depth',  v)} />
-      <DimField label="H" dim="height" item={item} onCommit={(v) => commitDim('height', v)} />
+      <DimField label={t('furniture.w')} dim="width"  item={item} onCommit={(v) => commitDim('width',  v)} />
+      <DimField label={t('furniture.d')} dim="depth"  item={item} onCommit={(v) => commitDim('depth',  v)} />
+      <DimField label={t('furniture.h')} dim="height" item={item} onCommit={(v) => commitDim('height', v)} />
       <RotationField item={item} onUpdate={onUpdate} />
-      <Row label="Position" value={`${formatMeters(item.x)}, ${formatMeters(item.y)}`} />
-      <Row label="Model" value={describeModelStatus(item.model ?? item.customModelId)} />
+      <Row label={t('furniture.position')} value={`${formatMeters(item.x)}, ${formatMeters(item.y)}`} />
+      <Row label={t('furniture.model')} value={describeModelStatus(item.model ?? item.customModelId, t)} />
       {item.wallMounted && <MountHeightField item={item} onUpdate={onUpdate} />}
 
       {item.wallMounted && (
         <div className="mt-3">
-          <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Mount height</div>
+          <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">{t('furniture.mount_height')}</div>
           <div className="flex items-center gap-2">
             <input
               type="number"
               min={0} max={4} step={0.05}
               value={(item.mountHeight ?? 1.2).toFixed(2)}
               onChange={(e) => onUpdate(item.id, { mountHeight: parseFloat(e.target.value) || 0 })}
+              dir="ltr"
               className="w-20 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-gray-200 text-xs font-mono"
             />
-            <span className="text-gray-500 text-[10px]">m above floor</span>
+            <span className="text-gray-500 text-[10px]">{t('furniture.above_floor')}</span>
           </div>
         </div>
       )}
 
       {spec?.parts?.length > 0 && (
         <div className="mt-3">
-          <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-2">Part colors</div>
+          <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-2">{t('furniture.part_colors')}</div>
           <div className="space-y-1.5">
             {spec.parts.map(({ key, label }) => (
               <PartColorRow
@@ -80,7 +81,7 @@ export default function FurnitureProps({ item, onUpdate }) {
       )}
 
       <div className="mt-3">
-        <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Global material</div>
+        <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">{t('furniture.global_material')}</div>
         <MaterialPicker
           materials={FURNITURE_MATERIALS}
           currentId={item.material}
@@ -90,7 +91,7 @@ export default function FurnitureProps({ item, onUpdate }) {
       </div>
 
       <p className="text-[10px] text-gray-500 mt-3 leading-snug">
-        Part colors override individual sections. Global material sets roughness/finish and tints parts without a color override.
+        {t('furniture.part_colors_hint')}
       </p>
     </div>
   )
@@ -127,6 +128,7 @@ function DimField({ label, dim, item, onCommit }) {
             if (e.key === 'Enter')  { e.preventDefault(); commit() }
             if (e.key === 'Escape') { e.preventDefault(); setVal(item[dim].toFixed(2)); e.currentTarget.blur() }
           }}
+          dir="ltr"
           className="w-16 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-gray-200 text-[12px] font-mono text-right focus:border-blue-500 focus:outline-none"
         />
         <span className="text-gray-500 text-[10px]">m</span>
@@ -136,6 +138,7 @@ function DimField({ label, dim, item, onCommit }) {
 }
 
 function MountHeightField({ item, onUpdate }) {
+  const { t } = useTranslation()
   const [val, setVal] = useState((item.mountHeight ?? 0).toFixed(2))
   useEffect(() => { setVal((item.mountHeight ?? 0).toFixed(2)) }, [item.mountHeight])
 
@@ -148,7 +151,7 @@ function MountHeightField({ item, onUpdate }) {
 
   return (
     <label className="block mt-2">
-      <span className="text-gray-500 text-[11px] uppercase tracking-wider">Mount height (m)</span>
+      <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('furniture.mount_height')}</span>
       <input
         type="number" step="0.05" min="0" max="4"
         value={val}
@@ -158,6 +161,7 @@ function MountHeightField({ item, onUpdate }) {
           if (e.key === 'Enter') { e.preventDefault(); commit() }
           if (e.key === 'Escape') { e.preventDefault(); setVal((item.mountHeight ?? 0).toFixed(2)); e.currentTarget.blur() }
         }}
+        dir="ltr"
         className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-sm font-mono focus:border-blue-500 focus:outline-none"
       />
     </label>
@@ -191,6 +195,7 @@ function PartColorRow({ label, value, onChange }) {
 }
 
 function RotationField({ item, onUpdate }) {
+  const { t } = useTranslation()
   const [val, setVal] = useState(String(Math.round(item.rotation)))
   useEffect(() => { setVal(String(Math.round(item.rotation))) }, [item.rotation])
 
@@ -204,7 +209,7 @@ function RotationField({ item, onUpdate }) {
 
   return (
     <div className="flex justify-between items-center py-1 border-b border-gray-800">
-      <span className="text-gray-500 text-[11px] uppercase tracking-wider">Rotation</span>
+      <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('furniture.rotation')}</span>
       <div className="flex items-center gap-1">
         <input
           type="number" step="1"
@@ -215,6 +220,7 @@ function RotationField({ item, onUpdate }) {
             if (e.key === 'Enter')  { e.preventDefault(); commit() }
             if (e.key === 'Escape') { e.preventDefault(); setVal(String(Math.round(item.rotation))); e.currentTarget.blur() }
           }}
+          dir="ltr"
           className="w-16 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-gray-200 text-[12px] font-mono text-right focus:border-blue-500 focus:outline-none"
         />
         <span className="text-gray-500 text-[10px]">°</span>
@@ -232,11 +238,11 @@ function Row({ label, value }) {
   )
 }
 
-function describeModelStatus(modelUrl) {
-  if (!modelUrl) return 'Box fallback'
+function describeModelStatus(modelUrl, t) {
+  if (!modelUrl) return t('furniture.model_box')
   const status = getModelStatus(modelUrl)
-  if (status === 'loaded') return 'GLB loaded'
-  if (status === 'loading') return 'GLB loading…'
-  if (status === 'failed') return 'GLB failed — using box'
-  return 'Box fallback'
+  if (status === 'loaded') return t('furniture.model_loaded')
+  if (status === 'loading') return t('furniture.model_loading')
+  if (status === 'failed') return t('furniture.model_failed')
+  return t('furniture.model_box')
 }

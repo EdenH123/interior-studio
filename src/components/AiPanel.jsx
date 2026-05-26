@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import useStore from '../store/useStore'
 import useApiKey from '../hooks/useApiKey'
 import useAiProposalSync from '../hooks/useAiProposalSync'
@@ -13,6 +14,7 @@ const MODEL = 'gemini-2.0-flash'
 // Session-scoped: no transcript persistence, no key persistence beyond the
 // tab. Streams Gemini responses as text via `streamClaude`.
 export default function AiPanel() {
+  const { t } = useTranslation()
   const closeAiPanel = useStore((s) => s.closeAiPanel)
   const pushToast = useStore((s) => s.pushToast)
   const walls = useStore((s) => s.walls)
@@ -70,7 +72,7 @@ export default function AiPanel() {
   }
 
   return (
-    <aside data-tour="ai-panel" className="w-72 shrink-0 bg-gray-900 border-l border-gray-700 flex flex-col">
+    <aside data-tour="ai-panel" className="w-72 shrink-0 bg-gray-900 border-s border-gray-700 flex flex-col">
       <Header onClose={closeAiPanel} />
       {showSettings
         ? <AiSettings apiKey={apiKey} setApiKey={setApiKey} onDismiss={() => setShowSettings(false)} />
@@ -88,11 +90,11 @@ export default function AiPanel() {
       {!aiProposal && jsonBlock && !streaming && (
         <div className="px-3 py-2 border-t border-gray-700 flex items-center justify-between gap-2 text-xs">
           <span className="text-gray-400 truncate">
-            {proposalError ? <span className="text-amber-300" title={proposalError}>Can't apply — {proposalError}</span> : 'Suggested JSON detected'}
+            {proposalError ? <span className="text-amber-300" title={proposalError}>{t('ai.cant_apply', { error: proposalError })}</span> : t('ai.json_detected')}
           </span>
           <button type="button" onClick={copyJson}
             className="shrink-0 text-xs px-2 py-1 rounded bg-blue-600 border border-blue-500 text-white hover:bg-blue-500">
-            Copy
+            {t('ai.copy')}
           </button>
         </div>
       )}
@@ -102,27 +104,28 @@ export default function AiPanel() {
           onClick={() => send('Analyze my current design. What is working? What is missing? What would you suggest? Be concrete.')}
           disabled={streaming || !apiKey}
           className="w-full text-xs px-2 py-1.5 rounded bg-gray-800 border border-gray-700 text-gray-200 hover:border-gray-500 disabled:opacity-40 disabled:cursor-not-allowed">
-          Analyze current design
+          {t('ai.analyze')}
         </button>
         <div className="flex gap-2">
           <textarea value={prompt}
             data-tour="ai-prompt"
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(prompt) } }}
-            placeholder={apiKey ? 'Ask anything…  (Enter to send, Shift+Enter for newline)' : 'Set your API key first'}
+            placeholder={apiKey ? t('ai.placeholder') : t('ai.placeholder_no_key')}
             disabled={!apiKey || streaming}
             rows={2}
+            dir="ltr"
             className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-xs font-mono focus:border-blue-500 focus:outline-none resize-none disabled:opacity-50" />
           <button type="button" onClick={() => send(prompt)}
             disabled={!apiKey || streaming || !prompt.trim()}
             className="text-xs px-3 rounded bg-blue-600 border border-blue-500 text-white hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed">
-            {streaming ? '…' : 'Send'}
+            {streaming ? t('ai.sending') : t('ai.send')}
           </button>
         </div>
         {messages.length > 0 && !streaming && (
           <button type="button" onClick={() => { setMessages([]); setError(null) }}
             className="text-[10px] text-gray-500 hover:text-gray-300 underline">
-            Clear conversation
+            {t('ai.clear')}
           </button>
         )}
       </div>
@@ -131,9 +134,10 @@ export default function AiPanel() {
 }
 
 function Header({ onClose }) {
+  const { t } = useTranslation()
   return (
     <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
-      <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">AI assistant</span>
+      <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">{t('ai.header')}</span>
       <button type="button" onClick={onClose}
         className="text-gray-500 hover:text-gray-200 text-base leading-none px-1">×</button>
     </div>
@@ -141,27 +145,31 @@ function Header({ onClose }) {
 }
 
 function KeyStatusBar({ onEdit }) {
+  const { t } = useTranslation()
   return (
     <div className="px-3 py-1.5 text-[10px] text-gray-500 border-b border-gray-800 flex justify-between items-center">
-      <span>Key set · session-only</span>
-      <button type="button" onClick={onEdit} className="text-gray-400 hover:text-gray-200 underline">edit</button>
+      <span>{t('ai.key_set')}</span>
+      <button type="button" onClick={onEdit} className="text-gray-400 hover:text-gray-200 underline">{t('ai.edit_key')}</button>
     </div>
   )
 }
 
 function EmptyHint() {
+  const { t } = useTranslation()
   return (
     <div className="text-gray-500 text-xs leading-relaxed">
-      Ask Claude about your design, or hit <b>Analyze current design</b> to send the full plan for review.
+      {t('ai.empty_hint')}
     </div>
   )
 }
 
 function Message({ role, content, streaming }) {
+  const { t } = useTranslation()
+  const roleLabel = role === 'user' ? t('ai.role_user') : t('ai.role_assistant')
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">{role}</div>
-      <div className={`whitespace-pre-wrap text-xs leading-relaxed ${role === 'user' ? 'text-gray-300' : 'text-gray-100'}`}>
+      <div className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">{roleLabel}</div>
+      <div className={`whitespace-pre-wrap text-xs leading-relaxed ${role === 'user' ? 'text-gray-300' : 'text-gray-100'}`} dir="ltr">
         {content}{streaming && <span className="text-gray-500 animate-pulse"> ▍</span>}
       </div>
     </div>

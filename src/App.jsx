@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import './index.css'
 import useStore from './store/useStore'
+import useLanguageSync from './hooks/useLanguageSync'
 import Toolbar from './components/Toolbar'
 import Sidebar from './components/Sidebar'
 import CanvasArea from './components/CanvasArea'
@@ -18,12 +19,13 @@ export default function App() {
   const show3d = useStore((s) => s.show3d)
   const aiPanelOpen = useStore((s) => s.aiPanelOpen)
   const showShortcuts = useStore((s) => s.showShortcuts)
+  useLanguageSync()
   return (
     <div className="flex flex-col h-full bg-gray-950 text-white">
       <Toolbar />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden rtl:flex-row-reverse">
         <Sidebar />
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden" dir="ltr">
           {show3d ? (
             <Suspense fallback={<ViewerFallback />}>
               <Viewer3D />

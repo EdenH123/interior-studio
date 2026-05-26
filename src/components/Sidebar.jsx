@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CATEGORIES, FURNITURE } from './canvas/furnitureCatalog'
 import { OPENINGS, OPENING_DRAG_MIME } from './canvas/openingsCatalog'
 import useStore from '../store/useStore'
@@ -11,6 +12,7 @@ import { CUSTOM_MODEL_DRAG_MIME } from '../hooks/useCustomModelDrop'
 export const FURNITURE_DRAG_MIME = 'application/x-interior-studio-furniture'
 
 export default function Sidebar() {
+  const { t } = useTranslation()
   const [showImport, setShowImport] = useState(false)
   const [editModel,  setEditModel]  = useState(null)
   const [search, setSearch] = useState('')
@@ -21,10 +23,10 @@ export default function Sidebar() {
     : null
 
   return (
-    <aside data-tour="sidebar" className="w-60 shrink-0 bg-gray-900 border-r border-gray-700 flex flex-col">
+    <aside data-tour="sidebar" className="w-60 shrink-0 bg-gray-900 border-e border-gray-700 flex flex-col">
       <LevelsPanel />
       <div className="px-4 py-2 border-b border-gray-700">
-        <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Elements</span>
+        <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">{t('sidebar.elements')}</span>
       </div>
       <IkeaProductSearch />
       <div className="px-2 pt-2">
@@ -32,18 +34,19 @@ export default function Sidebar() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search furniture…"
+          placeholder={t('sidebar.search_placeholder')}
           className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500"
+          dir="ltr"
         />
       </div>
       <div className="flex-1 overflow-y-auto p-2 space-y-3">
         {filteredFurniture ? (
           filteredFurniture.length === 0 ? (
-            <p className="text-[10px] text-gray-600 px-1 pt-1">No matches for "{search}"</p>
+            <p className="text-[10px] text-gray-600 px-1 pt-1">{t('sidebar.no_matches', { search })}</p>
           ) : (
             <div>
               <div className="px-1 pb-1 text-[10px] uppercase tracking-widest text-gray-500">
-                Results ({filteredFurniture.length})
+                {t('sidebar.results', { count: filteredFurniture.length })}
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {filteredFurniture.map((item) => (
@@ -71,7 +74,7 @@ export default function Sidebar() {
       </div>
       <LayersPanel />
       <div className="px-3 py-2 border-t border-gray-700 text-[11px] text-gray-500 font-mono leading-snug">
-        drag a tile onto the canvas to place
+        {t('sidebar.drag_hint')}
       </div>
       {showImport && <ImportModelModal onClose={() => setShowImport(false)} />}
       {editModel  && <ImportModelModal editModel={editModel} onClose={() => setEditModel(null)} />}
@@ -80,6 +83,7 @@ export default function Sidebar() {
 }
 
 function MyModelsGroup({ onImport, onEdit }) {
+  const { t } = useTranslation()
   const customModels    = useStore((s) => s.customModels)
   const removeCustomModel = useStore((s) => s.removeCustomModel)
   const setDragGhostCustom = useStore((s) => s.setDragGhostCustom)
@@ -88,18 +92,18 @@ function MyModelsGroup({ onImport, onEdit }) {
   return (
     <div>
       <div className="px-1 pb-1 flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-widest text-gray-500">My Models</span>
+        <span className="text-[10px] uppercase tracking-widest text-gray-500">{t('sidebar.my_models')}</span>
         <button
           onClick={onImport}
           title="Import a .glb file"
           className="text-gray-500 hover:text-gray-300 transition-colors text-[11px] leading-none px-1"
         >
-          + Import
+          {t('sidebar.import')}
         </button>
       </div>
       {customModels.length === 0 ? (
         <p className="text-[10px] text-gray-600 px-1 pb-1 leading-snug">
-          Import a <span className="font-mono">.glb</span> from any AI 3D generator
+          {t('sidebar.no_models_hint')}
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-2">
@@ -120,6 +124,7 @@ function MyModelsGroup({ onImport, onEdit }) {
 }
 
 function CustomModelTile({ model, onEdit, onRemove, onDragStart, onDragEnd }) {
+  const { t } = useTranslation()
   const aspect = model.width / model.depth
   const boxW = aspect >= 1 ? 36 : 36 * aspect
   const boxH = aspect >= 1 ? 36 / aspect : 36
@@ -138,19 +143,17 @@ function CustomModelTile({ model, onEdit, onRemove, onDragStart, onDragEnd }) {
       className="relative bg-gray-800 border border-gray-700 rounded p-2 cursor-grab active:cursor-grabbing hover:border-gray-500 transition-colors select-none group"
       title={`${model.label} — ${model.width.toFixed(2)} × ${model.depth.toFixed(2)} × ${model.height.toFixed(2)} m`}
     >
-      {/* Edit dimensions */}
       <button
         onClick={(e) => { e.stopPropagation(); onEdit() }}
-        className="absolute top-1 left-1 text-gray-600 hover:text-blue-400 text-[10px] leading-none opacity-0 group-hover:opacity-100 transition-opacity"
-        title="Edit dimensions"
+        className="absolute top-1 start-1 text-gray-600 hover:text-blue-400 text-[10px] leading-none opacity-0 group-hover:opacity-100 transition-opacity"
+        title={t('sidebar.edit_dimensions')}
       >
         ✎
       </button>
-      {/* Remove */}
       <button
         onClick={(e) => { e.stopPropagation(); onRemove() }}
-        className="absolute top-1 right-1 text-gray-600 hover:text-red-400 text-[10px] leading-none opacity-0 group-hover:opacity-100 transition-opacity"
-        title="Remove from library"
+        className="absolute top-1 end-1 text-gray-600 hover:text-red-400 text-[10px] leading-none opacity-0 group-hover:opacity-100 transition-opacity"
+        title={t('sidebar.remove_from_library')}
       >
         ✕
       </button>
@@ -182,14 +185,15 @@ function CategoryGroup({ name, items }) {
 }
 
 function OpeningsGroup() {
+  const { t } = useTranslation()
   return (
     <div>
-      <div className="px-1 pb-1 text-[10px] uppercase tracking-widest text-gray-500">Openings</div>
+      <div className="px-1 pb-1 text-[10px] uppercase tracking-widest text-gray-500">{t('sidebar.openings')}</div>
       <div className="grid grid-cols-2 gap-2">
         {OPENINGS.map((o) => <OpeningTile key={o.type} item={o} />)}
       </div>
       <div className="px-1 pt-1 text-[10px] text-gray-500 font-mono leading-snug">
-        drop on a wall — snaps automatically
+        {t('sidebar.drop_hint')}
       </div>
     </div>
   )

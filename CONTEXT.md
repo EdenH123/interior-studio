@@ -48,6 +48,9 @@ interior-studio/
 │       └── verification-before-completion/
 │           └── SKILL.md         # rule: no completion claims without fresh verification evidence in the current message
 ├── public/
+│   └── locales/
+│       ├── en/translation.json  # English UI strings (all namespaces)
+│       └── he/translation.json  # Hebrew UI strings (all namespaces)
 ├── src/
 │   ├── assets/                  # images, icons, 3D models, textures
 │   │   └── furniture/           # 12 .glb mesh files + CREDITS.md (chair.glb = processed SheenChair; 11 procedural CC0)
@@ -120,7 +123,9 @@ interior-studio/
 │   │   ├── useApiKey.js         # sessionStorage-backed [key, setKey] for the Anthropic API key — never persisted
 │   │   ├── useAiProposalSync.js # watches the latest assistant message; parses ```json → validates → diffs → setAiProposal; returns helpers for the panel UI
 │   │   ├── useFurnitureDrop3D.js  # 3D sidebar drag-drop: furniture (floor raycast + 0.5m snap) + openings (wall raycast → wallPositionFrom → addOpening); exports wallPositionFrom for tests
+│   │   ├── useLanguageSync.js   # syncs Zustand language → i18n.changeLanguage() + document.documentElement.lang/.dir
 │   │   └── useThree.js          # the only file outside viewer3d/ that imports `three`; owns scene/camera/renderer/composer/controls/RAF/resize; EffectComposer chain: RenderPass→SSAOPass→UnrealBloomPass; reconciles walls + furniture + rooms from the store via useEffect
+│   ├── i18n.js                  # i18next init: HttpBackend + initReactI18next; loads /public/locales/{{lng}}/translation.json
 │   ├── store/
 │   │   ├── useStore.js          # composer: imports slices, wires persist + zundo, holds loadProject + getSelectedFurniture
 │   │   └── slices/              # one file per state concern
@@ -134,7 +139,8 @@ interior-studio/
 │   │       ├── lightingSlice.js # lightsOn + timeOfDay + ambientStrength — persisted, not in undo
 │   │       ├── walkthroughSlice.js  # walkthrough bool — NOT persisted, NOT in undo history
 │   │       ├── levelsSlice.js       # building levels: { id, name, height, order }; GROUND_FLOOR_ID='L00000'; computeLevelOffsets(); solo3d + xrayCeiling flags
-│   │       └── levelsSlice.test.js  # 19 tests: computeLevelOffsets + all 9 actions
+│   │       ├── levelsSlice.test.js  # 19 tests: computeLevelOffsets + all 9 actions
+│   │       └── languageSlice.js     # language: 'en'|'he' + setLanguage(lang); persisted
 │   ├── App.jsx                  # root layout: Toolbar + Sidebar + Canvas + (PropertiesPanel ↔ AiPanel) + Toast
 │   ├── index.css                # Tailwind import + full-height reset
 │   ├── test/
@@ -600,6 +606,10 @@ interior-studio/
   - Root cause: zundo's `undo(steps=1)` uses `steps` in `Array.splice(-steps, steps)`. Passing the function directly as `onClick={undo}` caused React to call it with the `SyntheticEvent` as `steps`; `splice(NaN, NaN)` returns `[]`, so `nextState = undefined`, `userSet(undefined)` set the entire Zustand state to `undefined`, and every selector threw. Keyboard shortcut was unaffected because it called `t.undo()` with no arguments.
   - `useUndoRedo.js`: wrapped undo/redo in `useCallback(() => useStore.temporal.getState().undo(), [])` arrow functions so they're always invoked with no arguments.
 
+- [x] Auto-launch Getting Started tour on first visit (2026-05-26)
+  - `TourOverlay.jsx`: added a mount-time `useEffect` that checks `localStorage.getItem('interior-studio:welcomed')` and `useStore.getState().walls.length === 0`. If neither is set, the core tour starts automatically and the welcomed flag is written so the auto-launch only happens once (not on every return visit).
+  - Wrapped in try/catch so private-browsing environments where `localStorage` throws skip the auto-launch gracefully.
+
 - [x] Lock-ratio checkbox wired to corner resize handles (2026-05-25)
   - Lifted `lockAspectRatio` from local `useState` in `FurnitureProps` into `uiSlice` (not persisted, default `true`).
   - `CanvasArea.jsx` reads `lockAspectRatio` from store and passes `lockRatio={lockAspectRatio || shiftDown}` to `ResizeHandle`.
@@ -640,6 +650,18 @@ interior-studio/
   - **TV** (3 groups): dark frame + near-black screen panel + brushed aluminium stand column/base. Previously stand was same dark color as frame.
   - `generate-furniture-glbs.mjs`: added `SOFA_PARTS` helper constant; all affected items now emit `frame`/`cushions`/`legs` material names.
   - `furnitureCatalog.js`: added `SOFA_PARTS` constant; sofa/loveseat/chaise/armchair → 3-part; coffee-table → 3-part (top/shelf/legs); TV → 3-part (frame/screen/stand).
+
+- [x] Internationalization (i18n) + Hebrew RTL support (branch claude/object-resize-models-bikg3, 2026-05-26)
+  - **Infrastructure**: `react-i18next` + `i18next-http-backend` added. `src/i18n.js` initializes with HttpBackend loading `/public/locales/{{lng}}/{{ns}}.json`.
+  - **Language slice**: `src/store/slices/languageSlice.js` — `language: 'en'|'he'` + `setLanguage(lang)`. Persisted via `partialize`.
+  - **`useLanguageSync` hook** (`src/hooks/useLanguageSync.js`): syncs Zustand `language` to `i18n.changeLanguage()`, `document.documentElement.lang`, and `document.documentElement.dir` (`rtl` for Hebrew). Called once in `App.jsx`.
+  - **Translation files**: `public/locales/en/translation.json` and `public/locales/he/translation.json` — comprehensive coverage of all UI strings organized by namespace keys: `toolbar`, `sidebar`, `properties`, `room`, `wall`, `furniture`, `opening`, `lighting`, `stair`, `underlay`, `multiselect`, `layers`, `levels`, `ai`, `hud`, `lighting_toolbar`, `shortcuts`.
+  - **RTL layout**: `rtl:flex-row-reverse` on `App.jsx`'s main content row flips Sidebar to the right and Properties/AI panel to the left in Hebrew mode. Canvas wrapper gets `dir="ltr"` so Konva rendering is unaffected.
+  - **Logical CSS properties**: `border-r` → `border-e` (Sidebar), `border-l` → `border-s` (panels), `ml-3` → `ms-3`, `left-1`/`right-1` → `start-1`/`end-1` throughout.
+  - **Number inputs and range sliders**: all get `dir="ltr"` to display values correctly in RTL context.
+  - **Language toggle**: EN / עב buttons added to `Toolbar.jsx` (end of toolbar row).
+  - **Hebrew font**: Google Fonts Heebo loaded in `index.html`; applied via `:lang(he)` in `src/index.css`.
+  - **Components fully translated**: `Toolbar`, `Sidebar`, `PropertiesPanel`, `AiPanel`, `LayersPanel`, `LevelsPanel`, `KeyboardShortcutsModal`, `Viewer3D`, `LightingToolbar`, `WallProps`, `FurnitureProps`, `OpeningProps`, `MultiSelectProps`, `LightingProps`, `StairProps`, `UnderlayProps`.
 
 ### 🚧 In Progress
 - (nothing active)
@@ -1035,6 +1057,8 @@ interior-studio/
   by reading CONTEXT.md + running `npm run build` + reporting state. End every
   session by running `npm run build` + updating CONTEXT.md + summarising
   completed work and what's queued next.
+- **i18n via react-i18next**: all user-visible strings use `const { t } = useTranslation()` and `t('namespace.key')`. Translation files live in `public/locales/{en,he}/translation.json`. Add new strings to BOTH files when adding UI. The `language` store slice is persisted; `useLanguageSync` applies it to `document.documentElement.dir/lang` + `i18n.changeLanguage()` — do not mutate the DOM directly.
+- **RTL layout conventions**: use Tailwind logical properties everywhere — `border-e`/`border-s` (not `border-r`/`border-l`), `ms-*`/`me-*` (not `ml-*`/`mr-*`), `start-*`/`end-*` (not `left-*`/`right-*`), `text-start`/`text-end`. Canvas and number/range inputs get explicit `dir="ltr"` to stay unaffected by RTL mode. The main content row uses `rtl:flex-row-reverse` so Sidebar shifts to the right side automatically in Hebrew.
 
 ## Known Issues / Open Questions
 - No undo/redo. (Consider zundo or a manual history slice.)

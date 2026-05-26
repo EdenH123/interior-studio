@@ -75,6 +75,8 @@ function MissingCard({ step, onNext, onSkip }) {
   )
 }
 
+const WELCOMED_KEY = 'interior-studio:welcomed'
+
 export default function TourOverlay() {
   const tourActive      = useStore((s) => s.tourActive)
   const tourId          = useStore((s) => s.tourId)
@@ -90,6 +92,19 @@ export default function TourOverlay() {
   const isLast = tour ? stepIndex === tour.steps.length - 1 : false
 
   const { rect, missing } = useTargetRect(step?.target ?? null)
+
+  // Auto-launch the core tour on first ever visit when canvas is empty.
+  // Uses a separate localStorage flag so it doesn't interfere with undo/persist.
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem(WELCOMED_KEY) && useStore.getState().walls.length === 0) {
+        localStorage.setItem(WELCOMED_KEY, '1')
+        startTour('core')
+      }
+    } catch {
+      // localStorage unavailable (private browsing, etc.) — skip auto-launch
+    }
+  }, [startTour])
 
   // Keyboard navigation
   useEffect(() => {

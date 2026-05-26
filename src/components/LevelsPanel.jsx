@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import useStore from '../store/useStore'
 
 // Collapsible levels panel shown in the sidebar.
 // Lists floors sorted by order; click to activate, double-click name to rename,
 // edit height inline, add/remove levels with + and × controls.
 export default function LevelsPanel() {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(true)
   const [editingId, setEditingId] = useState(null)
   const [editingName, setEditingName] = useState('')
@@ -48,9 +50,9 @@ export default function LevelsPanel() {
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full px-4 py-2 flex items-center justify-between hover:bg-gray-800 transition-colors"
-        title="Switch between floors — click a level to make it active, double-click name to rename"
+        title={t('levels.switch_hint')}
       >
-        <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Levels</span>
+        <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">{t('levels.title')}</span>
         <span className="flex items-center gap-2">
           <span
             role="button"
@@ -69,7 +71,7 @@ export default function LevelsPanel() {
         <div className="pb-2 max-h-36 overflow-y-auto">
           {sorted.length === 1 && (
             <p className="px-4 pt-1 pb-0 text-[10px] text-gray-600 font-mono leading-snug">
-              Single floor · press + to add a level
+              {t('levels.single_floor')}
             </p>
           )}
           {sorted.map((lv) => {
@@ -116,7 +118,7 @@ export default function LevelsPanel() {
                   onChange={(e) => handleHeightChange(lv.id, e.target.value)}
                   onClick={(e) => e.stopPropagation()}
                   className="w-12 bg-transparent border border-gray-700 rounded px-1 text-[10px] font-mono text-gray-400 focus:border-blue-500 focus:outline-none text-right"
-                  title="Height (m)"
+                  title={t('levels.height_title')}
                 />
                 <span className="text-[9px] text-gray-600">m</span>
 
@@ -125,7 +127,7 @@ export default function LevelsPanel() {
                   <button
                     onClick={(e) => { e.stopPropagation(); removeLevel(lv.id) }}
                     className="text-gray-600 hover:text-red-400 text-xs leading-none ml-0.5 shrink-0"
-                    title="Remove level"
+                    title={t('levels.remove_title')}
                   >
                     ×
                   </button>

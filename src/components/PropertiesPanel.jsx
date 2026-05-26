@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import useStore from '../store/useStore'
 import { getSingleItem, selectionItems, commonKind } from '../store/selectionHelpers'
 import { detectRooms, polygonAreaM2 } from './canvas/roomDetection'
@@ -19,6 +20,7 @@ import StairProps from './canvas/StairProps'
 // still inline — it's specific to detected polygons which only exist in
 // this file's `detectRooms(walls)` derivation.
 export default function PropertiesPanel() {
+  const { t } = useTranslation()
   const selection = useStore((s) => s.selection)
   const walls = useStore((s) => s.walls)
   const furniture = useStore((s) => s.furniture)
@@ -78,9 +80,9 @@ export default function PropertiesPanel() {
   }
 
   return (
-    <aside data-tour="properties-panel" className="w-56 shrink-0 bg-gray-900 border-l border-gray-700 flex flex-col">
+    <aside data-tour="properties-panel" className="w-56 shrink-0 bg-gray-900 border-s border-gray-700 flex flex-col">
       <div className="px-4 py-3 border-b border-gray-700">
-        <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Properties</span>
+        <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">{t('properties.header')}</span>
       </div>
       <div className="flex-1 overflow-y-auto p-3 text-sm">{body}</div>
     </aside>
@@ -88,7 +90,8 @@ export default function PropertiesPanel() {
 }
 
 function Empty() {
-  return <p className="text-gray-500 text-xs leading-relaxed">Nothing selected. Click a wall, opening, furniture item, room, or underlay (via the toolbar).</p>
+  const { t } = useTranslation()
+  return <p className="text-gray-500 text-xs leading-relaxed">{t('properties.nothing_selected')}</p>
 }
 
 function Row({ label, value }) {
@@ -101,22 +104,23 @@ function Row({ label, value }) {
 }
 
 function RoomProps({ room, meta, onUpdate }) {
+  const { t } = useTranslation()
   const area = polygonAreaM2(room.verts)
   return (
     <div>
-      <h3 className="text-gray-200 text-xs uppercase tracking-widest mb-2">Room</h3>
+      <h3 className="text-gray-200 text-xs uppercase tracking-widest mb-2">{t('room.title')}</h3>
       <label className="block">
-        <span className="text-gray-500 text-[11px] uppercase tracking-wider">Name</span>
+        <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('room.name')}</span>
         <input
           type="text"
           value={meta.name ?? ''}
           onChange={(e) => onUpdate(room.id, { name: e.target.value })}
-          placeholder="Untitled"
+          placeholder={t('room.name_placeholder')}
           className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-sm focus:border-blue-500 focus:outline-none"
         />
       </label>
       <div className="mt-3" data-tour="material-floor">
-        <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Floor material</div>
+        <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">{t('room.floor_material')}</div>
         <MaterialPicker
           materials={FLOOR_MATERIALS}
           currentId={meta.floorMaterial}
@@ -125,7 +129,7 @@ function RoomProps({ room, meta, onUpdate }) {
         />
       </div>
       <div className="mt-3" data-tour="material-ceiling">
-        <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">Ceiling material</div>
+        <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">{t('room.ceiling_material')}</div>
         <MaterialPicker
           materials={CEILING_MATERIALS}
           currentId={meta.ceilingMaterial}
@@ -134,8 +138,8 @@ function RoomProps({ room, meta, onUpdate }) {
         />
       </div>
       <div className="mt-3">
-        <Row label="Area" value={`${area.toFixed(2)} m²`} />
-        <Row label="Vertices" value={room.verts.length} />
+        <Row label={t('room.area')} value={`${area.toFixed(2)} m²`} />
+        <Row label={t('room.vertices')} value={room.verts.length} />
       </div>
     </div>
   )

@@ -1,36 +1,38 @@
+import { useTranslation } from 'react-i18next'
 import useStore from '../store/useStore'
 
-const SECTIONS = [
-  {
-    title: 'Canvas',
-    rows: [
-      ['Space + drag', 'Pan canvas'],
-      ['Scroll', 'Zoom in / out'],
-      ['Esc', 'Cancel / deselect all'],
-      ['Delete / Backspace', 'Remove selected item(s)'],
-      ['R', 'Rotate furniture 15° clockwise'],
-      ['Shift + R', 'Rotate furniture 15° counter-clockwise'],
-      ['Ctrl/⌘ + A', 'Select all items'],
-      ['Ctrl/⌘ + C', 'Copy selected'],
-      ['Ctrl/⌘ + V', 'Paste'],
-      ['Ctrl/⌘ + Z', 'Undo'],
-      ['Ctrl/⌘ + Shift + Z', 'Redo'],
-      ['Shift + ?', 'Show this cheat-sheet'],
-    ],
-  },
-  {
-    title: '3D Walkthrough',
-    rows: [
-      ['W / A / S / D', 'Move forward / left / back / right'],
-      ['Shift', 'Run (hold while moving)'],
-      ['Space', 'Jump'],
-      ['Esc', 'Exit walkthrough mode'],
-    ],
-  },
-]
-
 export default function KeyboardShortcutsModal() {
+  const { t } = useTranslation()
   const closeShortcuts = useStore((s) => s.closeShortcuts)
+
+  const SECTIONS = [
+    {
+      title: t('shortcuts.canvas'),
+      rows: [
+        ['Space + drag', t('shortcuts.shortcut_pan')],
+        ['Scroll', t('shortcuts.shortcut_zoom')],
+        ['Esc', t('shortcuts.shortcut_cancel')],
+        ['Delete / Backspace', t('shortcuts.shortcut_delete')],
+        ['R', t('shortcuts.shortcut_rotate_cw')],
+        ['Shift + R', t('shortcuts.shortcut_rotate_ccw')],
+        ['Ctrl/⌘ + A', t('shortcuts.shortcut_select_all')],
+        ['Ctrl/⌘ + C', t('shortcuts.shortcut_copy')],
+        ['Ctrl/⌘ + V', t('shortcuts.shortcut_paste')],
+        ['Ctrl/⌘ + Z', t('shortcuts.shortcut_undo')],
+        ['Ctrl/⌘ + Shift + Z', t('shortcuts.shortcut_redo')],
+        ['Shift + ?', t('shortcuts.shortcut_shortcuts')],
+      ],
+    },
+    {
+      title: t('shortcuts.walkthrough_3d'),
+      rows: [
+        ['W / A / S / D', t('shortcuts.shortcut_move')],
+        ['Shift', t('shortcuts.shortcut_run')],
+        ['Space', t('shortcuts.shortcut_jump')],
+        ['Esc', t('shortcuts.shortcut_exit_walk')],
+      ],
+    },
+  ]
 
   return (
     <div
@@ -43,7 +45,7 @@ export default function KeyboardShortcutsModal() {
       >
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-300">
-            Keyboard Shortcuts
+            {t('shortcuts.title')}
           </h2>
           <button
             onClick={closeShortcuts}
@@ -64,7 +66,7 @@ export default function KeyboardShortcutsModal() {
                 {section.rows.map(([key, desc]) => (
                   <tr key={key} className="border-t border-gray-800 first:border-t-0">
                     <td className="py-1.5 pr-4 w-48">
-                      <kbd className="font-mono text-[11px] text-gray-200 bg-gray-800 border border-gray-600 rounded px-1.5 py-0.5 whitespace-nowrap">
+                      <kbd className="font-mono text-[11px] text-gray-200 bg-gray-800 border border-gray-600 rounded px-1.5 py-0.5 whitespace-nowrap" dir="ltr">
                         {key}
                       </kbd>
                     </td>
@@ -77,7 +79,7 @@ export default function KeyboardShortcutsModal() {
         ))}
 
         <p className="mt-4 text-[10px] text-gray-600 font-mono">
-          Press Esc or click outside to close
+          {t('shortcuts.close_hint')}
         </p>
       </div>
     </div>
