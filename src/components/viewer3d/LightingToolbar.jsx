@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import useStore from '../../store/useStore'
 
 function formatTime(t) {
@@ -6,9 +7,8 @@ function formatTime(t) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-// Overlay toolbar in the top-right of the 3D pane.
-// Controls lighting + level-view toggles (Solo and X-ray).
 export default function LightingToolbar() {
+  const { t } = useTranslation()
   const lightsOn         = useStore((s) => s.lighting.lightsOn)
   const timeOfDay        = useStore((s) => s.lighting.timeOfDay)
   const ambientStrength  = useStore((s) => s.lighting.ambientStrength)
@@ -25,7 +25,6 @@ export default function LightingToolbar() {
   return (
     <div data-tour="lighting-toolbar" className="pointer-events-auto absolute top-2 right-2 w-44 bg-gray-900/90 border border-gray-700 rounded p-2.5 space-y-2.5 text-[11px] text-gray-300 font-mono select-none">
 
-      {/* Level view toggles */}
       <div className="flex items-center justify-between gap-1">
         <button
           onClick={() => setSolo3d(!solo3d)}
@@ -34,9 +33,9 @@ export default function LightingToolbar() {
               ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
               : 'bg-gray-800 border-gray-600 text-gray-500'
           }`}
-          title="Show only active level"
+          title={t('lighting_toolbar.solo_title')}
         >
-          Solo
+          {t('lighting_toolbar.solo')}
         </button>
         <button
           onClick={() => setXrayCeiling(!xrayCeiling)}
@@ -45,15 +44,14 @@ export default function LightingToolbar() {
               ? 'bg-purple-500/20 border-purple-500/50 text-purple-300'
               : 'bg-gray-800 border-gray-600 text-gray-500'
           }`}
-          title="Make upper levels 30% transparent"
+          title={t('lighting_toolbar.xray_title')}
         >
-          X-Ray
+          {t('lighting_toolbar.xray')}
         </button>
       </div>
 
-      {/* Ceiling visibility */}
       <div className="flex items-center justify-between">
-        <span className="uppercase tracking-wider text-gray-400">Ceilings</span>
+        <span className="uppercase tracking-wider text-gray-400">{t('lighting_toolbar.ceilings')}</span>
         <button
           onClick={() => setCeilingsVisible(!ceilingsVisible)}
           className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-colors ${
@@ -61,15 +59,14 @@ export default function LightingToolbar() {
               ? 'bg-gray-500/20 border-gray-500/50 text-gray-300'
               : 'bg-gray-800 border-gray-600 text-gray-500'
           }`}
-          title="Show or hide ceiling planes"
+          title={t('lighting_toolbar.ceilings_title')}
         >
-          {ceilingsVisible ? 'ON' : 'OFF'}
+          {ceilingsVisible ? t('lighting_toolbar.on') : t('lighting_toolbar.off')}
         </button>
       </div>
 
-      {/* Master lights toggle */}
       <div className="flex items-center justify-between">
-        <span className="uppercase tracking-wider text-gray-400">Lights</span>
+        <span className="uppercase tracking-wider text-gray-400">{t('lighting_toolbar.lights')}</span>
         <button
           onClick={() => setLightsOn(!lightsOn)}
           className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-colors ${
@@ -78,14 +75,13 @@ export default function LightingToolbar() {
               : 'bg-gray-800 border-gray-600 text-gray-500'
           }`}
         >
-          {lightsOn ? 'ON' : 'OFF'}
+          {lightsOn ? t('lighting_toolbar.on') : t('lighting_toolbar.off')}
         </button>
       </div>
 
-      {/* Time of day */}
       <div>
         <div className="flex justify-between mb-1">
-          <span className="uppercase tracking-wider text-gray-400">Time</span>
+          <span className="uppercase tracking-wider text-gray-400">{t('lighting_toolbar.time')}</span>
           <span>{formatTime(timeOfDay)}</span>
         </div>
         <input
@@ -93,16 +89,16 @@ export default function LightingToolbar() {
           value={timeOfDay}
           onChange={(e) => setTimeOfDay(+e.target.value)}
           className="w-full accent-yellow-400 cursor-pointer"
+          dir="ltr"
         />
         <div className="flex justify-between text-[9px] text-gray-600 mt-0.5">
-          <span>00:00</span><span>noon</span><span>24:00</span>
+          <span>00:00</span><span>{t('lighting_toolbar.noon')}</span><span>24:00</span>
         </div>
       </div>
 
-      {/* Ambient strength */}
       <div>
         <div className="flex justify-between mb-1">
-          <span className="uppercase tracking-wider text-gray-400">Ambient</span>
+          <span className="uppercase tracking-wider text-gray-400">{t('lighting_toolbar.ambient')}</span>
           <span>{(ambientStrength * 100).toFixed(0)}%</span>
         </div>
         <input
@@ -110,6 +106,7 @@ export default function LightingToolbar() {
           value={ambientStrength}
           onChange={(e) => setAmbientStrength(+e.target.value)}
           className="w-full accent-blue-400 cursor-pointer"
+          dir="ltr"
         />
       </div>
     </div>

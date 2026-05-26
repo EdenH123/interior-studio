@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import useStore from '../store/useStore'
 import TourMenu from './tour/TourMenu'
 import { downscaleDataUrl, QUOTA_WARN_BYTES } from './canvas/imageDownscale'
@@ -16,9 +17,6 @@ function readAsDataUrl(file) {
   })
 }
 
-// Reads the persisted state straight from localStorage and checks whether
-// the just-set underlay dataUrl made it through. The persist middleware
-// uses key `interior-studio` and wraps state as `{ state, version }`.
 function persistedUnderlayMatches(dataUrl) {
   try {
     const raw = localStorage.getItem('interior-studio')
@@ -31,6 +29,7 @@ function persistedUnderlayMatches(dataUrl) {
 }
 
 export default function Toolbar() {
+  const { t } = useTranslation()
   const show3d = useStore((s) => s.show3d)
   const toggle3d = useStore((s) => s.toggle3d)
   const walkthrough = useStore((s) => s.walkthrough)
@@ -43,13 +42,15 @@ export default function Toolbar() {
   const setUnderlay = useStore((s) => s.setUnderlay)
   const select = useStore((s) => s.select)
   const pushToast = useStore((s) => s.pushToast)
+  const language = useStore((s) => s.language)
+  const setLanguage = useStore((s) => s.setLanguage)
   const fileRef = useRef(null)
   const { exportPng, exportPdf, exportJson, openJson, exportGlb, importInputRef, handleImportFile } = useProjectIO()
   const { canUndo, canRedo, undo, redo } = useUndoRedo()
 
   async function handleFile(e) {
     const file = e.target.files?.[0]
-    e.target.value = '' // allow re-uploading the same file
+    e.target.value = ''
     if (!file) return
     try {
       const raw = await readAsDataUrl(file)
@@ -58,11 +59,6 @@ export default function Toolbar() {
         dataUrl: result.dataUrl, x: 0, y: 0, scale: 1, opacity: 0.5, locked: false,
       })
       select('underlay', UNDERLAY_ID)
-      // Verify the persist write landed. Zustand's persist middleware writes
-      // synchronously on set(); if localStorage rejected (QuotaExceeded), the
-      // failure is swallowed there. A microtask later we can confirm by
-      // reading back. If the dataUrl didn't make it, surface a hard toast so
-      // the user knows the design won't survive a reload.
       queueMicrotask(() => {
         if (!persistedUnderlayMatches(result.dataUrl)) {
           pushToast(
@@ -93,65 +89,50 @@ export default function Toolbar() {
     else fileRef.current?.click()
   }
 
+  const btnBase = 'text-xs font-mono px-3 py-1.5 rounded border bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
+
   return (
     <header className="h-11 shrink-0 bg-gray-900 border-b border-gray-700 flex items-center px-4 gap-2">
       <span className="text-white font-semibold tracking-tight">Interior Studio</span>
-      <div className="ml-3 flex gap-1">
-        <UndoRedoButton label="↶" title="Undo (Ctrl/Cmd+Z)" onClick={undo} disabled={!canUndo} />
-        <UndoRedoButton label="↷" title="Redo (Ctrl/Cmd+Shift+Z)" onClick={redo} disabled={!canRedo} />
+      <div className="ms-3 flex gap-1">
+        <UndoRedoButton label={t('toolbar.undo')} title={t('toolbar.undo_title')} onClick={undo} disabled={!canUndo} />
+        <UndoRedoButton label={t('toolbar.redo')} title={t('toolbar.redo_title')} onClick={redo} disabled={!canRedo} />
       </div>
       <div className="flex-1" />
       <input ref={fileRef} type="file" accept="image/png,image/jpeg" hidden onChange={handleFile} />
       <input ref={importInputRef} type="file" accept=".json,application/json" hidden onChange={handleImportFile} />
-      <button type="button" onClick={openJson}
-        className="text-xs font-mono px-3 py-1.5 rounded border bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500">
-        Open
-      </button>
-      <button type="button" onClick={exportJson}
-        data-tour="toolbar-save"
-        className="text-xs font-mono px-3 py-1.5 rounded border bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500">
-        Save
-      </button>
-      <button type="button" onClick={exportPng}
-        className="text-xs font-mono px-3 py-1.5 rounded border bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500">
-        Export PNG
-      </button>
-      <button type="button" onClick={exportPdf}
-        className="text-xs font-mono px-3 py-1.5 rounded border bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500">
-        Export PDF
-      </button>
-      <button type="button" onClick={exportGlb}
-        title="Export 3D room as a .glb file (open 3D view first)"
-        className="text-xs font-mono px-3 py-1.5 rounded border bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500">
-        Export GLB
-      </button>
+      <button type="button" onClick={openJson} className={btnBase}>{t('toolbar.open')}</button>
+      <button type="button" onClick={exportJson} data-tour="toolbar-save" className={btnBase}>{t('toolbar.save')}</button>
+      <button type="button" onClick={exportPng} className={btnBase}>{t('toolbar.export_png')}</button>
+      <button type="button" onClick={exportPdf} className={btnBase}>{t('toolbar.export_pdf')}</button>
+      <button type="button" onClick={exportGlb} title={t('toolbar.export_glb_title')} className={btnBase}>{t('toolbar.export_glb')}</button>
       <button type="button" onClick={underlayClick}
         className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
           underlay ? 'bg-gray-800 border-gray-600 text-gray-200' : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
         }`}>
-        {underlay ? (underlay.locked ? 'Underlay · locked' : 'Underlay') : 'Upload underlay'}
+        {underlay ? (underlay.locked ? t('toolbar.underlay_locked') : t('toolbar.underlay')) : t('toolbar.upload_underlay')}
       </button>
       <button type="button" onClick={toggle3d} aria-pressed={show3d}
         data-tour="toolbar-3d"
         className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
           show3d ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
         }`}>
-        {show3d ? '← 2D' : '3D'}
+        {show3d ? t('toolbar.to_2d') : t('toolbar.to_3d')}
       </button>
       {show3d && (
         <button type="button" onClick={toggleWalkthrough} aria-pressed={walkthrough}
-          title="Walkthrough mode — WASD to move, Shift to run, Space to jump, Esc to exit"
+          title={t('toolbar.walk_title')}
           data-tour="toolbar-walk"
           className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
             walkthrough ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
           }`}>
-          Walk
+          {t('toolbar.walk')}
         </button>
       )}
       <div className="relative">
         <button type="button" onClick={toggleTourMenu} aria-pressed={tourMenuOpen}
           data-tour="toolbar-help"
-          title="Take a tour"
+          title={t('toolbar.help_title')}
           className={`text-xs font-mono px-3 py-1.5 rounded border transition-colors ${
             tourMenuOpen ? 'bg-gray-700 border-gray-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
           }`}>
@@ -166,6 +147,27 @@ export default function Toolbar() {
         }`}>
         AI
       </button>
+      {/* Language toggle */}
+      <div className="flex gap-1 ms-1">
+        <button
+          type="button"
+          onClick={() => setLanguage('en')}
+          className={`text-xs font-mono px-2 py-1.5 rounded border transition-colors ${
+            language === 'en' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+          }`}
+        >
+          {t('toolbar.lang_en')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setLanguage('he')}
+          className={`text-xs font-mono px-2 py-1.5 rounded border transition-colors ${
+            language === 'he' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+          }`}
+        >
+          {t('toolbar.lang_he')}
+        </button>
+      </div>
     </header>
   )
 }

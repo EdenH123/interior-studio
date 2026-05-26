@@ -10,3 +10,8 @@ html, body, #root {
   padding: 0;
   overflow: hidden;
 }
+
+:lang(he) {
+  font-family: 'Heebo', system-ui, sans-serif;
+  letter-spacing: 0;
+}
