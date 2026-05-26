@@ -17,9 +17,58 @@ import { PIXELS_PER_METER } from './constants'
 
 const NODE_EPSILON = 1000 // round coords to 1/1000 px when keying nodes
 const MIN_ROOM_AREA = 25 * 25 // 0.5 m × 0.5 m — smaller than this isn't a room
+// How close (px) an endpoint must be to a wall line to count as a T-junction
+const TJUNCTION_EPSILON = 8
+
+// Pre-split walls wherever another wall's endpoint lands on their segment.
+// Without this, a divider wall whose tips are ON the outer walls (but not at
+// existing nodes) won't create T-junction nodes and the two rooms merge into one.
+function splitAtTJunctions(walls) {
+  const result = []
+  for (const wall of walls) {
+    const dx = wall.x2 - wall.x1
+    const dy = wall.y2 - wall.y1
+    const lenSq = dx * dx + dy * dy
+    if (lenSq < 1e-6) { result.push(wall); continue }
+
+    const splits = []
+    for (const other of walls) {
+      if (other.id === wall.id) continue
+      for (const pt of [{ x: other.x1, y: other.y1 }, { x: other.x2, y: other.y2 }]) {
+        const t = ((pt.x - wall.x1) * dx + (pt.y - wall.y1) * dy) / lenSq
+        if (t <= 0 || t >= 1) continue // outside segment or at endpoints
+        const px = wall.x1 + t * dx
+        const py = wall.y1 + t * dy
+        if (Math.hypot(pt.x - px, pt.y - py) < TJUNCTION_EPSILON) {
+          splits.push({ t, x: px, y: py })
+        }
+      }
+    }
+
+    if (splits.length === 0) { result.push(wall); continue }
+
+    splits.sort((a, b) => a.t - b.t)
+    // Deduplicate splits that are very close together
+    const deduped = [splits[0]]
+    for (let i = 1; i < splits.length; i++) {
+      if (splits[i].t - deduped[deduped.length - 1].t > 1e-4) deduped.push(splits[i])
+    }
+
+    let prevX = wall.x1; let prevY = wall.y1
+    let segIdx = 0
+    for (const s of deduped) {
+      result.push({ id: `${wall.id}_tj${segIdx++}`, x1: prevX, y1: prevY, x2: s.x, y2: s.y })
+      prevX = s.x; prevY = s.y
+    }
+    result.push({ id: `${wall.id}_tj${segIdx}`, x1: prevX, y1: prevY, x2: wall.x2, y2: wall.y2 })
+  }
+  return result
+}
 
 export function detectRooms(walls) {
   if (!walls || walls.length < 3) return []
+
+  const splitWalls = splitAtTJunctions(walls)
 
   const nodes = new Map() // key -> { x, y, halfEdges: [] }
   const getNode = (x, y) => {
@@ -30,7 +79,7 @@ export function detectRooms(walls) {
   }
 
   const halfEdges = []
-  for (const w of walls) {
+  for (const w of splitWalls) {
     const a = getNode(w.x1, w.y1)
     const b = getNode(w.x2, w.y2)
     if (a === b) continue

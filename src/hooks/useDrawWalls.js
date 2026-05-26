@@ -66,7 +66,27 @@ export default function useDrawWalls(stageRef, viewScale, spaceDown, shiftDown =
       // Try endpoint snap from the direction-locked position — catches
       // near-miss rectangle closes where the raw cursor misses the threshold.
       const closeEndpoint = findNearestSnapPoint(dirSnapped, walls, threshold)
+      // T-junction body snap: if cursor is near a wall line (but no endpoint
+      // was matched), project exactly onto that wall. This lets a divider wall
+      // terminate precisely on an outer wall so room detection sees two faces.
+      // Exclude walls whose endpoint coincides with drawStart to avoid snapping
+      // back onto the originating wall.
+      let bodySnapPt = null
+      if (!closeEndpoint) {
+        const startWallIds = new Set(
+          walls
+            .filter((w) =>
+              Math.hypot(w.x1 - drawStart.x, w.y1 - drawStart.y) < threshold ||
+              Math.hypot(w.x2 - drawStart.x, w.y2 - drawStart.y) < threshold,
+            )
+            .map((w) => w.id),
+        )
+        const wallsForBody = walls.filter((w) => !startWallIds.has(w.id))
+        const bodySnap = nearestWallSnap(p, wallsForBody, threshold)
+        if (bodySnap) bodySnapPt = bodySnap.point
+      }
       end = (closeEndpoint?.kind === 'endpoint' ? closeEndpoint : null)
+            ?? bodySnapPt
             ?? snapParallelWallLength(drawStart, dirSnapped, walls, threshold)
     }
     if (Math.hypot(end.x - drawStart.x, end.y - drawStart.y) > 1) {
