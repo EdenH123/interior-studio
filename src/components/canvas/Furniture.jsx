@@ -45,7 +45,7 @@ export default function Furniture({ item, selected, scale, onSelect, onShiftSele
         // Wall snap: override position if within threshold of a wall face.
         if (!item.wallMounted) {
           const wallSnap = findWallSnap(
-            { x: worldX, y: worldY, width: item.width, depth: item.depth },
+            { x: worldX, y: worldY, width: item.width, depth: item.depth, rotation: item.rotation },
             walls,
             scale,
           )
