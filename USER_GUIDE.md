@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- D key toggles 2D/3D -->
+_Last updated: 2026-05-27_  <!-- railings snap onto the top of a wall -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -900,6 +900,22 @@ N+1 — the level the stairs arrive at. The hole updates live as you move,
 resize, or rotate the stair piece. If the stair's center falls outside
 any detected room on the upper level the floor there is solid — move the
 stairs so their center is clearly inside a room polygon.
+
+### Railings (on top of a wall)
+
+Railings live in the **Architecture** category (Wood, Metal, Cable, and
+Glass). To make a balcony, lower a wall's height in its properties (e.g.
+to 1 m), then **drag a railing onto that wall** — it snaps onto the **top**
+of the wall, centered and running along it, with its base at the wall's
+height. This works in both the 2D plan and the 3D view.
+
+A wall-mounted railing is **attached to its wall**: move, resize, or
+re-height the wall and the railing follows automatically. Because of that
+it isn't free-dragged on the 2D canvas — reposition it by editing the wall
+(or delete it and drop a new one). Deleting the wall removes its railing.
+
+Dropping a railing away from any wall still places it as a free-standing
+piece on the floor, which you can move and rotate like normal furniture.
 
 ### 3D multi-level view
 

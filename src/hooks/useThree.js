@@ -12,6 +12,7 @@ import { applySelectionHighlight } from '../components/viewer3d/selectionHighlig
 import { attachPicking } from '../components/viewer3d/picking'
 import { attachFurnitureDrag } from '../components/viewer3d/furnitureDrag'
 import { detectRooms } from '../components/canvas/roomDetection'
+import { resolveRailingMount } from '../components/canvas/wallSnapGeometry'
 import { getFloorMaterial, resolveFloorMaterialId } from '../components/canvas/floorMaterials'
 import { kelvinToRgb } from '../utils/colorTemp'
 import { isLightingType } from '../components/viewer3d/reconcileFurniture'
@@ -310,13 +311,18 @@ export default function useThree(containerRef) {
   // Resolve custom-model blob URLs (created lazily from stored base64).
   // Stable blob URL strings mean reconcileFurniture sees no change on re-renders.
   const resolvedFurniture = useMemo(() => {
-    if (!customModels.length) return furniture
     return furniture.map((f) => {
-      if (!f.customModelId) return f
-      const cm = customModels.find((m) => m.id === f.customModelId)
-      return cm ? { ...f, model: getCustomModelUrl(cm) } : f
+      let r = f
+      if (f.customModelId && customModels.length) {
+        const cm = customModels.find((m) => m.id === f.customModelId)
+        if (cm) r = { ...r, model: getCustomModelUrl(cm) }
+      }
+      // Wall-bound railings derive their transform from the mounted wall so
+      // they follow it when the wall moves / resizes / changes height.
+      r = resolveRailingMount(r, walls)
+      return r
     })
-  }, [furniture, customModels])
+  }, [furniture, customModels, walls])
 
   useEffect(() => {
     if (!stateRef.current) return

@@ -152,23 +152,24 @@ export const FURNITURE = [
     width: 2.2, depth: 2.2, height: 2.7, color: '#8b7355', model: null,
     stairType: true, stairStyle: 'spiral',
   },
-  // Railings — procedural geometry
+  // Railings — procedural geometry. `wallTop` makes them snap onto the top of
+  // the nearest wall (centered + aligned along it), e.g. a balcony railing.
   {
     type: 'railing-wood',  label: 'Wood railing',   category: 'Architecture',
-    width: 1.2, depth: 0.06, height: 1.0, color: '#a16207', railingStyle: 'wood',
+    width: 1.2, depth: 0.06, height: 1.0, color: '#a16207', railingStyle: 'wood', wallTop: true,
   },
   {
     type: 'railing-metal', label: 'Metal railing',  category: 'Architecture',
-    width: 1.2, depth: 0.04, height: 1.0, color: '#64748b', railingStyle: 'metal',
+    width: 1.2, depth: 0.04, height: 1.0, color: '#64748b', railingStyle: 'metal', wallTop: true,
   },
   {
     type: 'railing-cable', label: 'Cable railing',  category: 'Architecture',
-    width: 1.2, depth: 0.05, height: 1.0, color: '#94a3b8', railingStyle: 'cable',
+    width: 1.2, depth: 0.05, height: 1.0, color: '#94a3b8', railingStyle: 'cable', wallTop: true,
   },
   // Glass railings and partition (box fallback + glass material)
   {
     type: 'glass-railing',    label: 'Glass railing',    category: 'Architecture',
-    width: 1.2, depth: 0.02, height: 1.0, color: '#ddeef5', material: 'glass-clear',
+    width: 1.2, depth: 0.02, height: 1.0, color: '#ddeef5', material: 'glass-clear', wallTop: true,
   },
   {
     type: 'glass-balustrade', label: 'Glass balustrade', category: 'Architecture',

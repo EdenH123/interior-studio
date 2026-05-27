@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import { FURNITURE_DRAG_MIME } from '../components/Sidebar'
 import { OPENING_DRAG_MIME, getOpeningSpec } from '../components/canvas/openingsCatalog'
 import { fitOpeningWidth } from '../components/canvas/openingGeometry'
+import { railingWallPlacement } from '../components/canvas/wallSnapGeometry'
 import { getFurnitureSpec } from '../components/canvas/furnitureCatalog'
 import { CUSTOM_MODEL_DRAG_MIME } from './useCustomModelDrop'
 
@@ -126,17 +127,38 @@ export default function useFurnitureDrop3D(containerRef, stateRef) {
       if (!stateRef.current) return
 
       if (isFurniture || isCustomModel) {
+        const spec = dragGhost
+          ? (getFurnitureSpec(dragGhost.type) ?? dragGhost)
+          : null
+        // Railings (wallTop) snap onto the TOP of the nearest wall.
+        if (spec?.wallTop) {
+          const wallHit = raycastWall(containerRef, stateRef, e.clientX, e.clientY)
+          if (wallHit) {
+            if (ghostKindRef.current !== 'furniture') {
+              removeGhost()
+              ghostRef.current = createFurnitureGhostMesh(spec)
+              ghostKindRef.current = 'furniture'
+              stateRef.current.scene.add(ghostRef.current)
+            }
+            const wall = useStore.getState().walls.find((w) => w.id === wallHit.wallId)
+            const wallH = wall?.height ?? WALL_HEIGHT
+            const yOffset = wallHit.wallMesh.position.y - wallH / 2
+            const railH = spec?.height ?? 1.0
+            ghostRef.current.position.set(wallHit.point.x, yOffset + wallH + railH / 2, wallHit.point.z)
+            if (wall) ghostRef.current.rotation.y = -Math.atan2(wall.y2 - wall.y1, wall.x2 - wall.x1)
+            return
+          }
+          // No wall under cursor — fall through to a floor ghost.
+        }
         const floorPos = raycastFloor(containerRef, stateRef, e.clientX, e.clientY)
         if (!floorPos) return
         if (ghostKindRef.current !== 'furniture') {
           removeGhost()
-          const spec = dragGhost
-            ? (getFurnitureSpec(dragGhost.type) ?? dragGhost)
-            : null
           ghostRef.current = createFurnitureGhostMesh(spec)
           ghostKindRef.current = 'furniture'
           stateRef.current.scene.add(ghostRef.current)
         }
+        ghostRef.current.rotation.y = 0
         ghostRef.current.position.x = floorPos.x
         ghostRef.current.position.z = floorPos.y  // Three Z ← Konva Y
 
@@ -182,6 +204,22 @@ export default function useFurnitureDrop3D(containerRef, stateRef) {
       removeGhost()
 
       if (furnitureType) {
+        // Railings snap onto the top of a wall when dropped over one.
+        const fspec = getFurnitureSpec(furnitureType)
+        if (fspec?.wallTop) {
+          const wallHit = raycastWall(containerRef, stateRef, e.clientX, e.clientY)
+          if (wallHit) {
+            const position = wallPositionFrom(wallHit.wallId, wallHit.point)
+            const wall = useStore.getState().walls.find((w) => w.id === wallHit.wallId)
+            if (wall) {
+              const place = railingWallPlacement(wall, position)
+              addFurniture(furnitureType, place.x, place.y,
+                { rotation: place.rotation, mountWallId: wallHit.wallId, position })
+              return
+            }
+          }
+          // No wall — fall through to floor placement (free-standing railing).
+        }
         const floorPos = raycastFloor(containerRef, stateRef, e.clientX, e.clientY)
         if (!floorPos) {
           pushToast('Could not find a floor surface to drop onto.', 'warn')

@@ -4,7 +4,7 @@ import { clientToWorld, snapToGrid } from './useViewport'
 import { FURNITURE_DRAG_MIME } from '../components/Sidebar'
 import { getFurnitureSpec } from '../components/canvas/furnitureCatalog'
 import { nearestWallSnap, wallMountedPlacement } from '../components/canvas/openingGeometry'
-import { findWallSnap } from '../components/canvas/wallSnapGeometry'
+import { findWallSnap, railingWallPlacement } from '../components/canvas/wallSnapGeometry'
 
 // Wall-mounted catalog items (wallMounted: true) behave like openings on
 // dragover: they snap to the nearest wall within WALL_SNAP_SCREEN_PX and
@@ -46,7 +46,18 @@ export default function useFurnitureDrop(containerRef, view) {
       // dragGhost.type is set by setDragGhostType in the Sidebar's onDragStart,
       // so it's available here even though dataTransfer.getData is blocked.
       const spec = dragGhost ? getFurnitureSpec(dragGhost.type) : null
-      if (spec?.wallMounted) {
+      if (spec?.wallTop) {
+        // Railings snap onto the wall centerline (aligned along it), or drop
+        // free-standing on the floor when no wall is in range (no red X).
+        const snap = findWallMountSnap(world)
+        if (snap) {
+          const place = railingWallPlacement(snap.wall, snap.position)
+          setDragGhostPos(place.x, place.y, { wallSnap: undefined, rotation: place.rotation })
+        } else {
+          const p = snapToGrid(world, GRID_SIZE)
+          setDragGhostPos(p.x, p.y, { wallSnap: undefined, rotation: 0 })
+        }
+      } else if (spec?.wallMounted) {
         const snap = findWallMountSnap(world)
         if (snap) {
           const p = wallMountedPlacement(snap, spec.depth, world)
@@ -79,7 +90,17 @@ export default function useFurnitureDrop(containerRef, view) {
       const world = worldAt(e.clientX, e.clientY)
       clearDragGhost()
       const spec = getFurnitureSpec(type)
-      if (spec?.wallMounted) {
+      if (spec?.wallTop) {
+        const snap = findWallMountSnap(world)
+        if (snap) {
+          const place = railingWallPlacement(snap.wall, snap.position)
+          addFurniture(type, place.x, place.y,
+            { rotation: place.rotation, mountWallId: snap.wallId, position: snap.position })
+        } else {
+          const p = snapToGrid(world, GRID_SIZE)
+          addFurniture(type, p.x, p.y)
+        }
+      } else if (spec?.wallMounted) {
         const snap = findWallMountSnap(world)
         if (!snap) {
           pushToast('Drop wall-mounted items against a wall.', 'warn')

@@ -717,6 +717,15 @@ interior-studio/
   - `KeyboardShortcutsModal` lists the new shortcut under Canvas; i18n key `shortcuts.shortcut_toggle_3d` added (en "Toggle 2D / 3D view" / he "החלפת תצוגת 2D / 3D").
   - Tests: +3 (`flows.test.jsx`: toggles show3d on each press, ignores Ctrl/Cmd+D, ignores D during walkthrough). 466 total passing.
 
+- [x] Railings snap onto the top of a wall (balcony railings) (2026-05-27)
+  - The 4 railing catalog items (`railing-wood/metal/cable`, `glass-railing`) gain `wallTop: true`. When dropped over a wall (in 2D or 3D), a railing snaps onto the **top** of that wall: centered on the wall centerline, aligned **along** it, base at the wall's height. Dropped away from any wall, it still drops free-standing on the floor (no red X).
+  - New pure helpers in `wallSnapGeometry.js`: `railingWallPlacement(wall, t)` → `{ x, y, rotation, mountHeight }` and `resolveRailingMount(item, walls)` which derives a bound railing's live transform from its wall (injecting `wallMounted: true` so the 3D reconciler lifts it to `mountHeight`).
+  - Data: a bound railing stores `mountWallId` + `position` (0–1 along wall). `addFurniture(type, x, y, opts)` now accepts `opts.mountWallId` / `opts.position`. The transform (x/y/rotation/mountHeight) is **derived from the wall at render time** in both renderers — so the railing follows the wall when it moves, resizes, or changes height. `CanvasArea` maps furniture through `resolveRailingMount` (2D); `useThree`'s `resolvedFurniture` memo does the same (3D) and now depends on `walls`.
+  - Drop wiring: `useFurnitureDrop` (2D) + `useFurnitureDrop3D` (3D) detect `spec.wallTop`, raycast/snap the wall, and place bound (3D shows a wall-top ghost on dragover). Bound railings are non-draggable in 2D (`Furniture.jsx` `draggable={!item.mountWallId}`) — you move them by moving the wall.
+  - Cascade: `removeWall` now also removes furniture whose `mountWallId` matches (and clears their selection), so deleting a balcony wall removes its railing.
+  - Tests: +8 (railingWallPlacement ×2, resolveRailingMount ×3, addFurniture mount fields ×2, removeWall railing cascade ×1). 474 total passing.
+  - NOTE: not visually verified in a live 3D browser here (no browser automation); placement/resolve math is covered by unit tests and follows the existing furniture/wall rotation + Konva→Three conventions.
+
 ### 🚧 In Progress
 - (nothing active)
 

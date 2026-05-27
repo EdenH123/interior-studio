@@ -89,3 +89,30 @@ export function findWallSnap(item, walls, scale, thresholdScreen = 60) {
 
   return bestSnap
 }
+
+// Placement for a railing sitting ON TOP of a wall: centered on the wall
+// centerline at normalised position `t`, aligned ALONG the wall, with its base
+// at the wall's height. (Distinct from findWallSnap, which puts items flush
+// against a wall face, perpendicular.)
+export function railingWallPlacement(wall, t = 0.5) {
+  const dx = wall.x2 - wall.x1
+  const dy = wall.y2 - wall.y1
+  return {
+    x: wall.x1 + dx * t,
+    y: wall.y1 + dy * t,
+    rotation: normalizeAngle((Math.atan2(dy, dx) * 180) / Math.PI),
+    mountHeight: wall.height ?? 2.4,
+  }
+}
+
+// Resolves a wall-bound railing's live transform from its mounted wall, so it
+// follows the wall when moved / resized / re-heighted. Returns the item
+// unchanged when it isn't wall-bound (or its wall is gone). `wallMounted: true`
+// is injected so the 3D reconciler lifts it to `mountHeight`.
+export function resolveRailingMount(item, walls) {
+  if (!item?.mountWallId) return item
+  const wall = walls.find((w) => w.id === item.mountWallId)
+  if (!wall) return item
+  const p = railingWallPlacement(wall, item.position ?? 0.5)
+  return { ...item, x: p.x, y: p.y, rotation: p.rotation, wallMounted: true, mountHeight: p.mountHeight }
+}

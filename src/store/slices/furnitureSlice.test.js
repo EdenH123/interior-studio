@@ -41,6 +41,19 @@ describe('furnitureSlice', () => {
     expect(store.getState().selection).toEqual({ items: [{ kind: 'furniture', id }] })
   })
 
+  it('addFurniture binds a railing to a wall via opts (mountWallId + position)', () => {
+    const id = store.getState().addFurniture('railing-cable', 100, 0,
+      { rotation: 90, mountWallId: 'w1', position: 0.5 })
+    const f = store.getState().furniture.find((x) => x.id === id)
+    expect(f).toMatchObject({ type: 'railing-cable', rotation: 90, mountWallId: 'w1', position: 0.5 })
+  })
+
+  it('addFurniture omits mount fields when not provided', () => {
+    const id = store.getState().addFurniture('railing-cable', 0, 0)
+    const f = store.getState().furniture.find((x) => x.id === id)
+    expect(f.mountWallId).toBeUndefined()
+  })
+
   it('updateFurniture merges patches onto the targeted piece', () => {
     const id = store.getState().addFurniture('chair', 0, 0)
     store.getState().updateFurniture(id, { x: 100, y: 200 })

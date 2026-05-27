@@ -28,7 +28,7 @@ export default function Furniture({ item, selected, scale, onSelect, onShiftSele
       x={item.x}
       y={item.y}
       rotation={item.rotation}
-      draggable
+      draggable={!item.mountWallId}
       onDragStart={(e) => {
         const p = e.target.getStage().getRelativePointerPosition()
         dragOffset.current = { dx: p.x - item.x, dy: p.y - item.y }

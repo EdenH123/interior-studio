@@ -16,11 +16,20 @@ export const createWallsSlice = (set) => ({
       const removedOpeningIds = new Set(
         (s.openings ?? []).filter((o) => o.wallId === id).map((o) => o.id),
       )
-      // Selection clears any reference to the removed wall or its openings.
+      // Railings mounted on this wall are meaningless without it — cascade.
+      const removedFurnIds = new Set(
+        (s.furniture ?? []).filter((f) => f.mountWallId === id).map((f) => f.id),
+      )
+      const furniture = removedFurnIds.size
+        ? s.furniture.filter((f) => !removedFurnIds.has(f.id))
+        : s.furniture
+      // Selection clears any reference to the removed wall, its openings, or
+      // its cascaded furniture.
       const prevItems = s.selection?.items ?? []
       const nextItems = prevItems.filter(
         (i) => !(i.kind === 'wall' && i.id === id) &&
-               !(i.kind === 'opening' && removedOpeningIds.has(i.id)),
+               !(i.kind === 'opening' && removedOpeningIds.has(i.id)) &&
+               !(i.kind === 'furniture' && removedFurnIds.has(i.id)),
       )
       const selection = nextItems.length === prevItems.length
         ? s.selection
@@ -28,6 +37,7 @@ export const createWallsSlice = (set) => ({
       return {
         walls: s.walls.filter((w) => w.id !== id),
         openings,
+        furniture,
         selection,
       }
     }),
