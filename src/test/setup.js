@@ -1,6 +1,25 @@
 // Vitest global setup. Loaded before every test file via vitest.config.js.
 
 import '@testing-library/jest-dom/vitest'
+import i18n from 'i18next'
+import { initReactI18next } from 'react-i18next'
+import en from '../../public/locales/en/translation.json'
+
+// Production loads translations over HTTP via i18next-http-backend, which
+// can't run in jsdom. Initialise i18n synchronously from the bundled English
+// resources so components rendered in tests get real strings from t(), not
+// raw keys. initImmediate:false makes init resolve synchronously.
+if (!i18n.isInitialized) {
+  i18n.use(initReactI18next).init({
+    lng: 'en',
+    fallbackLng: 'en',
+    ns: ['translation'],
+    defaultNS: 'translation',
+    resources: { en: { translation: en } },
+    interpolation: { escapeValue: false },
+    initImmediate: false,
+  })
+}
 
 // jsdom in vitest does expose `window.localStorage` but not the bare global
 // `localStorage` that Zustand's `persist` default storage reaches for.
