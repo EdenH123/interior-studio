@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- outdoor areas: reshape handles + per-side meter labels -->
+_Last updated: 2026-05-27_  <!-- pools: dedicated water feature (polygon + depth + 3D basin) -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -475,6 +475,30 @@ as walls appear:
 
 Corners and edges snap to a 0.1 m grid, and each reshape is a single
 **Undo** step.
+
+## Pools
+
+To add a pool, use the **Pool** tool (the fourth button in the top
+toolbar). You draw it exactly like an outdoor area: **click out the
+corners** of the pool, then click the first point — or press **Enter** —
+to close it (**Esc** cancels). Each side shows its length in metres as you
+go.
+
+In 3D the pool becomes a **sunken basin**: the outline drops below the
+surrounding ground, the sides become basin walls, and a translucent blue
+**water surface** fills it near the rim. In 2D it shows as a water-blue
+patch.
+
+Select a pool in **Select** mode to:
+
+- set its **name**,
+- set its **depth** with a slider (0.3–3 m — how far the water sits below
+  ground),
+- reshape it with the same **corner / edge handles** as areas and walls,
+- or **delete** it.
+
+Pools sit on the active level and ride the **Rooms** layer toggle. Build a
+deck around one by drawing an outdoor **Area** next to it.
 
 ## Floor-plan underlay
 

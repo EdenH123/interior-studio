@@ -18,6 +18,9 @@ export default function useCanvasKeyboard() {
   const removeArea = useStore((s) => s.removeArea)
   const cancelAreaDraft = useStore((s) => s.cancelAreaDraft)
   const finishAreaDraft = useStore((s) => s.finishAreaDraft)
+  const removePool = useStore((s) => s.removePool)
+  const cancelPoolDraft = useStore((s) => s.cancelPoolDraft)
+  const finishPoolDraft = useStore((s) => s.finishPoolDraft)
   const rotateFurniture = useStore((s) => s.rotateFurniture)
   const cancelCalibration = useStore((s) => s.cancelCalibration)
   const selectAll = useStore((s) => s.selectAll)
@@ -44,12 +47,14 @@ export default function useCanvasKeyboard() {
       if (e.code === 'Escape') {
         clearPendingPlacement()
         cancelAreaDraft()
+        cancelPoolDraft()
         if (calibration) cancelCalibration()
         else { setDrawStart(null); clearSelection() }
       }
-      // Enter finishes the in-progress outdoor-area polygon.
+      // Enter finishes the in-progress outdoor-area / pool polygon.
       if (e.code === 'Enter' || e.code === 'NumpadEnter') {
         finishAreaDraft()
+        finishPoolDraft()
       }
       if (e.code === 'Delete' || e.code === 'Backspace') {
         // Delete every selected item. Walls cascade-remove their openings,
@@ -60,6 +65,7 @@ export default function useCanvasKeyboard() {
           else if (kind === 'furniture') removeFurniture(id)
           else if (kind === 'opening') removeOpening(id)
           else if (kind === 'area') removeArea(id)
+          else if (kind === 'pool') removePool(id)
         })
       }
       // 'd' toggles 2D ↔ 3D. Skip during walkthrough (W/A/S/D is movement
@@ -129,5 +135,5 @@ export default function useCanvasKeyboard() {
     }
     window.addEventListener('keydown', down)
     return () => window.removeEventListener('keydown', down)
-  }, [selection, calibration, walkthrough, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, removeArea, cancelAreaDraft, finishAreaDraft, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement, furniture, walls, openings, setClipboard, pasteClipboard, pushToast, toggleShortcuts, toggleActiveTool, toggle3d])
+  }, [selection, calibration, walkthrough, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, removeArea, cancelAreaDraft, finishAreaDraft, removePool, cancelPoolDraft, finishPoolDraft, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement, furniture, walls, openings, setClipboard, pasteClipboard, pushToast, toggleShortcuts, toggleActiveTool, toggle3d])
 }

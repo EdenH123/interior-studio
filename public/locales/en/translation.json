@@ -7,9 +7,11 @@
     "tool_select": "Select",
     "tool_draw": "Draw",
     "tool_area": "Area",
+    "tool_pool": "Pool",
     "tool_select_title": "Select mode — click to select, drag to pan (Space to toggle)",
     "tool_draw_title": "Draw mode — click to place walls (Space to toggle)",
     "tool_area_title": "Area mode — click out a polygon for an outdoor area (no walls); click the first point or press Enter to finish, Esc to cancel",
+    "tool_pool_title": "Pool mode — click out a polygon for a pool; click the first point or press Enter to finish, Esc to cancel",
     "open": "Open",
     "save": "Save",
     "export_png": "Export PNG",
@@ -127,6 +129,15 @@
     "size": "Area",
     "vertices": "Vertices",
     "delete": "Delete area"
+  },
+  "pool": {
+    "title": "Pool",
+    "name": "Name",
+    "name_placeholder": "Untitled pool",
+    "depth": "Depth (m)",
+    "size": "Surface",
+    "vertices": "Vertices",
+    "delete": "Delete pool"
   },
   "wall": {
     "title": "Wall",

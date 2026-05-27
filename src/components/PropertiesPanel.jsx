@@ -28,6 +28,9 @@ export default function PropertiesPanel() {
   const areas = useStore((s) => s.areas)
   const updateArea = useStore((s) => s.updateArea)
   const removeArea = useStore((s) => s.removeArea)
+  const pools = useStore((s) => s.pools)
+  const updatePool = useStore((s) => s.updatePool)
+  const removePool = useStore((s) => s.removePool)
   const roomMeta = useStore((s) => s.roomMeta)
   const updateRoomMeta = useStore((s) => s.updateRoomMeta)
   const updateWall = useStore((s) => s.updateWall)
@@ -83,6 +86,9 @@ export default function PropertiesPanel() {
   } else if (single?.kind === 'area') {
     const a = areas.find((x) => x.id === single.id)
     if (a) body = <AreaProps area={a} onUpdate={updateArea} onRemove={removeArea} />
+  } else if (single?.kind === 'pool') {
+    const pool = pools.find((x) => x.id === single.id)
+    if (pool) body = <PoolProps pool={pool} onUpdate={updatePool} onRemove={removePool} />
   } else if (single?.kind === 'opening') {
     const o = openings.find((x) => x.id === single.id)
     const wall = o ? walls.find((w) => w.id === o.wallId) : null
@@ -205,6 +211,50 @@ function AreaProps({ area, onUpdate, onRemove }) {
         className="mt-3 w-full text-xs font-mono px-2 py-1.5 rounded border border-red-800 bg-red-950 text-red-200 hover:bg-red-900"
       >
         {t('area.delete')}
+      </button>
+    </div>
+  )
+}
+
+function PoolProps({ pool, onUpdate, onRemove }) {
+  const { t } = useTranslation()
+  const size = polygonAreaM2(pool.verts)
+  const depth = pool.depth ?? 1.5
+  return (
+    <div>
+      <h3 className="text-gray-200 text-xs uppercase tracking-widest mb-2">{t('pool.title')}</h3>
+      <label className="block">
+        <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('pool.name')}</span>
+        <input
+          type="text"
+          value={pool.name ?? ''}
+          onChange={(e) => onUpdate(pool.id, { name: e.target.value })}
+          placeholder={t('pool.name_placeholder')}
+          className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-sm focus:border-blue-500 focus:outline-none"
+        />
+      </label>
+      <label className="block mt-3">
+        <div className="flex justify-between text-[11px] uppercase tracking-wider text-gray-500">
+          <span>{t('pool.depth')}</span>
+          <span className="font-mono text-gray-300">{depth.toFixed(2)} m</span>
+        </div>
+        <input
+          type="range" min={0.3} max={3} step={0.1}
+          value={depth}
+          onChange={(e) => onUpdate(pool.id, { depth: parseFloat(e.target.value) })}
+          className="mt-1 w-full accent-blue-500"
+        />
+      </label>
+      <div className="mt-3">
+        <Row label={t('pool.size')} value={`${Math.abs(size).toFixed(2)} m²`} />
+        <Row label={t('pool.vertices')} value={pool.verts.length} />
+      </div>
+      <button
+        type="button"
+        onClick={() => onRemove(pool.id)}
+        className="mt-3 w-full text-xs font-mono px-2 py-1.5 rounded border border-red-800 bg-red-950 text-red-200 hover:bg-red-900"
+      >
+        {t('pool.delete')}
       </button>
     </div>
   )

@@ -13,6 +13,7 @@ import { attachPicking } from '../components/viewer3d/picking'
 import { attachFurnitureDrag } from '../components/viewer3d/furnitureDrag'
 import { detectRooms } from '../components/canvas/roomDetection'
 import { resolveRailingMount } from '../components/canvas/wallSnapGeometry'
+import { reconcilePools } from '../components/viewer3d/reconcilePools'
 import { getFloorMaterial, resolveFloorMaterialId } from '../components/canvas/floorMaterials'
 import { kelvinToRgb } from '../utils/colorTemp'
 import { isLightingType } from '../components/viewer3d/reconcileFurniture'
@@ -62,6 +63,7 @@ export default function useThree(containerRef) {
   const furnMeshes    = useRef(new Map())
   const roomMeshes    = useRef(new Map())
   const areaMeshes    = useRef(new Map())
+  const poolMeshes    = useRef(new Map())
   const ceilingMeshes = useRef(new Map())
   const doorMeshes    = useRef(new Map())
   const doorAnims   = useRef(new Map())
@@ -74,6 +76,7 @@ export default function useThree(containerRef) {
   const furniture     = useStore((s) => s.furniture)
   const customModels  = useStore((s) => s.customModels)
   const areas       = useStore((s) => s.areas)
+  const pools       = useStore((s) => s.pools)
   const roomMeta    = useStore((s) => s.roomMeta)
   const selection   = useStore((s) => s.selection)
   const lighting    = useStore((s) => s.lighting)
@@ -267,6 +270,7 @@ export default function useThree(containerRef) {
       disposeAll(s.scene, furnMeshes.current)
       disposeAll(s.scene, roomMeshes.current)
       disposeAll(s.scene, areaMeshes.current)
+      disposeAll(s.scene, poolMeshes.current)
       disposeAll(s.scene, ceilingMeshes.current)
       disposeAll(s.scene, doorMeshes.current)
       for (const [, light] of lightMap.current) {
@@ -427,6 +431,15 @@ export default function useThree(containerRef) {
       if (!layerRooms) m.visible = false
     }
   }, [areas, levels, activeLevel, solo3d, layerRooms])
+
+  // ── pools (recessed water basins) ────────────────────────────────────────────
+  useEffect(() => {
+    if (!stateRef.current) return
+    const levelOffsets = computeLevelOffsets(levels)
+    reconcilePools(stateRef.current.scene, pools, poolMeshes.current, levelOffsets,
+      { solo: solo3d, activeLevelId: activeLevel })
+    if (!layerRooms) for (const m of poolMeshes.current.values()) m.visible = false
+  }, [pools, levels, activeLevel, solo3d, layerRooms])
 
   // ── selection highlight ──────────────────────────────────────────────────────
   useEffect(() => {

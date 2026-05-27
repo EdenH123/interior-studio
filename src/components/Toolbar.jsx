@@ -118,6 +118,19 @@ export default function Toolbar() {
         >
           ⬠ {t('toolbar.tool_area')}
         </button>
+        <div className="w-px bg-gray-700" />
+        <button
+          type="button"
+          onClick={() => setActiveTool('pool')}
+          title={t('toolbar.tool_pool_title')}
+          className={`text-xs font-mono px-2.5 py-1.5 transition-colors ${
+            activeTool === 'pool'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-800 text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          ≈ {t('toolbar.tool_pool')}
+        </button>
       </div>
       <div className="flex-1" />
       <input ref={fileRef} type="file" accept="image/png,image/jpeg" hidden onChange={handleFile} />
