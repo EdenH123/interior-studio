@@ -68,6 +68,7 @@ export default function useMarquee({ stageRef, setDrawStart }) {
   }
 
   const onMouseUp = () => {
+    const wasBackgroundPress = anchor.current !== null
     if (active.current && marquee) {
       const { layers, walls, furniture, openings, setSelectionItems } = useStore.getState()
       const items = selectItemsInRect(
@@ -77,6 +78,11 @@ export default function useMarquee({ stageRef, setDrawStart }) {
         layers.openings ? openings : [],
       )
       setSelectionItems(items)
+    } else if (wasBackgroundPress) {
+      // A plain click on the empty background (no drag) deselects — same as
+      // clicking away from any other object. `anchor` is only set for a press
+      // that landed on the stage background, so shape clicks are unaffected.
+      useStore.getState().clearSelection()
     }
     anchor.current = null
     active.current = false
