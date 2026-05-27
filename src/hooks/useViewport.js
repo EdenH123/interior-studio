@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { MIN_SCALE, MAX_SCALE, ZOOM_STEP } from '../components/canvas/constants'
 
 // Manages stage scale + pan position, wheel-zoom around cursor, and drag-pan.
@@ -6,6 +6,7 @@ import { MIN_SCALE, MAX_SCALE, ZOOM_STEP } from '../components/canvas/constants'
 //   view = { scale, x, y }
 //   handleWheel        — bind to Konva Stage onWheel
 //   handleStageDragEnd — bind to Konva Stage onDragEnd
+//   setPanPosition(x, y) — sync view after manual pan (stable reference)
 //   recenterIfUnset(width, height) — centers origin once on first known size
 export default function useViewport() {
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 })
@@ -42,7 +43,13 @@ export default function useViewport() {
     setView((v) => ({ ...v, x: e.target.x(), y: e.target.y() }))
   }
 
-  return { view, recenterIfUnset, handleWheel, handleStageDragEnd }
+  // Stable setter used by manual-pan code in CanvasArea to sync view after
+  // a pointer-tracked drag (not Konva's built-in draggable).
+  const setPanPosition = useCallback((x, y) => {
+    setView((v) => ({ ...v, x, y }))
+  }, [])
+
+  return { view, recenterIfUnset, handleWheel, handleStageDragEnd, setPanPosition }
 }
 
 export function clientToWorld(clientX, clientY, containerRect, view) {

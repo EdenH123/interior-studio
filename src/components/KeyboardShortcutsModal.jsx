@@ -9,7 +9,7 @@ export default function KeyboardShortcutsModal() {
     {
       title: t('shortcuts.canvas'),
       rows: [
-        ['Space + drag', t('shortcuts.shortcut_pan')],
+        ['Space', t('shortcuts.shortcut_toggle_tool')],
         ['Scroll', t('shortcuts.shortcut_zoom')],
         ['Esc', t('shortcuts.shortcut_cancel')],
         ['Delete / Backspace', t('shortcuts.shortcut_delete')],

@@ -33,16 +33,16 @@ function selectItemsInRect(rect, walls, furniture, openings) {
 // Returns { marquee, onMouseDown, onMouseMove, onMouseUp } to wire into Stage.
 //
 // Marquee only activates on a background drag when not in draw mode
-// (drawStart === null) and not panning (spaceDown). On activation it calls
-// setDrawStart(null) to cancel the accidental draw start that useDrawWalls
-// already issued for the same mousedown event.
-export default function useMarquee({ stageRef, spaceDown, setDrawStart }) {
+// (drawStart === null). On activation it calls setDrawStart(null) to cancel
+// the accidental draw start that useDrawWalls already issued for the same
+// mousedown event.
+export default function useMarquee({ stageRef, setDrawStart }) {
   const anchor = useRef(null) // { wx, wy, sx, sy } world + screen coords at mousedown
   const active = useRef(false) // true once drag exceeds the 5-px threshold
   const [marquee, setMarquee] = useState(null) // { x1, y1, x2, y2 } in world coords
 
   const onMouseDown = (e) => {
-    if (e.evt.button !== 0 || spaceDown || e.target !== stageRef.current) return
+    if (e.evt.button !== 0 || e.target !== stageRef.current) return
     // Only start a potential marquee when not already drawing walls
     if (useStore.getState().drawStart !== null) return
     const p = stageRef.current.getRelativePointerPosition()
