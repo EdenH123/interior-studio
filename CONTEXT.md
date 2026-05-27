@@ -726,6 +726,11 @@ interior-studio/
   - Tests: +8 (railingWallPlacement ×2, resolveRailingMount ×3, addFurniture mount fields ×2, removeWall railing cascade ×1). 474 total passing.
   - NOTE: not visually verified in a live 3D browser here (no browser automation); placement/resolve math is covered by unit tests and follows the existing furniture/wall rotation + Konva→Three conventions.
 
+- [x] Fix: `D` (2D↔3D toggle) did nothing from the 3D view (2026-05-27)
+  - Root cause: `useCanvasKeyboard()` (which owns `D` and all global shortcuts) was mounted inside `CanvasArea`, but `App` unmounts `CanvasArea` and renders `Viewer3D` while `show3d` is on (App.jsx) — so the keydown listener wasn't active in 3D.
+  - Fix: moved the `useCanvasKeyboard()` call to `App` (always mounted), removed it from `CanvasArea`. Side benefit: all global shortcuts (undo/redo, delete, copy/paste, etc.) now work in the 3D view too.
+  - Test: new `src/App.test.jsx` renders `App` with heavy children mocked (CanvasArea is a bare stub) and asserts `D` toggles `show3d` both directions — the 3D→2D case is the regression guard. 476 total passing.
+
 ### 🚧 In Progress
 - (nothing active)
 
