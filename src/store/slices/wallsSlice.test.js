@@ -117,3 +117,51 @@ describe('wallsSlice cross-slice: railing cascade', () => {
     expect(selection).toBeNull()
   })
 })
+
+describe('wallsSlice.moveWallVertices', () => {
+  const make = (activeLevel = null) =>
+    create((set, get) => ({ ...createWallsSlice(set, get), activeLevel }))
+
+  it('moves every wall endpoint coincident with a corner (room stays closed)', () => {
+    const store = make()
+    store.getState().addWall(0, 0, 100, 0)     // A — shares corner (100,0)
+    store.getState().addWall(100, 0, 100, 100) // B — shares corner (100,0)
+    store.getState().moveWallVertices([{ from: { x: 100, y: 0 }, to: { x: 120, y: 10 } }])
+    const [a, b] = store.getState().walls
+    expect(a).toMatchObject({ x1: 0, y1: 0, x2: 120, y2: 10 }) // A's shared end moved
+    expect(b).toMatchObject({ x1: 120, y1: 10, x2: 100, y2: 100 }) // B's shared end moved
+  })
+
+  it('leaves non-coincident endpoints untouched', () => {
+    const store = make()
+    store.getState().addWall(0, 0, 100, 0)
+    store.getState().addWall(100, 0, 100, 100)
+    store.getState().moveWallVertices([{ from: { x: 0, y: 0 }, to: { x: -5, y: -5 } }])
+    const [a, b] = store.getState().walls
+    expect(a).toMatchObject({ x1: -5, y1: -5 })
+    expect(b).toMatchObject({ x1: 100, y1: 0 }) // unchanged
+  })
+
+  it('applies multiple moves at once (edge slide) against pre-move coords', () => {
+    const store = make()
+    store.getState().addWall(0, 0, 100, 0) // slide both endpoints down by 30
+    store.getState().moveWallVertices([
+      { from: { x: 0, y: 0 }, to: { x: 0, y: 30 } },
+      { from: { x: 100, y: 0 }, to: { x: 100, y: 30 } },
+    ])
+    expect(store.getState().walls[0]).toMatchObject({ x1: 0, y1: 30, x2: 100, y2: 30 })
+  })
+
+  it('only moves walls on the active level', () => {
+    const store = make('L0')
+    store.getState().addWall(0, 0, 100, 0) // levelId L0
+    store.setState({
+      walls: [...store.getState().walls, { id: 'x', x1: 0, y1: 0, x2: 50, y2: 0, levelId: 'L1' }],
+    })
+    store.getState().moveWallVertices([{ from: { x: 0, y: 0 }, to: { x: 10, y: 0 } }])
+    const l0 = store.getState().walls.find((w) => w.levelId === 'L0')
+    const l1 = store.getState().walls.find((w) => w.id === 'x')
+    expect(l0).toMatchObject({ x1: 10, y1: 0 })
+    expect(l1).toMatchObject({ x1: 0, y1: 0 }) // other level untouched
+  })
+})

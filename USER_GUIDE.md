@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- railings snap onto the top of a wall -->
+_Last updated: 2026-05-27_  <!-- reshape rooms via wall corner/edge drag handles (select mode) -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -302,6 +302,25 @@ Once a wall is selected, the right panel shows three dimension inputs:
   range 0.05 – 1.0 m). Step: 0.05 m.
 
 Press **Esc** while typing any field to revert to the current value.
+
+### Reshaping a room by dragging (corner & edge handles)
+
+To resize or reshape a room without redrawing it, switch to **Select**
+mode and click one of its walls. Drag handles appear on the canvas:
+
+- **Corner circles** at the wall's two ends — drag a corner to move it.
+  Every wall meeting at that corner moves with it, so the room reshapes
+  and stays closed. (Moving one corner of a square turns it into a
+  trapezoid.)
+- **Edge square** at the wall's midpoint — drag it to slide the whole
+  wall straight in or out. Both ends move together and the two adjoining
+  walls stretch to stay attached — the quick way to make a balcony or
+  room smaller while keeping its shape.
+
+Dragged corners and edges snap to a 0.1 m grid. Doors, windows, and
+wall-top railings on the affected walls follow the reshape automatically,
+and the move counts as a single **Undo** step. (Handles only appear in
+Select mode — in Draw mode, clicking a wall starts a new wall instead.)
 
 ### Wall materials
 

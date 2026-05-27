@@ -10,6 +10,29 @@ export const createWallsSlice = (set) => ({
     set((s) => ({ walls: [...s.walls, { id: nanoid(6), x1, y1, x2, y2, levelId: s.activeLevel ?? null }] })),
   updateWall: (id, patch) =>
     set((s) => ({ walls: s.walls.map((w) => (w.id === id ? { ...w, ...patch } : w)) })),
+  // Move one or more wall vertices. `moves` is [{ from:{x,y}, to:{x,y} }].
+  // Every active-level wall endpoint coincident with a `from` point (within
+  // EPS) is set to the matching `to` — so dragging a shared corner moves all
+  // the walls meeting there and the room stays closed. Matching is against the
+  // pre-move coords so multiple moves in one call can't chain into each other.
+  moveWallVertices: (moves) =>
+    set((s) => {
+      const EPS = 1.5
+      const active = s.activeLevel ?? null
+      const onLevel = (w) => !w.levelId || w.levelId === active
+      const walls = s.walls.map((w) => {
+        if (!onLevel(w)) return w
+        let { x1, y1, x2, y2 } = w
+        for (const m of moves) {
+          if (Math.hypot(w.x1 - m.from.x, w.y1 - m.from.y) <= EPS) { x1 = m.to.x; y1 = m.to.y }
+          if (Math.hypot(w.x2 - m.from.x, w.y2 - m.from.y) <= EPS) { x2 = m.to.x; y2 = m.to.y }
+        }
+        return (x1 !== w.x1 || y1 !== w.y1 || x2 !== w.x2 || y2 !== w.y2)
+          ? { ...w, x1, y1, x2, y2 }
+          : w
+      })
+      return { walls }
+    }),
   removeWall: (id) =>
     set((s) => {
       const openings = s.openings ? s.openings.filter((o) => o.wallId !== id) : s.openings
