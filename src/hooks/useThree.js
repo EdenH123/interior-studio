@@ -386,11 +386,16 @@ export default function useThree(containerRef) {
       const ceilVoidMap  = voidsOnLv.length  > 0 ? computeVoidHolesForRooms(lvRooms, voidsOnLv)  : null
       const floorVoidMap = voidsBelow.length > 0 ? computeVoidHolesForRooms(lvRooms, voidsBelow) : null
 
+      // Pools on lv cut lv's room floor so the recessed basin shows through.
+      const poolsOnLv  = pools.filter((p) => (p.levelId ?? activeLevel) === lv.id)
+      const poolFloorMap = poolsOnLv.length > 0 ? computeVoidHolesForRooms(lvRooms, poolsOnLv) : null
+
       return lvRooms.map((r) => ({
         ...r,
         stairHoles: [
           ...(floorHolesMap ? (floorHolesMap.get(r.id) ?? []) : []),
           ...(floorVoidMap  ? (floorVoidMap.get(r.id)  ?? []) : []),
+          ...(poolFloorMap  ? (poolFloorMap.get(r.id)  ?? []) : []),
         ],
         ceilingStairHoles: [
           ...(ceilHolesMap ? (ceilHolesMap.get(r.id) ?? []) : []),
@@ -429,13 +434,16 @@ export default function useThree(containerRef) {
       for (const m of roomMeshes.current.values()) m.visible = false
       for (const m of ceilingMeshes.current.values()) m.visible = false
     }
-  }, [walls, roomMeta, furniture, voids, levels, activeLevel, solo3d, ceilingsVisible, layerRooms])
+  }, [walls, roomMeta, furniture, voids, pools, levels, activeLevel, solo3d, ceilingsVisible, layerRooms])
 
   // ── outdoor areas (floor slabs only — no walls, no ceiling) ──────────────────
   useEffect(() => {
     if (!stateRef.current) return
     const levelOffsets = computeLevelOffsets(levels)
-    const asRooms = areas.map((a) => ({ id: `area:${a.id}`, verts: a.verts, levelId: a.levelId }))
+    const baseAreas = areas.map((a) => ({ id: `area:${a.id}`, verts: a.verts, levelId: a.levelId }))
+    // Pools cut their footprint out of any area floor they sit inside.
+    const poolHoleMap = pools.length > 0 ? computeVoidHolesForRooms(baseAreas, pools) : null
+    const asRooms = baseAreas.map((r) => ({ ...r, stairHoles: poolHoleMap?.get(r.id) ?? [] }))
     const areaFor = (id) => areas.find((x) => `area:${x.id}` === id)
     const colorFor = (id) => {
       const mat = areaFor(id)?.floorMaterial ? getFloorMaterial(areaFor(id).floorMaterial) : null
@@ -450,7 +458,7 @@ export default function useThree(containerRef) {
       m.userData.id = key.startsWith('area:') ? key.slice(5) : key
       if (!layerRooms) m.visible = false
     }
-  }, [areas, levels, activeLevel, solo3d, layerRooms])
+  }, [areas, pools, levels, activeLevel, solo3d, layerRooms])
 
   // ── pools (recessed water basins) ────────────────────────────────────────────
   useEffect(() => {

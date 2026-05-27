@@ -809,6 +809,12 @@ interior-studio/
   - Tests: covered indirectly (no new unit tests — geometry builders; existing pool slice tests still green). 508 total passing.
   - NOTE: 3D appearance (coping ring, ground hole alignment) not visually verified in a live browser; the ground hole reuses the verified room-floor shape convention (`×KONVA_TO_THREE`, `rotation.x = π/2`) so pool holes line up with the basins. Follow-up: water reflections/caustics.
 
+- [x] Fix: can't draw a void/area/pool inside a room + pools didn't cut room/area floors (2026-05-27)
+  - **Bug 1 (placement blocked):** detected rooms rendered with `listening={drawStart === null}`, which is `true` in area/pool/void mode (those don't set `drawStart`). So a click inside a room hit the room fill, not the stage, and the polygon-point handler (gated on `e.target === stage`) never fired — you couldn't drop points inside a room. Fix: rooms now `listening={activeTool === 'select'}`, matching areas/pools/voids, so polygon tools (and wall drawing) click straight through a room interior. Selecting a room is unchanged (still works in select mode); drawing walls inside a room now goes via the stage path instead of the room-fill path.
+  - **Bug 2 (pool didn't cut the floor):** the earlier fix only cut the global ground plane, so a pool inside a room or outdoor **area** stayed hidden under that slab. Now pools also cut their footprint out of **room floors** (merged into `stairHoles` in the rooms effect via `computeVoidHolesForRooms`) and **area floors** (holes attached to the area shapes in the areas effect). Combined with the ground-plane cut, a pool reads as a recessed basin no matter what floor it sits on. Both effects gained `pools` in their deps.
+  - 508 tests still passing (the hole-assignment helper was already unit-tested; these are wiring/prop fixes).
+  - NOTE: not visually verified in a live browser; the room-listening change is a one-line prop fix matching the area/pool/void pattern, and the pool floor-cutting reuses the unit-tested `computeVoidHolesForRooms` + verified stair-hole `ShapeGeometry` path.
+
 ### 🚧 In Progress
 - (nothing active)
 
