@@ -24,6 +24,21 @@ export const createAreasSlice = (set) => ({
   updateArea: (id, patch) =>
     set((s) => ({ areas: s.areas.map((a) => (a.id === id ? { ...a, ...patch } : a)) })),
 
+  // Move one or more polygon vertices of an area by index. `moves` is
+  // [{ index, x, y }]. Used by the drag handles to reshape an area; reading
+  // the latest verts inside `set` avoids stale-closure issues during a drag.
+  moveAreaVertices: (id, moves) =>
+    set((s) => ({
+      areas: s.areas.map((a) => {
+        if (a.id !== id) return a
+        const verts = a.verts.slice()
+        for (const m of moves) {
+          if (m.index >= 0 && m.index < verts.length) verts[m.index] = { x: m.x, y: m.y }
+        }
+        return { ...a, verts }
+      }),
+    })),
+
   removeArea: (id) =>
     set((s) => ({
       areas: s.areas.filter((a) => a.id !== id),

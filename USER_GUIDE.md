@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- pivot door (centre-pivot opening type) -->
+_Last updated: 2026-05-27_  <!-- outdoor areas: reshape handles + per-side meter labels -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -452,12 +452,29 @@ to Select and Draw).
    in cyan when you're close enough), or just press **Enter**. Press
    **Esc** to cancel a half-drawn area.
 
+As you draw, each side shows a floating **length in metres** (the segment
+you're currently dragging out included), just like walls — so you can size
+the area precisely.
+
 The finished area shows as a floor patch in both 2D and 3D — no walls, no
 ceiling. Switch to **Select** mode and click it to set its **name** and
 **floor material** (the same wood/tile/marble/etc. catalog as rooms), or
 to **delete** it (Delete key or the button in its properties). Areas live
-on the active level and ride the **Rooms** layer toggle. Corners snap to a
-0.1 m grid.
+on the active level and ride the **Rooms** layer toggle.
+
+### Reshaping an area
+
+Every side of an area always shows its **length in metres** on the canvas.
+To change the shape, select the area in **Select** mode — the same handles
+as walls appear:
+
+- **Corner circles** at each vertex — drag a corner to move it.
+- **Edge squares** at each side's midpoint — drag to slide that whole side
+  in or out (great for nudging one edge to an exact length while watching
+  its label).
+
+Corners and edges snap to a 0.1 m grid, and each reshape is a single
+**Undo** step.
 
 ## Floor-plan underlay
 

@@ -21,6 +21,8 @@ import { wallSegmentsForRendering } from './canvas/openingGeometry'
 import { resolveRailingMount } from './canvas/wallSnapGeometry'
 import DrawPreview from './canvas/DrawPreview'
 import AreaDraftPreview from './canvas/AreaDraftPreview'
+import AreaEditHandles from './canvas/AreaEditHandles'
+import AreaDimensions from './canvas/AreaDimensions'
 import SnapIndicator from './canvas/SnapIndicator'
 import RotationHandle from './canvas/RotationHandle'
 import ResizeHandle from './canvas/ResizeHandle'
@@ -84,6 +86,7 @@ export default function CanvasArea() {
   const selection = useStore((s) => s.selection)
   const removeWall = useStore((s) => s.removeWall)
   const moveWallVertices = useStore((s) => s.moveWallVertices)
+  const moveAreaVertices = useStore((s) => s.moveAreaVertices)
   const updateFurniture = useStore((s) => s.updateFurniture)
   const removeFurniture = useStore((s) => s.removeFurniture)
   const select = useStore((s) => s.select)
@@ -164,6 +167,10 @@ export default function CanvasArea() {
   // Wall reshape handles: only in select mode, for a single selected wall.
   const selectedWall = activeTool === 'select' && layers.walls && singleSel?.kind === 'wall'
     ? walls.find((x) => x.id === singleSel.id) ?? null
+    : null
+  // Area reshape handles: only in select mode, for a single selected area.
+  const selectedArea = activeTool === 'select' && layers.rooms && singleSel?.kind === 'area'
+    ? areas.find((x) => x.id === singleSel.id) ?? null
     : null
 
   const snapTarget = cursorWorld
@@ -299,6 +306,9 @@ export default function CanvasArea() {
             {layers.walls && walls.map((w) => (
               <WallLengthLabel key={`len-${w.id}`} wall={w} scale={view.scale} />
             ))}
+            {layers.rooms && areas.map((a) => (
+              <AreaDimensions key={`dim-${a.id}`} area={a} scale={view.scale} />
+            ))}
             {layers.openings && openings.map((o) => {
               const wall = walls.find((w) => w.id === o.wallId)
               if (!wall) return null
@@ -332,6 +342,10 @@ export default function CanvasArea() {
             )}
             {selectedWall && (
               <WallEditHandles wall={selectedWall} scale={view.scale} onMove={moveWallVertices} />
+            )}
+            {selectedArea && (
+              <AreaEditHandles area={selectedArea} scale={view.scale}
+                onMove={(moves) => moveAreaVertices(selectedArea.id, moves)} />
             )}
             <DragGhost
               ghost={dragGhost ?? (pendingPlacement && cursorWorld ? {
