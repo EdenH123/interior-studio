@@ -303,7 +303,7 @@ export default function CanvasArea() {
           </Layer>
         </Stage>
       )}
-      <HudOverlay view={view} cursor={cursorWorld} drawing={!!drawStart} spaceDown={spaceDown} selection={selection} calibration={calibration} shiftDown={shiftDown} altDown={altDown} />
+      <HudOverlay view={view} cursor={cursorWorld} drawing={!!drawStart} selection={selection} calibration={calibration} shiftDown={shiftDown} altDown={altDown} />
       {calibration?.p1 && calibration?.p2 && (
         <CalibrationPrompt p1={calibration.p1} p2={calibration.p2}
           onConfirm={applyCalibration} onCancel={cancelCalibration} />
