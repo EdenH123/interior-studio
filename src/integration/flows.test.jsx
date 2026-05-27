@@ -14,6 +14,7 @@ import { FURNITURE_DRAG_MIME } from '../components/Sidebar'
 import { OPENING_DRAG_MIME } from '../components/canvas/openingsCatalog'
 import PropertiesPanel from '../components/PropertiesPanel'
 import useDrawWalls from '../hooks/useDrawWalls'
+import { detectRooms } from '../components/canvas/roomDetection'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -667,5 +668,32 @@ describe('PropertiesPanel routes to the correct editor (real store)', () => {
   it('shows the empty state when nothing is selected', () => {
     render(<PropertiesPanel />)
     expect(screen.getByText(/nothing selected/i)).toBeInTheDocument()
+  })
+
+  // Regression: selecting a room on an upper level must show its properties.
+  // Both levels carry an identically-shaped room (same fingerprint); the panel
+  // must detect rooms from the ACTIVE level's walls, not all walls at once.
+  it('shows the room editor for a room on a non-ground level', () => {
+    const square = () => {
+      useStore.getState().addWall(0, 0, 200, 0)
+      useStore.getState().addWall(200, 0, 200, 200)
+      useStore.getState().addWall(200, 200, 0, 200)
+      useStore.getState().addWall(0, 200, 0, 0)
+    }
+    square() // ground floor
+    useStore.getState().addLevel()
+    const upper = useStore.getState().levels.find((l) => l.id !== useStore.getState().activeLevel).id
+    useStore.getState().setActiveLevel(upper)
+    square() // upper floor — identical coords
+
+    const upperWalls = useStore.getState().walls.filter((w) => w.levelId === upper)
+    const roomId = detectRooms(upperWalls)[0].id
+    useStore.getState().select('room', roomId)
+
+    render(<PropertiesPanel />)
+
+    expect(screen.getByRole('heading', { name: /room/i })).toBeInTheDocument()
+    // Ceiling toggle is present and on by default.
+    expect(screen.getByRole('checkbox')).toBeChecked()
   })
 })

@@ -112,6 +112,7 @@
     "name": "Name",
     "name_placeholder": "Untitled",
     "floor_material": "Floor material",
+    "has_ceiling": "Ceiling",
     "ceiling_material": "Ceiling material",
     "area": "Area",
     "vertices": "Vertices"

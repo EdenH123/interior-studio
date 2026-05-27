@@ -112,6 +112,7 @@
     "name": "שם",
     "name_placeholder": "ללא שם",
     "floor_material": "חומר רצפה",
+    "has_ceiling": "תקרה",
     "ceiling_material": "חומר תקרה",
     "area": "שטח",
     "vertices": "קודקודים"
