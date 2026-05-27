@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import './index.css'
 import useStore from './store/useStore'
 import useLanguageSync from './hooks/useLanguageSync'
+import useCanvasKeyboard from './hooks/useCanvasKeyboard'
 import Toolbar from './components/Toolbar'
 import Sidebar from './components/Sidebar'
 import CanvasArea from './components/CanvasArea'
@@ -20,6 +21,9 @@ export default function App() {
   const aiPanelOpen = useStore((s) => s.aiPanelOpen)
   const showShortcuts = useStore((s) => s.showShortcuts)
   useLanguageSync()
+  // Global keyboard shortcuts live here (not in CanvasArea) so they stay
+  // active in the 3D view too — CanvasArea is unmounted while show3d is on.
+  useCanvasKeyboard()
   return (
     <div className="flex flex-col h-full bg-gray-950 text-white">
       <Toolbar />

@@ -4,7 +4,6 @@ import { Stage, Layer, Line, Rect } from 'react-konva'
 import useStore from '../store/useStore'
 import useElementSize from '../hooks/useElementSize'
 import useViewport from '../hooks/useViewport'
-import useCanvasKeyboard from '../hooks/useCanvasKeyboard'
 import useDrawWalls from '../hooks/useDrawWalls'
 import useFurnitureDrop from '../hooks/useFurnitureDrop'
 import useOpeningDrop from '../hooks/useOpeningDrop'
@@ -85,7 +84,7 @@ export default function CanvasArea() {
 
   const lockAspectRatio = useStore((s) => s.lockAspectRatio)
   const { view, recenterIfUnset, handleWheel, handleStageDragEnd, setPanPosition } = useViewport()
-  useCanvasKeyboard()
+  // Global keyboard shortcuts are mounted once in App so they work in 2D + 3D.
   const { shiftDown, altDown } = useModifierKeys()
   const handleStageMouseDown = useDrawWalls(stageRef, view.scale, shiftDown, altDown)
   const dragHandlers = combineDragHandlers(

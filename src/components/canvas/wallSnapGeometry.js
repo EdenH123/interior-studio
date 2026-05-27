@@ -106,13 +106,21 @@ export function railingWallPlacement(wall, t = 0.5) {
 }
 
 // Resolves a wall-bound railing's live transform from its mounted wall, so it
-// follows the wall when moved / resized / re-heighted. Returns the item
-// unchanged when it isn't wall-bound (or its wall is gone). `wallMounted: true`
-// is injected so the 3D reconciler lifts it to `mountHeight`.
+// follows the wall when moved / resized / re-heighted. A wall-bound railing
+// spans the FULL wall, centered on it — i.e. a balcony parapet rail — rather
+// than sitting as a fixed-width piece wherever it was dropped. Returns the
+// item unchanged when it isn't wall-bound (or its wall is gone). `wallMounted:
+// true` is injected so the 3D reconciler lifts it to `mountHeight`.
 export function resolveRailingMount(item, walls) {
   if (!item?.mountWallId) return item
   const wall = walls.find((w) => w.id === item.mountWallId)
   if (!wall) return item
-  const p = railingWallPlacement(wall, item.position ?? 0.5)
-  return { ...item, x: p.x, y: p.y, rotation: p.rotation, wallMounted: true, mountHeight: p.mountHeight }
+  const lengthM = Math.hypot(wall.x2 - wall.x1, wall.y2 - wall.y1) / PIXELS_PER_METER
+  const p = railingWallPlacement(wall, 0.5)  // centered on the wall
+  return {
+    ...item,
+    x: p.x, y: p.y, rotation: p.rotation,
+    width: lengthM,                            // span the whole wall
+    wallMounted: true, mountHeight: p.mountHeight,
+  }
 }

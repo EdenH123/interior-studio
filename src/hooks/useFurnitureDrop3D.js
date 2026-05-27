@@ -144,8 +144,15 @@ export default function useFurnitureDrop3D(containerRef, stateRef) {
             const wallH = wall?.height ?? WALL_HEIGHT
             const yOffset = wallHit.wallMesh.position.y - wallH / 2
             const railH = spec?.height ?? 1.0
-            ghostRef.current.position.set(wallHit.point.x, yOffset + wallH + railH / 2, wallHit.point.z)
-            if (wall) ghostRef.current.rotation.y = -Math.atan2(wall.y2 - wall.y1, wall.x2 - wall.x1)
+            const railY = yOffset + wallH + railH / 2
+            if (wall) {
+              // Preview the final placement: centered on the wall centerline.
+              const place = railingWallPlacement(wall, 0.5)
+              ghostRef.current.position.set(place.x * K2T, railY, place.y * K2T)
+              ghostRef.current.rotation.y = -Math.atan2(wall.y2 - wall.y1, wall.x2 - wall.x1)
+            } else {
+              ghostRef.current.position.set(wallHit.point.x, railY, wallHit.point.z)
+            }
             return
           }
           // No wall under cursor — fall through to a floor ghost.

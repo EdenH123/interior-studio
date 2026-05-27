@@ -906,8 +906,8 @@ stairs so their center is clearly inside a room polygon.
 Railings live in the **Architecture** category (Wood, Metal, Cable, and
 Glass). To make a balcony, lower a wall's height in its properties (e.g.
 to 1 m), then **drag a railing onto that wall** — it snaps onto the **top**
-of the wall, centered and running along it, with its base at the wall's
-height. This works in both the 2D plan and the 3D view.
+of the wall and **spans the whole wall**, centered on it, with its base at
+the wall's height. This works in both the 2D plan and the 3D view.
 
 A wall-mounted railing is **attached to its wall**: move, resize, or
 re-height the wall and the railing follows automatically. Because of that
