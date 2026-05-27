@@ -20,6 +20,7 @@ import Furniture from './canvas/Furniture'
 import { wallSegmentsForRendering } from './canvas/openingGeometry'
 import { resolveRailingMount } from './canvas/wallSnapGeometry'
 import DrawPreview from './canvas/DrawPreview'
+import AreaDraftPreview from './canvas/AreaDraftPreview'
 import SnapIndicator from './canvas/SnapIndicator'
 import RotationHandle from './canvas/RotationHandle'
 import ResizeHandle from './canvas/ResizeHandle'
@@ -34,11 +35,19 @@ import CalibrationPrompt from './canvas/CalibrationPrompt'
 import { detectRooms } from './canvas/roomDetection'
 import { DEFAULT_ROOM_FILL, getFloorMaterial, materialOverlayFill } from './canvas/floorMaterials'
 import { getFurnitureSpec } from './canvas/furnitureCatalog'
-import { SNAP_RADIUS_SCREEN, WORLD_HALF, GRID_SIZE, snapTo90, snapTo45, findNearestSnapPoint } from './canvas/constants'
+import { SNAP_RADIUS_SCREEN, WORLD_HALF, GRID_SIZE, PIXELS_PER_METER, snapTo90, snapTo45, findNearestSnapPoint } from './canvas/constants'
 import { snapToGrid } from '../hooks/useViewport'
 import HudOverlay from './canvas/HudOverlay'
 
 const UNDERLAY_ID = 'underlay'
+const AREA_SNAP = PIXELS_PER_METER * 0.1 // snap area polygon points to 0.1 m
+const AREA_CLOSE_PX = 12                 // screen px within which a click "closes" the loop
+const AREA_DEFAULT_FILL = 'rgba(132, 204, 22, 0.14)' // outdoor-ish lime tint
+const snapArea = (v) => Math.round(v / AREA_SNAP) * AREA_SNAP
+const areaCentroid = (verts) => {
+  const n = verts.length || 1
+  return { x: verts.reduce((s, v) => s + v.x, 0) / n, y: verts.reduce((s, v) => s + v.y, 0) / n }
+}
 
 export default function CanvasArea() {
   const { t } = useTranslation()
@@ -48,6 +57,10 @@ export default function CanvasArea() {
   const allWalls = useStore((s) => s.walls)
   const allFurniture = useStore((s) => s.furniture)
   const allOpenings = useStore((s) => s.openings)
+  const allAreas = useStore((s) => s.areas)
+  const areaDraft = useStore((s) => s.areaDraft)
+  const addAreaPoint = useStore((s) => s.addAreaPoint)
+  const finishAreaDraft = useStore((s) => s.finishAreaDraft)
   const activeLevel = useStore((s) => s.activeLevel)
   const levels = useStore((s) => s.levels)
   const layers = useStore((s) => s.layers)
@@ -83,6 +96,7 @@ export default function CanvasArea() {
   const walls = allWalls.filter(onLevel)
   const furniture = allFurniture.filter(onLevel)
   const openings = allOpenings.filter(onLevel)
+  const areas = allAreas.filter(onLevel)
 
   const lockAspectRatio = useStore((s) => s.lockAspectRatio)
   const { view, recenterIfUnset, handleWheel, handleStageDragEnd, setPanPosition } = useViewport()
@@ -191,6 +205,23 @@ export default function CanvasArea() {
                 return
               }
             }
+            // Area tool: each background click drops a polygon vertex; clicking
+            // back on the first point (or pressing Enter) closes it.
+            if (activeTool === 'area' && e.evt.button === 0 && e.target === stageRef.current) {
+              const pos = stageRef.current?.getRelativePointerPosition()
+              if (pos) {
+                const p = { x: snapArea(pos.x), y: snapArea(pos.y) }
+                if (areaDraft && areaDraft.length >= 3) {
+                  const first = areaDraft[0]
+                  if (Math.hypot(p.x - first.x, p.y - first.y) < AREA_CLOSE_PX / view.scale) {
+                    finishAreaDraft()
+                    return
+                  }
+                }
+                addAreaPoint(p)
+              }
+              return
+            }
             // Manual pan: in select mode, dragging the stage background pans
             // the canvas. We track this ourselves (instead of Konva draggable)
             // so child-shape click events are never swallowed by Konva's drag.
@@ -241,6 +272,19 @@ export default function CanvasArea() {
                   name={meta?.name ?? ''}
                   onSelect={(id) => select('room', id)}
                   onShiftSelect={(id) => addToSelection('room', id)} />
+              )
+            })}
+            {layers.rooms && areas.map((a) => {
+              const material = a.floorMaterial ? getFloorMaterial(a.floorMaterial) : null
+              const fill = material ? materialOverlayFill(material.color) : AREA_DEFAULT_FILL
+              return (
+                <Room key={`area-${a.id}`}
+                  room={{ id: a.id, verts: a.verts, centroid: areaCentroid(a.verts) }}
+                  selected={isSelected(selection, 'area', a.id)}
+                  fill={fill} listening={activeTool === 'select'} scale={view.scale}
+                  name={a.name ?? ''}
+                  onSelect={(id) => select('area', id)}
+                  onShiftSelect={(id) => addToSelection('area', id)} />
               )
             })}
             {layers.walls && walls.map((w) => (
@@ -303,6 +347,7 @@ export default function CanvasArea() {
             />
             {aiProposal && <DiffOverlay diff={aiProposal.diff} scale={view.scale} />}
             {drawStart && previewEnd && <DrawPreview start={drawStart} end={previewEnd} scale={view.scale} />}
+            {activeTool === 'area' && <AreaDraftPreview draft={areaDraft} cursor={cursorWorld} scale={view.scale} />}
             {snapTarget && !calibration && <SnapIndicator point={snapTarget} scale={view.scale} />}
             {marquee && (
               <Rect
@@ -319,7 +364,7 @@ export default function CanvasArea() {
         </Stage>
       )}
       <HudOverlay view={view} cursor={cursorWorld} drawing={!!drawStart} selection={selection} calibration={calibration} shiftDown={shiftDown} altDown={altDown} />
-      {allWalls.length === 0 && allFurniture.length === 0 && !drawStart && !underlay && (
+      {allWalls.length === 0 && allFurniture.length === 0 && allAreas.length === 0 && !drawStart && !areaDraft && !underlay && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="bg-gray-900/70 border border-gray-700 rounded-lg px-6 py-5 max-w-xs text-center backdrop-blur-sm">
             <div className="text-gray-100 text-sm font-semibold mb-3">{t('hud.empty_title')}</div>

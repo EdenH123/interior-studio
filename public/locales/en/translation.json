@@ -6,8 +6,10 @@
     "redo_title": "Redo (Ctrl/Cmd+Shift+Z)",
     "tool_select": "Select",
     "tool_draw": "Draw",
+    "tool_area": "Area",
     "tool_select_title": "Select mode — click to select, drag to pan (Space to toggle)",
     "tool_draw_title": "Draw mode — click to place walls (Space to toggle)",
+    "tool_area_title": "Area mode — click out a polygon for an outdoor area (no walls); click the first point or press Enter to finish, Esc to cancel",
     "open": "Open",
     "save": "Save",
     "export_png": "Export PNG",
@@ -116,6 +118,15 @@
     "ceiling_material": "Ceiling material",
     "area": "Area",
     "vertices": "Vertices"
+  },
+  "area": {
+    "title": "Outdoor area",
+    "name": "Name",
+    "name_placeholder": "Untitled area",
+    "floor_material": "Floor material",
+    "size": "Area",
+    "vertices": "Vertices",
+    "delete": "Delete area"
   },
   "wall": {
     "title": "Wall",

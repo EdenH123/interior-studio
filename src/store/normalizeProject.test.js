@@ -51,8 +51,14 @@ describe('normalizeProjectData', () => {
     expect(out.walls).toEqual([])
     expect(out.furniture).toEqual([])
     expect(out.openings).toEqual([])
+    expect(out.areas).toEqual([])
     expect(out.roomMeta).toEqual({})
     expect(out.underlay).toBeNull()
+  })
+
+  it('backfills levelId on legacy outdoor areas', () => {
+    const out = normalizeProjectData({ areas: [{ id: 'a1', verts: [] }] })
+    expect(out.areas[0].levelId).toBe(GROUND_FLOOR_ID)
   })
 
   it('tolerates null/undefined input', () => {

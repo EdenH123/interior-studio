@@ -6,8 +6,10 @@
     "redo_title": "שחזר (Ctrl/Cmd+Shift+Z)",
     "tool_select": "בחירה",
     "tool_draw": "ציור",
+    "tool_area": "אזור",
     "tool_select_title": "מצב בחירה — לחץ לבחור, גרור להזזה (Space להחלפה)",
     "tool_draw_title": "מצב ציור — לחץ להנחת קירות (Space להחלפה)",
+    "tool_area_title": "מצב אזור — לחץ לסימון מצולע לאזור חיצוני (ללא קירות); לחץ על הנקודה הראשונה או Enter לסיום, Esc לביטול",
     "open": "פתח",
     "save": "שמור",
     "export_png": "ייצוא PNG",
@@ -116,6 +118,15 @@
     "ceiling_material": "חומר תקרה",
     "area": "שטח",
     "vertices": "קודקודים"
+  },
+  "area": {
+    "title": "אזור חיצוני",
+    "name": "שם",
+    "name_placeholder": "אזור ללא שם",
+    "floor_material": "חומר רצפה",
+    "size": "שטח",
+    "vertices": "קודקודים",
+    "delete": "מחק אזור"
   },
   "wall": {
     "title": "קיר",

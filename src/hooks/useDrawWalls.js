@@ -34,7 +34,8 @@ export default function useDrawWalls(stageRef, viewScale, shiftDown = false, alt
     if (evt.button === 1) return
     if (evt.button !== 0) return
     if (calibration) return
-    if (activeTool === 'select') return
+    // Only the wall-draw tool draws walls — 'select' and 'area' don't.
+    if (activeTool !== 'draw') return
     // Allow shape clicks when a wall chain is in progress, when the click
     // landed on a room polygon (enables starting interior partition walls
     // by clicking inside an existing room), when it landed on an existing

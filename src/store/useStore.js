@@ -7,6 +7,7 @@ import { createWallsSlice } from './slices/wallsSlice'
 import { createFurnitureSlice } from './slices/furnitureSlice'
 import { createOpeningsSlice } from './slices/openingsSlice'
 import { createRoomsSlice } from './slices/roomsSlice'
+import { createAreasSlice } from './slices/areasSlice'
 import { createUnderlaySlice } from './slices/underlaySlice'
 import { createViewSlice } from './slices/viewSlice'
 import { createUiSlice } from './slices/uiSlice'
@@ -37,6 +38,7 @@ const HISTORY_SLICE = (state) => ({
   walls: state.walls,
   furniture: state.furniture,
   openings: state.openings,
+  areas: state.areas,
   roomMeta: state.roomMeta,
   underlay: state.underlay,
 })
@@ -64,6 +66,7 @@ const useStore = create(persist(
     ...createFurnitureSlice(set, get),
     ...createOpeningsSlice(set, get),
     ...createRoomsSlice(set, get),
+    ...createAreasSlice(set, get),
     ...createUnderlaySlice(set, get),
     ...createViewSlice(set, get),
     ...createUiSlice(set, get),
@@ -85,6 +88,7 @@ const useStore = create(persist(
         ...normalizeProjectData(data),
         selection: null,
         drawStart: null,
+        areaDraft: null,
         calibration: null,
         dragGhost: null,
       })),
@@ -210,6 +214,7 @@ const useStore = create(persist(
       walls: state.walls,
       furniture: state.furniture,
       openings: state.openings,
+      areas: state.areas,
       roomMeta: state.roomMeta,
       underlay: state.underlay,
       layers: state.layers,
