@@ -712,6 +712,11 @@ interior-studio/
   - i18n: added `room.has_ceiling` (en "Ceiling" / he "תקרה").
   - Tests: +1 (`flows.test.jsx`: room editor shows for a room on a non-ground level + ceiling checkbox on by default). 463 total passing.
 
+- [x] `D` key toggles 2D ↔ 3D view (2026-05-27)
+  - `useCanvasKeyboard` handles a plain `d`/`D` press → `toggle3d()`. Guards: ignored on key-repeat, when any modifier is held (so Ctrl/⌘+D stays the browser bookmark shortcut), when typing in an input/textarea (existing top-of-handler guard), and during 3D walkthrough (W/A/S/D is movement there).
+  - `KeyboardShortcutsModal` lists the new shortcut under Canvas; i18n key `shortcuts.shortcut_toggle_3d` added (en "Toggle 2D / 3D view" / he "החלפת תצוגת 2D / 3D").
+  - Tests: +3 (`flows.test.jsx`: toggles show3d on each press, ignores Ctrl/Cmd+D, ignores D during walkthrough). 466 total passing.
+
 ### 🚧 In Progress
 - (nothing active)
 

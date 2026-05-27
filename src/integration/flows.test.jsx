@@ -14,6 +14,7 @@ import { FURNITURE_DRAG_MIME } from '../components/Sidebar'
 import { OPENING_DRAG_MIME } from '../components/canvas/openingsCatalog'
 import PropertiesPanel from '../components/PropertiesPanel'
 import useDrawWalls from '../hooks/useDrawWalls'
+import useCanvasKeyboard from '../hooks/useCanvasKeyboard'
 import { detectRooms } from '../components/canvas/roomDetection'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -695,5 +696,34 @@ describe('PropertiesPanel routes to the correct editor (real store)', () => {
     expect(screen.getByRole('heading', { name: /room/i })).toBeInTheDocument()
     // Ceiling toggle is present and on by default.
     expect(screen.getByRole('checkbox')).toBeChecked()
+  })
+})
+
+// ─── 11. Keyboard: D toggles 2D ↔ 3D ──────────────────────────────────────────
+
+describe('Keyboard shortcut: D toggles 3D', () => {
+  beforeEach(resetStore)
+
+  it('flips show3d on each plain D press', () => {
+    renderHook(() => useCanvasKeyboard())
+    expect(useStore.getState().show3d).toBe(false)
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd' })))
+    expect(useStore.getState().show3d).toBe(true)
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd' })))
+    expect(useStore.getState().show3d).toBe(false)
+  })
+
+  it('ignores Ctrl/Cmd+D so the browser bookmark shortcut still works', () => {
+    renderHook(() => useCanvasKeyboard())
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', ctrlKey: true })))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', metaKey: true })))
+    expect(useStore.getState().show3d).toBe(false)
+  })
+
+  it('ignores D during walkthrough (WASD movement)', () => {
+    useStore.setState({ walkthrough: true })
+    renderHook(() => useCanvasKeyboard())
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd' })))
+    expect(useStore.getState().show3d).toBe(false)
   })
 })
