@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- first-run empty-state hint, keyboard focus rings -->
+_Last updated: 2026-05-27_  <!-- first-run empty-state hint, keyboard focus rings, IndexedDB persistence -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -480,18 +480,13 @@ automatically; drop them manually after the walls are placed.
 
 ### Auto-save and underlays
 
-Underlays save to your browser along with walls and furniture. To stay
-within your browser's storage quota, very large images are
-**automatically downscaled** on upload to 2000 pixels on the long side
-and re-encoded as JPEG at high quality. A small toast notification
-tells you when this happens.
-
-If even after downscaling the image is too large to fit in the
-browser's localStorage (rare, but it can happen on phones with strict
-limits or when you already have a lot of other state), a red toast
-warns you that the image won't survive a reload. The rest of your
-design (walls, furniture, room metadata) still saves normally; only
-the underlay is at risk.
+Underlays save to your browser along with walls and furniture. Large
+images are still **automatically downscaled** on upload to 2000 pixels on
+the long side and re-encoded as JPEG at high quality (a small toast tells
+you when this happens), which keeps them light — but your design is now
+stored in IndexedDB rather than the old 5 MB localStorage box, so underlay
+images and imported 3D models persist reliably without crowding out the
+rest of the project.
 
 ## Layers panel
 

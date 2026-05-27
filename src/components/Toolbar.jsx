@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import useStore from '../store/useStore'
 import TourMenu from './tour/TourMenu'
-import { downscaleDataUrl, QUOTA_WARN_BYTES } from './canvas/imageDownscale'
+import { downscaleDataUrl } from './canvas/imageDownscale'
 import useProjectIO from '../hooks/useProjectIO'
 import useUndoRedo from '../hooks/useUndoRedo'
 
@@ -15,17 +15,6 @@ function readAsDataUrl(file) {
     reader.onerror = () => reject(new Error('Could not read file'))
     reader.readAsDataURL(file)
   })
-}
-
-function persistedUnderlayMatches(dataUrl) {
-  try {
-    const raw = localStorage.getItem('interior-studio')
-    if (!raw) return false
-    const parsed = JSON.parse(raw)
-    return parsed?.state?.underlay?.dataUrl === dataUrl
-  } catch {
-    return false
-  }
 }
 
 export default function Toolbar() {
@@ -61,26 +50,15 @@ export default function Toolbar() {
         dataUrl: result.dataUrl, x: 0, y: 0, scale: 1, opacity: 0.5, locked: false,
       })
       select('underlay', UNDERLAY_ID)
-      queueMicrotask(() => {
-        if (!persistedUnderlayMatches(result.dataUrl)) {
-          pushToast(
-            'Underlay is too large to save in browser storage. It will work this session but be lost on reload.',
-            'error',
-          )
-          return
-        }
-        if (result.dataUrl.length > QUOTA_WARN_BYTES) {
-          pushToast(
-            'Underlay is large; depending on browser storage limits it may not persist.',
-            'warn',
-          )
-        } else if (result.downscaled) {
-          pushToast(
-            `Underlay downscaled to ${result.width}×${result.height} to fit in browser storage.`,
-            'info',
-          )
-        }
-      })
+      // Underlays persist to IndexedDB now (no ~5 MB localStorage cap), so the
+      // old "too large to save" guard is gone. Still surface the downscale as
+      // useful feedback.
+      if (result.downscaled) {
+        pushToast(
+          `Underlay downscaled to ${result.width}×${result.height}.`,
+          'info',
+        )
+      }
     } catch (err) {
       pushToast(err?.message ?? 'Could not read that image.', 'error')
     }
