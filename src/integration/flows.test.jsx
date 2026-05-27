@@ -568,6 +568,37 @@ describe('useDrawWalls shape-click guard', () => {
     expect(useStore.getState().drawStart).toEqual({ x: 50, y: 50 })
     expect(useStore.getState().walls).toHaveLength(0)
   })
+
+  // A wall-body click (no chain active) starts a new chain projected onto the
+  // wall — it must NOT bail like a generic shape click does.
+  function makeWallTarget() {
+    return { getAttr: (n) => (n === 'name' ? 'wall-body' : undefined) }
+  }
+
+  it('clicking an existing wall starts a chain projected onto that wall', () => {
+    // Horizontal wall along y=0 from x=0 to x=200.
+    act(() => useStore.getState().addWall(0, 0, 200, 0))
+
+    // Cursor 30 px below the wall, away from endpoints/midpoint (no snap).
+    const stageRef = makeStage({ x: 100, y: 30 })
+    const { result } = renderHook(() => useDrawWalls(stageRef, 1, false, false))
+    act(() => result.current(makeEvent(makeWallTarget())))
+
+    // drawStart projects onto the wall (y collapses to 0); no wall committed yet.
+    expect(useStore.getState().drawStart).toEqual({ x: 100, y: 0 })
+    expect(useStore.getState().walls).toHaveLength(1)
+  })
+
+  it('a non-wall shape click still bails when no chain is active', () => {
+    act(() => useStore.getState().addWall(0, 0, 200, 0))
+    const stageRef = makeStage({ x: 100, y: 30 })
+    // Shape with a different name (e.g. furniture) — should not start a draw.
+    const furnitureTarget = { getAttr: (n) => (n === 'name' ? 'furniture' : undefined) }
+    const { result } = renderHook(() => useDrawWalls(stageRef, 1, false, false))
+    act(() => result.current(makeEvent(furnitureTarget)))
+
+    expect(useStore.getState().drawStart).toBeNull()
+  })
 })
 
 // ─── 10. PropertiesPanel routing with real store ──────────────────────────────
