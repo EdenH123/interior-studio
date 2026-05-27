@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- pools: dedicated water feature (polygon + depth + 3D basin) -->
+_Last updated: 2026-05-27_  <!-- double-height voids + wall-style angle snapping for area/pool/void -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -452,6 +452,9 @@ to Select and Draw).
    in cyan when you're close enough), or just press **Enter**. Press
    **Esc** to cancel a half-drawn area.
 
+Like walls, each new side **locks to a 45° angle** from the previous point.
+Hold **Shift** for 90°-only, or hold **Alt / Option** for a free angle.
+
 As you draw, each side shows a floating **length in metres** (the segment
 you're currently dragging out included), just like walls — so you can size
 the area precisely.
@@ -499,6 +502,23 @@ Select a pool in **Select** mode to:
 
 Pools sit on the active level and ride the **Rooms** layer toggle. Build a
 deck around one by drawing an outdoor **Area** next to it.
+
+## Double-height spaces (the Void tool)
+
+To make part of a room **double-height** — open all the way up to the next
+floor — use the **Void** tool (the fifth toolbar button). On the lower
+level, **click out the opening** where you want the space to rise (same
+draw flow as areas/pools, with the same 45° / Shift / Alt angle snapping;
+Enter to finish, Esc to cancel).
+
+In 3D this **cuts a matching hole in the ceiling of the level you drew on
+and in the floor of the level directly above**, so that part of the room
+opens up into the level above — a high ceiling, atrium, or mezzanine
+overlook. The rest of the room keeps its normal height.
+
+Tip: the void cuts the **room directly above** it. So draw your upper
+floor first, then mark the void on the lower floor where you want the
+slab removed. Select a void to rename, reshape, or delete it.
 
 ## Floor-plan underlay
 

@@ -31,6 +31,9 @@ export default function PropertiesPanel() {
   const pools = useStore((s) => s.pools)
   const updatePool = useStore((s) => s.updatePool)
   const removePool = useStore((s) => s.removePool)
+  const voids = useStore((s) => s.voids)
+  const updateVoid = useStore((s) => s.updateVoid)
+  const removeVoid = useStore((s) => s.removeVoid)
   const roomMeta = useStore((s) => s.roomMeta)
   const updateRoomMeta = useStore((s) => s.updateRoomMeta)
   const updateWall = useStore((s) => s.updateWall)
@@ -89,6 +92,9 @@ export default function PropertiesPanel() {
   } else if (single?.kind === 'pool') {
     const pool = pools.find((x) => x.id === single.id)
     if (pool) body = <PoolProps pool={pool} onUpdate={updatePool} onRemove={removePool} />
+  } else if (single?.kind === 'void') {
+    const vd = voids.find((x) => x.id === single.id)
+    if (vd) body = <VoidProps vd={vd} onUpdate={updateVoid} onRemove={removeVoid} />
   } else if (single?.kind === 'opening') {
     const o = openings.find((x) => x.id === single.id)
     const wall = o ? walls.find((w) => w.id === o.wallId) : null
@@ -255,6 +261,38 @@ function PoolProps({ pool, onUpdate, onRemove }) {
         className="mt-3 w-full text-xs font-mono px-2 py-1.5 rounded border border-red-800 bg-red-950 text-red-200 hover:bg-red-900"
       >
         {t('pool.delete')}
+      </button>
+    </div>
+  )
+}
+
+function VoidProps({ vd, onUpdate, onRemove }) {
+  const { t } = useTranslation()
+  const size = polygonAreaM2(vd.verts)
+  return (
+    <div>
+      <h3 className="text-gray-200 text-xs uppercase tracking-widest mb-2">{t('void_region.title')}</h3>
+      <label className="block">
+        <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('void_region.name')}</span>
+        <input
+          type="text"
+          value={vd.name ?? ''}
+          onChange={(e) => onUpdate(vd.id, { name: e.target.value })}
+          placeholder={t('void_region.name_placeholder')}
+          className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-sm focus:border-blue-500 focus:outline-none"
+        />
+      </label>
+      <div className="mt-3">
+        <Row label={t('void_region.size')} value={`${Math.abs(size).toFixed(2)} m²`} />
+        <Row label={t('void_region.vertices')} value={vd.verts.length} />
+      </div>
+      <p className="text-[10px] text-gray-500 mt-2 leading-snug">{t('void_region.hint')}</p>
+      <button
+        type="button"
+        onClick={() => onRemove(vd.id)}
+        className="mt-3 w-full text-xs font-mono px-2 py-1.5 rounded border border-red-800 bg-red-950 text-red-200 hover:bg-red-900"
+      >
+        {t('void_region.delete')}
       </button>
     </div>
   )

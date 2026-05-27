@@ -18,7 +18,7 @@ import { getFloorMaterial, resolveFloorMaterialId } from '../components/canvas/f
 import { kelvinToRgb } from '../utils/colorTemp'
 import { isLightingType } from '../components/viewer3d/reconcileFurniture'
 import { computeLevelOffsets } from '../store/slices/levelsSlice'
-import { computeStairHolesForRooms } from '../components/viewer3d/stairFloorHoles'
+import { computeStairHolesForRooms, computeVoidHolesForRooms } from '../components/viewer3d/stairFloorHoles'
 import { DEFAULT_CEILING_COLOR, getCeilingMaterial, resolveCeilingMaterialId } from '../components/canvas/ceilingMaterials'
 import { getCustomModelUrl } from '../utils/customModelUrls'
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
@@ -77,6 +77,7 @@ export default function useThree(containerRef) {
   const customModels  = useStore((s) => s.customModels)
   const areas       = useStore((s) => s.areas)
   const pools       = useStore((s) => s.pools)
+  const voids       = useStore((s) => s.voids)
   const roomMeta    = useStore((s) => s.roomMeta)
   const selection   = useStore((s) => s.selection)
   const lighting    = useStore((s) => s.lighting)
@@ -372,10 +373,26 @@ export default function useThree(containerRef) {
       )
       const floorHolesMap   = arrivingStairs.length  > 0 ? computeStairHolesForRooms(lvRooms, arrivingStairs)  : null
       const ceilHolesMap    = departingStairs.length > 0 ? computeStairHolesForRooms(lvRooms, departingStairs) : null
+
+      // Voids (open-to-above): a void on lv cuts lv's CEILING; a void on the
+      // level directly BELOW lv cuts lv's FLOOR (so the room below opens up).
+      const idx = sortedLevels.findIndex((l) => l.id === lv.id)
+      const belowId = idx > 0 ? sortedLevels[idx - 1].id : null
+      const voidsOnLv  = voids.filter((v) => (v.levelId ?? activeLevel) === lv.id)
+      const voidsBelow = belowId ? voids.filter((v) => (v.levelId ?? activeLevel) === belowId) : []
+      const ceilVoidMap  = voidsOnLv.length  > 0 ? computeVoidHolesForRooms(lvRooms, voidsOnLv)  : null
+      const floorVoidMap = voidsBelow.length > 0 ? computeVoidHolesForRooms(lvRooms, voidsBelow) : null
+
       return lvRooms.map((r) => ({
         ...r,
-        stairHoles:        floorHolesMap ? (floorHolesMap.get(r.id) ?? [])  : [],
-        ceilingStairHoles: ceilHolesMap  ? (ceilHolesMap.get(r.id)  ?? [])  : [],
+        stairHoles: [
+          ...(floorHolesMap ? (floorHolesMap.get(r.id) ?? []) : []),
+          ...(floorVoidMap  ? (floorVoidMap.get(r.id)  ?? []) : []),
+        ],
+        ceilingStairHoles: [
+          ...(ceilHolesMap ? (ceilHolesMap.get(r.id) ?? []) : []),
+          ...(ceilVoidMap  ? (ceilVoidMap.get(r.id)  ?? []) : []),
+        ],
       }))
     })
 
@@ -409,7 +426,7 @@ export default function useThree(containerRef) {
       for (const m of roomMeshes.current.values()) m.visible = false
       for (const m of ceilingMeshes.current.values()) m.visible = false
     }
-  }, [walls, roomMeta, furniture, levels, activeLevel, solo3d, ceilingsVisible, layerRooms])
+  }, [walls, roomMeta, furniture, voids, levels, activeLevel, solo3d, ceilingsVisible, layerRooms])
 
   // ── outdoor areas (floor slabs only — no walls, no ceiling) ──────────────────
   useEffect(() => {

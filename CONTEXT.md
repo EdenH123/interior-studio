@@ -140,6 +140,7 @@ interior-studio/
 │   │       ├── roomsSlice.js
 │   │       ├── areasSlice.js    # outdoor areas (rooms without walls): areas[] + transient areaDraft + add/update/remove + draft actions
 │   │       ├── poolsSlice.js    # pools (water feature): pools[] {verts,name,depth} + transient poolDraft + add/update/remove/movePoolVertices + draft actions
+│   │       ├── voidsSlice.js    # voids (open-to-above): voids[] {verts,name} + transient voidDraft + add/update/remove/moveVoidVertices + draft actions; cuts ceiling X + floor X+1
 │   │       ├── underlaySlice.js
 │   │       ├── viewSlice.js     # show3d + drawStart
 │   │       ├── uiSlice.js       # selection + dragGhost (now carries kind/wallId/position) + toast
@@ -792,6 +793,15 @@ interior-studio/
   - Properties: `PoolProps` (name, **depth slider** 0.3–3 m, surface m²/vertex count, delete). Keyboard: Esc cancels draft, Enter finishes, Del removes a selected pool. i18n `toolbar.tool_pool(_title)` + `pool.*` (en/he).
   - Tests: +6 (`poolsSlice.test.js` ×5, normalizeProject pools ×1). 500 total passing.
   - NOTE: chose a polygon-drawn pool sharing the area UX (per the "dedicated feature" pick) — own entity/tool/3D basin, but reuses the generic polygon components. 3D basin + draw interaction not visually verified in a live browser here; geometry math + slice are unit-tested where possible. Follow-ups: proper offset-outward coping cap, water caustics/reflection, 3D click-to-select.
+
+- [x] Double-height voids + wall-style angle snapping for polygon tools (2026-05-27)
+  - **Voids (open-to-above):** new `void` entity + **Void tool** (5th toolbar button). Draw a polygon on level X; in 3D it cuts a hole in **level X's ceiling** AND the **floor of the level directly above (X+1)**, so part of the room becomes double-height. `voidsSlice.js` mirrors areas/pools (no material); joins HISTORY + persist + normalize (`voids`); `loadProject`/`setActiveTool` clear `voidDraft`.
+  - 3D: `computeVoidHolesForRooms(rooms, voids)` (in `stairFloorHoles.js`) assigns each void's outline (shape-space) as a hole to the room containing its centroid — reuses the existing stair-hole `ShapeGeometry` cutting. `useThree` rooms effect merges void holes into `stairHoles` (floor, from voids on the level below) and `ceilingStairHoles` (ceiling, from voids on this level). Deps gained `voids`.
+  - 2D: voids render as a purple "open above" fill (`Room.jsx`) with per-side labels + reshape handles when selected; `PoolProps`-style `VoidProps` (name, opening m², vertex count, hint, delete). Ride the Rooms layer.
+  - **Angle snapping (area + pool + void):** drawing now locks each segment's angle to 45° from the previous point like walls — Shift = 90°, **Alt/Option = free** — instead of the old 0.1 m grid snap. Unified `polyCfg` + `polyPreview` in CanvasArea drive both the click handler and the draft preview; the close test uses the raw cursor near the first point. (Removed the now-unused `snapArea`/grid-snap.)
+  - i18n: `toolbar.tool_void(_title)` + `void_region.*` (en/he); area/pool tool tooltips note the 45°/Shift/Alt snapping.
+  - Tests: +8 (`voidsSlice.test.js` ×4, `computeVoidHolesForRooms` ×3, normalizeProject void ×1). 508 total passing.
+  - NOTE: 3D hole-cutting + draw interaction not visually verified in a live browser; void-hole assignment + slice are unit-tested, and the cut reuses the verified stair-hole path. A void currently cuts ROOM floors/ceilings above (not area/pool slabs) — fine for the double-height use case. Voids show only on their own level in 2D.
 
 ### 🚧 In Progress
 - (nothing active)

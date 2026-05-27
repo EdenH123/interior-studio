@@ -8,10 +8,12 @@
     "tool_draw": "Draw",
     "tool_area": "Area",
     "tool_pool": "Pool",
+    "tool_void": "Void",
     "tool_select_title": "Select mode — click to select, drag to pan (Space to toggle)",
     "tool_draw_title": "Draw mode — click to place walls (Space to toggle)",
-    "tool_area_title": "Area mode — click out a polygon for an outdoor area (no walls); click the first point or press Enter to finish, Esc to cancel",
-    "tool_pool_title": "Pool mode — click out a polygon for a pool; click the first point or press Enter to finish, Esc to cancel",
+    "tool_area_title": "Area mode — click out a polygon for an outdoor area (no walls); angles snap to 45° (Shift = 90°, Alt = free); click the first point or press Enter to finish, Esc to cancel",
+    "tool_pool_title": "Pool mode — click out a polygon for a pool; angles snap to 45° (Shift = 90°, Alt = free); click the first point or press Enter to finish, Esc to cancel",
+    "tool_void_title": "Void mode — click out an opening for a double-height space (cuts this level's ceiling + the floor above); angles snap to 45° (Shift = 90°, Alt = free); first point / Enter to finish, Esc to cancel",
     "open": "Open",
     "save": "Save",
     "export_png": "Export PNG",
@@ -138,6 +140,15 @@
     "size": "Surface",
     "vertices": "Vertices",
     "delete": "Delete pool"
+  },
+  "void_region": {
+    "title": "Void (open above)",
+    "name": "Name",
+    "name_placeholder": "Untitled void",
+    "size": "Opening",
+    "vertices": "Vertices",
+    "hint": "Cuts this level's ceiling and the floor of the level above, for a double-height space.",
+    "delete": "Delete void"
   },
   "wall": {
     "title": "Wall",

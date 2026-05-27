@@ -9,6 +9,7 @@ import { createOpeningsSlice } from './slices/openingsSlice'
 import { createRoomsSlice } from './slices/roomsSlice'
 import { createAreasSlice } from './slices/areasSlice'
 import { createPoolsSlice } from './slices/poolsSlice'
+import { createVoidsSlice } from './slices/voidsSlice'
 import { createUnderlaySlice } from './slices/underlaySlice'
 import { createViewSlice } from './slices/viewSlice'
 import { createUiSlice } from './slices/uiSlice'
@@ -41,6 +42,7 @@ const HISTORY_SLICE = (state) => ({
   openings: state.openings,
   areas: state.areas,
   pools: state.pools,
+  voids: state.voids,
   roomMeta: state.roomMeta,
   underlay: state.underlay,
 })
@@ -70,6 +72,7 @@ const useStore = create(persist(
     ...createRoomsSlice(set, get),
     ...createAreasSlice(set, get),
     ...createPoolsSlice(set, get),
+    ...createVoidsSlice(set, get),
     ...createUnderlaySlice(set, get),
     ...createViewSlice(set, get),
     ...createUiSlice(set, get),
@@ -93,6 +96,7 @@ const useStore = create(persist(
         drawStart: null,
         areaDraft: null,
         poolDraft: null,
+        voidDraft: null,
         calibration: null,
         dragGhost: null,
       })),
@@ -220,6 +224,7 @@ const useStore = create(persist(
       openings: state.openings,
       areas: state.areas,
       pools: state.pools,
+      voids: state.voids,
       roomMeta: state.roomMeta,
       underlay: state.underlay,
       layers: state.layers,
