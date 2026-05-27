@@ -747,6 +747,11 @@ interior-studio/
   - Tests: +4 in `wallsSlice.test.js` (shared-corner move, non-coincident untouched, batched edge slide, active-level-only). 480 total passing.
   - NOTE: handle drag interaction not visually verified in a live browser here; the `moveWallVertices` math is unit-tested and the handle drag mirrors the existing `ResizeHandle` pattern. Possible follow-up: show handles when a *room* is selected (all its corners/edges at once).
 
+- [x] Fix: clicking the empty background didn't deselect in select mode (2026-05-27)
+  - In select mode nothing cleared the selection on a background click — `useDrawWalls` only calls `clearSelection()` in *draw* mode (it returns early in select mode), and the marquee only acted on a drag. So a selected wall (or any object) stayed selected when you clicked away. Surfaced now that wall editing lives in select mode.
+  - Fix: `useMarquee`'s `onMouseUp` now clears the selection when the press landed on the stage background (`anchor` set) and there was no drag (`active` false). Shape clicks are unaffected (they don't set `anchor`), and dragging a wall edit-handle doesn't deselect (handles `cancelBubble`, so the press never reaches the stage).
+  - Test: new `src/hooks/useMarquee.test.js` (+2) — background click clears selection; a press on a shape leaves it. 482 total passing.
+
 ### 🚧 In Progress
 - (nothing active)
 
