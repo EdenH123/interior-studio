@@ -311,7 +311,7 @@ export default function CanvasArea() {
               return (
                 <Room key={room.id} room={room}
                   selected={isSelected(selection, 'room', room.id)}
-                  fill={fill} listening={drawStart === null} scale={view.scale}
+                  fill={fill} listening={activeTool === 'select'} scale={view.scale}
                   name={meta?.name ?? ''}
                   onSelect={(id) => select('room', id)}
                   onShiftSelect={(id) => addToSelection('room', id)} />
