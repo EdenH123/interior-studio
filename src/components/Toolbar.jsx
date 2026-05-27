@@ -105,7 +105,9 @@ export default function Toolbar() {
         >
           ✏ {t('toolbar.tool_draw')}
         </button>
-        <div className="w-px bg-gray-700" />
+      </div>
+      {/* Region tools — separate group from Select/Draw */}
+      <div className="ms-2 flex rounded border border-gray-700 overflow-hidden">
         <button
           type="button"
           onClick={() => setActiveTool('area')}
