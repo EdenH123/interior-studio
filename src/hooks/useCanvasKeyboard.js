@@ -27,6 +27,7 @@ export default function useCanvasKeyboard() {
   const pushToast = useStore((s) => s.pushToast)
   const toggleShortcuts = useStore((s) => s.toggleShortcuts)
   const toggleActiveTool = useStore((s) => s.toggleActiveTool)
+  const toggle3d = useStore((s) => s.toggle3d)
 
   useEffect(() => {
     const down = (e) => {
@@ -51,6 +52,11 @@ export default function useCanvasKeyboard() {
           else if (kind === 'furniture') removeFurniture(id)
           else if (kind === 'opening') removeOpening(id)
         })
+      }
+      // 'd' toggles 2D ↔ 3D. Skip during walkthrough (W/A/S/D is movement
+      // there) and when a modifier is held (e.g. Ctrl/⌘+D = browser bookmark).
+      if ((e.key === 'd' || e.key === 'D') && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !walkthrough) {
+        toggle3d()
       }
       if (e.key === 'r' || e.key === 'R') {
         selectionItems(selection)
@@ -114,5 +120,5 @@ export default function useCanvasKeyboard() {
     }
     window.addEventListener('keydown', down)
     return () => window.removeEventListener('keydown', down)
-  }, [selection, calibration, walkthrough, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement, furniture, walls, openings, setClipboard, pasteClipboard, pushToast, toggleShortcuts, toggleActiveTool])
+  }, [selection, calibration, walkthrough, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement, furniture, walls, openings, setClipboard, pasteClipboard, pushToast, toggleShortcuts, toggleActiveTool, toggle3d])
 }

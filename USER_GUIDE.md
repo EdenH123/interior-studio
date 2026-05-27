@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- per-room ceiling toggle; room selection fixed on all levels -->
+_Last updated: 2026-05-27_  <!-- D key toggles 2D/3D -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -933,6 +933,7 @@ your cursor position in metres.
 
 | Key | What it does |
 |---|---|
+| `D` | Toggle between the 2D plan and the 3D view |
 | `Esc` | End the current wall chain / clear selection |
 | `Del` or `Backspace` | Delete the selected item(s) |
 | `R` | Rotate selected furniture clockwise 15° |

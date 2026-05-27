@@ -327,6 +327,7 @@
     "walkthrough_3d": "3D Walkthrough",
     "close_hint": "Press Esc or click outside to close",
     "shortcut_toggle_tool": "Toggle Select / Draw mode",
+    "shortcut_toggle_3d": "Toggle 2D / 3D view",
     "shortcut_pan": "Pan canvas",
     "shortcut_zoom": "Zoom in / out",
     "shortcut_cancel": "Cancel / deselect all",
