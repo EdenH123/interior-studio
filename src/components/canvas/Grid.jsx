@@ -1,7 +1,8 @@
+import { memo } from 'react'
 import { Group, Line } from 'react-konva'
 import { GRID_SIZE, WORLD_HALF } from './constants'
 
-export default function Grid() {
+function Grid() {
   const lines = []
   const minor = '#1f2937'
   const major = '#374151'
@@ -34,3 +35,6 @@ export default function Grid() {
 
   return <Group listening={false}>{lines}</Group>
 }
+
+// No props and no store reads, so the 402 grid lines only need building once.
+export default memo(Grid)
