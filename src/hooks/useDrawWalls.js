@@ -37,22 +37,25 @@ export default function useDrawWalls(stageRef, viewScale, shiftDown = false, alt
     if (activeTool === 'select') return
     // Allow shape clicks when a wall chain is in progress, when the click
     // landed on a room polygon (enables starting interior partition walls
-    // by clicking inside an existing room), or when the user is holding Alt
-    // (lets them start a new chain by Alt-clicking on an existing wall — the
-    // start point projects onto the wall, so T-junctions are one click).
+    // by clicking inside an existing room), when it landed on an existing
+    // wall body (in draw mode a wall click starts a new chain from that
+    // point instead of selecting the wall), or when the user is holding Alt.
+    // In all these cases the start point projects onto the wall, so
+    // T-junctions are one click.
     const targetIsRoom = e.target?.getAttr?.('name') === 'room-fill'
-    if (e.target !== stageRef.current && !drawStart && !targetIsRoom && !altDown) return
+    const targetIsWall = e.target?.getAttr?.('name') === 'wall-body'
+    if (e.target !== stageRef.current && !drawStart && !targetIsRoom && !targetIsWall && !altDown) return
     clearSelection()
     const p = stageRef.current.getRelativePointerPosition()
     if (!p) return
     const threshold = SNAP_RADIUS_SCREEN / viewScale
     const snap = findNearestSnapPoint(p, walls, threshold)
     if (!drawStart) {
-      // Endpoint/midpoint snap wins. Otherwise, if Alt+click landed on a
-      // wall body, project the cursor onto that wall so the chain starts
-      // exactly on the wall.
+      // Endpoint/midpoint snap wins. Otherwise, if the click landed on a
+      // wall body (or Alt is held), project the cursor onto that wall so the
+      // chain starts exactly on the wall.
       let start = snap ?? p
-      if (!snap && altDown && e.target !== stageRef.current) {
+      if (!snap && (altDown || targetIsWall) && e.target !== stageRef.current) {
         const wallProj = nearestWallSnap(p, walls, Infinity)
         if (wallProj) start = { x: wallProj.point.x, y: wallProj.point.y }
       }

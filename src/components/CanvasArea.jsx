@@ -238,6 +238,7 @@ export default function CanvasArea() {
               <Wall key={w.id} wall={w}
                 segments={wallSegmentsForRendering(w, layers.openings ? openings : [])}
                 selected={isSelected(selection, 'wall', w.id)}
+                drawMode={activeTool !== 'select'}
                 onClick={(id) => select('wall', id)}
                 onShiftSelect={(id) => addToSelection('wall', id)}
                 onContextMenu={removeWall} />
