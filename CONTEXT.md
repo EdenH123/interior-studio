@@ -691,6 +691,11 @@ interior-studio/
   - `CanvasArea.jsx`: passes `drawMode={activeTool !== 'select'}` to each `<Wall>`.
   - Build green; 452 tests still passing.
 
+- [x] Fix: doors/windows landing on the wrong floor (2026-05-27)
+  - Dropping an opening while an upper level was active could place it on the ground floor. `useOpeningDrop` searched `s.walls` (all levels) for the nearest wall, so a ground-floor wall sitting at the same 2D coordinates as the active-level wall could win the snap — and `addOpening` inherits `wall.levelId`, so the opening landed on the ground floor.
+  - Fix: `useOpeningDrop` now filters walls to the active level (`!w.levelId || w.levelId === activeLevel`) before snapping, matching how `CanvasArea` filters rendered walls. 3D drop (`useFurnitureDrop3D`) was already correct — it raycasts against per-level wall meshes stacked vertically.
+  - Test: new `useOpeningDrop only snaps to walls on the active level` regression test in `flows.test.jsx`. 455 tests passing.
+
 ### 🚧 In Progress
 - (nothing active)
 

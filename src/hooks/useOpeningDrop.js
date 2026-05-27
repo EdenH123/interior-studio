@@ -15,11 +15,17 @@ import { nearestWallSnap } from '../components/canvas/openingGeometry'
 const SNAP_SCREEN_PX = 28 // pointer must be within ~28 screen px of a wall
 
 export default function useOpeningDrop(containerRef, view) {
-  const walls = useStore((s) => s.walls)
+  const allWalls = useStore((s) => s.walls)
+  const activeLevel = useStore((s) => s.activeLevel)
   const addOpening = useStore((s) => s.addOpening)
   const setDragGhostPos = useStore((s) => s.setDragGhostPos)
   const clearDragGhost = useStore((s) => s.clearDragGhost)
   const pushToast = useStore((s) => s.pushToast)
+
+  // Only snap to walls on the active level. Otherwise a wall on a level below
+  // (drawn at the same 2D coordinates) could win the snap, and the opening
+  // would inherit that wall's level — landing on the wrong floor.
+  const walls = allWalls.filter((w) => !w.levelId || w.levelId === activeLevel)
 
   function findSnap(clientX, clientY) {
     const rect = containerRef.current?.getBoundingClientRect()
