@@ -100,12 +100,14 @@ function buildPool(verts, depth) {
   const linerMat = new THREE.MeshStandardMaterial({
     color: LINER_COLOR, roughness: 0.45, metalness: 0, side: THREE.DoubleSide,
   })
-  // Visibly-blue water: mostly opaque (so the basin tiling / world grid below
-  // doesn't read through) with a low-roughness sheen. depthWrite so it occludes
-  // the y=0 grid lines crossing the open pool.
+  // Visibly-blue water. DoubleSide is essential: the surface is a flat shape
+  // rotated so its front face points DOWN, so without it the water is invisible
+  // from above (you'd see straight through to the liner + world grid — the
+  // "no water / tiles" bug). Near-opaque + depthWrite so the y=0 grid crossing
+  // the open pool is fully hidden.
   const waterMat = new THREE.MeshStandardMaterial({
     color: WATER_COLOR, roughness: 0.12, metalness: 0.05,
-    transparent: true, opacity: 0.9, depthWrite: true,
+    transparent: true, opacity: 0.95, depthWrite: true, side: THREE.DoubleSide,
   })
 
   // Walls (coping lip → basin floor)

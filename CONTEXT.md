@@ -91,6 +91,7 @@ interior-studio/
 │   │   │   ├── AreaDraftPreview.jsx # in-progress outdoor-area polygon (lime polyline + cursor segment + fill + vertex dots + live per-segment meter labels)
 │   │   │   ├── AreaEditHandles.jsx  # select-mode area reshape handles: corner circles (move vertex) + edge squares (slide side); index-based, snaps to 0.1 m
 │   │   │   ├── AreaDimensions.jsx   # per-edge floating "X.XX m" labels for an area (reuses WallLengthLabel per side)
+│   │   │   ├── StairArrivalGhost.jsx # 2D dashed footprint + tread lines + "↑ stairs" for a staircase arriving from the level below
 │   │   │   ├── WallEditHandles.jsx  # select-mode wall reshape handles: corner circles (move vertex) + edge square (slide wall); snaps to 0.1 m
 │   │   │   ├── Underlay.jsx        # Konva.Image with drag-when-unlocked + selection
 │   │   │   ├── UnderlayProps.jsx   # PropertiesPanel editor for the underlay (opacity, calibrate, remove, AI trace)
@@ -820,6 +821,13 @@ interior-studio/
   - **Toolbar grouping:** Area / Pool / Void now live in their own bordered button group, separate from Select / Draw.
   - 508 tests still passing (visual/material tweaks + a toolbar layout change).
   - NOTE: not visually verified in a live browser; the water now sits above the y=0 world grid and is mostly opaque, which should hide the grid inside the basin and read as filled water.
+
+- [x] Fix invisible pool water (root cause) + void wall-snap + 2D stair-arrival ghost (2026-05-27)
+  - **Pool water was invisible (the real bug):** the water surface is a flat `ShapeGeometry` rotated `x = π/2`, so its single front face points DOWN — from above you saw the back face (culled) and looked straight through to the white liner + world grid ("no water / tiles"). Fix: `side: THREE.DoubleSide` on the water material (+ opacity 0.95). Now the water renders from above as opaque blue and hides the grid inside the basin. (The earlier raise-above-grid change stays.)
+  - **Void/area/pool wall snapping:** `snapPolyPoint(raw)` in CanvasArea — a polygon point now snaps to a nearby wall endpoint/midpoint (`findNearestSnapPoint`), else onto the nearest wall line (`nearestWallSnap`), else falls back to 45°/Shift-90°/Alt-free angle snap. Lets you trace a void exactly **wall-to-wall**. Used by both the click handler and the live preview dot.
+  - **2D stair-arrival ghost:** stairs from the level directly below that arrive at the active level now show on the upper floor as a dashed violet footprint + tread lines + "↑ stairs" label (`StairArrivalGhost.jsx`), so you can see where the staircase lands / its opening (matches the 3D floor-hole cut). New `arrivingStairs` memo in CanvasArea (reuses the toLevel / level-order arrival rule); rides the Furniture layer.
+  - 508 tests still passing.
+  - NOTE: not visually verified in a live browser. The water fix (DoubleSide) is the clear cause of the reported "no water"; the wall-snap reuses unit-tested helpers; the stair ghost is a 2D overlay using the same arrival rule as the (verified) 3D hole-cut.
 
 ### 🚧 In Progress
 - (nothing active)

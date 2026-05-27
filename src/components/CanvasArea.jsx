@@ -17,12 +17,13 @@ import Wall from './canvas/Wall'
 import WallLengthLabel from './canvas/WallLengthLabel'
 import Opening from './canvas/Opening'
 import Furniture from './canvas/Furniture'
-import { wallSegmentsForRendering } from './canvas/openingGeometry'
+import { wallSegmentsForRendering, nearestWallSnap } from './canvas/openingGeometry'
 import { resolveRailingMount } from './canvas/wallSnapGeometry'
 import DrawPreview from './canvas/DrawPreview'
 import AreaDraftPreview from './canvas/AreaDraftPreview'
 import AreaEditHandles from './canvas/AreaEditHandles'
 import AreaDimensions from './canvas/AreaDimensions'
+import StairArrivalGhost from './canvas/StairArrivalGhost'
 import SnapIndicator from './canvas/SnapIndicator'
 import RotationHandle from './canvas/RotationHandle'
 import ResizeHandle from './canvas/ResizeHandle'
@@ -170,6 +171,22 @@ export default function CanvasArea() {
     const belowWalls = allWalls.filter((w) => w.levelId === belowId)
     return detectRooms(belowWalls)
   }, [levels, activeLevel, allWalls])
+
+  // Stairs from the level below that ARRIVE at the active level — shown in 2D
+  // as a dashed footprint so you can see where the staircase lands / its
+  // opening on the upper floor (matches the floor hole cut in 3D).
+  const arrivingStairs = useMemo(() => {
+    const sorted = [...levels].sort((a, b) => a.order - b.order)
+    const activeIdx = sorted.findIndex((l) => l.id === activeLevel)
+    if (activeIdx <= 0) return []
+    const isStair = (f) => f.stairStyle != null || f.type === 'stairs'
+    return allFurniture.filter((f) => {
+      if (!isStair(f)) return false
+      if (f.toLevel != null) return f.toLevel === activeLevel
+      const fromIdx = sorted.findIndex((l) => l.id === (f.levelId ?? sorted[0]?.id))
+      return fromIdx >= 0 && fromIdx + 1 === activeIdx
+    })
+  }, [levels, activeLevel, allFurniture])
   // Rotation handle only for a single selected furniture item.
   const singleSel = getSingleItem(selection)
   const selectedFurniture = layers.furniture && singleSel?.kind === 'furniture'
@@ -209,9 +226,21 @@ export default function CanvasArea() {
     void: { draft: voidDraft, add: addVoidPoint, finish: finishVoidDraft },
   }
   const polyCfg = POLY_TOOLS[activeTool] ?? null
-  const polyPreview = polyCfg && cursorWorld
-    ? (polyCfg.draft?.length ? snapFn(polyCfg.draft[polyCfg.draft.length - 1], cursorWorld) : cursorWorld)
-    : null
+  // Snap a polygon point to a nearby wall endpoint/midpoint, else onto a wall
+  // line — so voids/areas/pools can be traced exactly wall-to-wall. When no
+  // wall is near, fall back to angle-snapping (45° / Shift 90° / Alt free) from
+  // the previous point. Returns the world point to drop.
+  const snapPolyPoint = (raw) => {
+    if (!raw) return raw
+    const thr = SNAP_RADIUS_SCREEN / view.scale
+    const end = findNearestSnapPoint(raw, walls, thr)
+    if (end) return { x: end.x, y: end.y }
+    const body = nearestWallSnap(raw, walls, thr)
+    if (body) return { x: body.point.x, y: body.point.y }
+    const last = polyCfg?.draft?.length ? polyCfg.draft[polyCfg.draft.length - 1] : null
+    return last ? snapFn(last, raw) : raw
+  }
+  const polyPreview = polyCfg && cursorWorld ? snapPolyPoint(cursorWorld) : null
 
   return (
     <main
@@ -245,15 +274,15 @@ export default function CanvasArea() {
               }
             }
             // Polygon tools (area / pool / void): each background click drops a
-            // vertex. Angles lock to 45° from the previous point like walls
-            // (Shift = 90°, Alt/Option = free). Clicking near the first point —
-            // or pressing Enter — closes the loop.
+            // vertex. Points snap to nearby wall endpoints/lines (trace a void
+            // wall-to-wall), else lock to 45° from the previous point (Shift =
+            // 90°, Alt/Option = free). Clicking near the first point — or
+            // pressing Enter — closes the loop.
             if (polyCfg && e.evt.button === 0 && e.target === stageRef.current) {
               const raw = stageRef.current?.getRelativePointerPosition()
               if (raw) {
                 const d = polyCfg.draft
-                const last = d?.[d.length - 1]
-                const p = last ? snapFn(last, raw) : raw
+                const p = snapPolyPoint(raw)
                 if (d && d.length >= 3) {
                   const first = d[0]
                   if (Math.hypot(raw.x - first.x, raw.y - first.y) < AREA_CLOSE_PX / view.scale) {
@@ -303,6 +332,9 @@ export default function CanvasArea() {
                 dashEnabled
                 listening={false}
               />
+            ))}
+            {layers.furniture && arrivingStairs.map((s) => (
+              <StairArrivalGhost key={`stair-up-${s.id}`} item={s} scale={view.scale} />
             ))}
             {layers.rooms && rooms.map((room) => {
               const meta = roomMeta[room.id]
