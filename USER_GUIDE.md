@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- first-run empty-state hint, keyboard focus rings, IndexedDB persistence -->
+_Last updated: 2026-05-27_  <!-- draw mode: click an existing wall to start a new wall from that point -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -55,6 +55,14 @@ When the marker is visible, your next click will lock to that exact
 point instead of wherever the cursor was. This makes it easy to close
 rooms (snap back to where you started) and to connect walls cleanly to
 existing geometry without aiming.
+
+### Starting a wall on an existing wall
+
+In **Draw** mode, clicking anywhere along an existing wall starts a new
+wall from that exact point on the wall (it does **not** select the wall).
+This makes T-junctions and interior partitions a single click — start on
+the wall, then click again to draw away from it. To select a wall and
+edit its properties instead, switch to **Select** mode and click it.
 
 ### Wall angle snapping
 

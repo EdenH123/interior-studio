@@ -683,6 +683,14 @@ interior-studio/
   - Tests: `fake-indexeddb` added as a devDependency and imported in `src/test/setup.js`; new `idbStorage.test.js` covers round-trip + the localStorage→IDB migration. 446 → 452 passing.
   - Shipped as its own PR for review (not auto-merged) — data-safety-sensitive.
 
+- [x] Draw mode: click an existing wall to start a new wall from that point (2026-05-27)
+  - Previously, clicking a wall in draw mode bailed out of `useDrawWalls` and let `Wall.jsx`'s `onClick` select the wall (showing properties, like select mode). The only way to start a chain on a wall was Alt+click.
+  - Now a plain click on a wall body in draw mode starts a new chain projected onto that wall (the former Alt behaviour, made default). Alt is still honoured and still also frees the angle snap; select mode is unchanged (walls still select normally there).
+  - `Wall.jsx`: each segment `<Line>` tagged `name="wall-body"`; new `drawMode` prop makes the click skip selection (`if (drawMode || e.evt.altKey) return`).
+  - `useDrawWalls.js`: detects `targetIsWall` via the `wall-body` name; first-click bail no longer triggers on wall targets, and the project-onto-wall start point now applies for wall clicks as well as Alt.
+  - `CanvasArea.jsx`: passes `drawMode={activeTool !== 'select'}` to each `<Wall>`.
+  - Build green; 452 tests still passing.
+
 ### 🚧 In Progress
 - (nothing active)
 

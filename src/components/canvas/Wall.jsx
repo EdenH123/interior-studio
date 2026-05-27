@@ -9,7 +9,7 @@ import { wallColorFor } from './wallMaterials'
 //
 // Selection + delete handlers live on the Group so clicks on any segment
 // of the wall behave identically.
-export default function Wall({ wall, segments, onContextMenu, onClick, onShiftSelect, selected }) {
+export default function Wall({ wall, segments, onContextMenu, onClick, onShiftSelect, selected, drawMode }) {
   const stroke = selected ? '#3b82f6' : wallColorFor(wall)
   const sw = WALL_THICKNESS
   const hit = Math.max(WALL_THICKNESS, 16)
@@ -25,10 +25,10 @@ export default function Wall({ wall, segments, onContextMenu, onClick, onShiftSe
       onContextMenu={(e) => { e.evt.preventDefault(); onContextMenu?.(wall.id) }}
       onClick={(e) => {
         if (e.evt.button === 0) {
-          // Alt+click on a wall starts a new draw chain from the projected
-          // point on the wall (handled by the stage's onMouseDown). Skip
-          // selection here so the click only starts drawing.
-          if (e.evt.altKey) return
+          // In draw mode (or with Alt held) a wall click starts a new draw
+          // chain from the projected point on the wall, handled by the
+          // stage's onMouseDown. Skip selection here so the click only draws.
+          if (drawMode || e.evt.altKey) return
           if (e.evt.shiftKey) onShiftSelect?.(wall.id)
           else onClick?.(wall.id)
         }
@@ -37,6 +37,7 @@ export default function Wall({ wall, segments, onContextMenu, onClick, onShiftSe
       {segs.map((s, i) => (
         <Line
           key={i}
+          name="wall-body"
           points={[s.x1, s.y1, s.x2, s.y2]}
           stroke={stroke} strokeWidth={sw} lineCap="square"
           hitStrokeWidth={hit}
