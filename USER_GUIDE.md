@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- double-height voids; wall-style angle snapping; pool cut into ground + coping -->
+_Last updated: 2026-05-27_  <!-- pool water fix; void wall-snap; 2D stair-arrival ghost on upper floors -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -519,7 +519,17 @@ overlook. The rest of the room keeps its normal height.
 
 Tip: the void cuts the **room directly above** it. So draw your upper
 floor first, then mark the void on the lower floor where you want the
-slab removed. Select a void to rename, reshape, or delete it.
+slab removed. Select a void to rename, reshape, or delete it. While
+drawing a void (or an area/pool), points **snap to nearby wall corners and
+wall lines**, so you can trace an opening exactly wall-to-wall.
+
+## Seeing the floor below
+
+When you're on an upper level, a staircase that **arrives from the level
+below** shows on the canvas as a dashed footprint with tread lines and an
+"↑ stairs" label — so you can see where the stairs land and place things
+around the opening. (Detected rooms on the level below also show as faint
+dashed outlines.)
 
 ## Floor-plan underlay
 
