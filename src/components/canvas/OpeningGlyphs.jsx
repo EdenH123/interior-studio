@@ -27,6 +27,30 @@ export function DoorGlyph({ widthPx, scale, selected, swingDir = 'left', openSid
   )
 }
 
+export function PivotDoorGlyph({ widthPx, scale, selected, openSide = 'front' }) {
+  const half = widthPx / 2
+  const stroke = selected ? '#3b82f6' : '#e5e7eb'
+  const sw = selected ? 2 / scale : 1.5 / scale
+  const dot = 3 / scale
+  const sign = openSide === 'back' ? 1 : -1
+  // Two quarter arcs (one each side of the centre pivot) — the panel halves
+  // sweep in opposite directions, the signature of a centre-pivot door.
+  const arcA = `M ${-half} 0 A ${half} ${half} 0 0 ${sign < 0 ? 1 : 0} 0 ${sign * half}`
+  const arcB = `M ${half} 0 A ${half} ${half} 0 0 ${sign < 0 ? 0 : 1} 0 ${-sign * half}`
+  return (
+    <Group listening={false}>
+      <Line points={[-half, -4 / scale, -half, 4 / scale]} stroke={stroke} strokeWidth={sw} />
+      <Line points={[half, -4 / scale, half, 4 / scale]} stroke={stroke} strokeWidth={sw} />
+      {/* Closed panel lies along the wall */}
+      <Line points={[-half, 0, half, 0]} stroke={stroke} strokeWidth={sw} />
+      <Path data={arcA} stroke={stroke} strokeWidth={1 / scale} opacity={0.5} fill="" />
+      <Path data={arcB} stroke={stroke} strokeWidth={1 / scale} opacity={0.5} fill="" />
+      {/* Pivot point at centre */}
+      <Rect x={-dot} y={-dot} width={dot * 2} height={dot * 2} cornerRadius={dot} fill={stroke} />
+    </Group>
+  )
+}
+
 export function DoubleDoorGlyph({ widthPx, scale, selected, openSide = 'front' }) {
   const half = widthPx / 2
   const qtr = widthPx / 4

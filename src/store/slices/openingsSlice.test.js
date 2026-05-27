@@ -150,6 +150,12 @@ describe('openingsSlice.toggleDoorOpen', () => {
     expect(store.getState().openings[0].open).toBe(false)
   })
 
+  it('a pivot door is a door variant: gets open:false + openSide default', () => {
+    const id = store.getState().addOpening('door-pivot', wallId, 0.4).id
+    const o = store.getState().openings.find((x) => x.id === id)
+    expect(o).toMatchObject({ type: 'door-pivot', open: false, openSide: 'front' })
+  })
+
   it('new windows have no open field', () => {
     const wid = store.getState().addOpening('window', wallId, 0.8).id
     const win = store.getState().openings.find((o) => o.id === wid)

@@ -765,6 +765,13 @@ interior-studio/
   - Tests: +9 (`areasSlice.test.js` ×8, normalizeProject area backfill ×1). 491 total passing.
   - NOTE: 2D draw/select/edit verified via store + unit tests; the canvas-click interaction and 3D slab not visually verified in a live browser here. Follow-ups: dedicated "Areas" layer toggle; vertex-edit handles for areas (reuse the wall handle pattern); 3D click-to-select an area.
 
+- [x] Pivot door (centre-pivot opening type) (2026-05-27)
+  - New `door-pivot` opening (catalog: "Pivot Door", 1.0 × 2.1 m). The panel rotates about its own **vertical centreline** (pivot axis at the opening centre), opening 90°; `openSide` (front/back) flips the direction. Distinct from the hinged door (edge hinge) and sliding door.
+  - Reuses the whole door pipeline: it's a `door*` type so it gets `open:false` + `openSide` defaults (openingsSlice), the CSG wall hole, the door casing, and the 3D click-to-toggle (kind `'door'`). New 3D branch in `reconcileDoors` builds a centred panel + a slim metal pivot post + a knob; animates via the default `group.rotation.y` path in `tickDoorAnims`.
+  - 2D: new `PivotDoorGlyph` (jambs + closed panel line + two opposite quarter-arcs + a centre pivot dot) wired in `Opening.jsx`. Properties: `OpeningProps` now shows the "Opens toward" (openSide) control for `door-pivot` too.
+  - Sidebar lists it automatically (maps the catalog). Tests: openingsSlice pivot-defaults ×1; Sidebar opening count 9→10 + asserts the "Pivot Door" tile. 492 total passing.
+  - NOTE: 3D pivot animation not visually verified in a live browser here; it reuses the hinged-door rotate/anim path (unit-tested defaults) with the pivot moved to centre. Chose a centre-pivot (iconic, visually distinct); an offset pivot (mostly-into-room) is a small tweak if preferred.
+
 ### 🚧 In Progress
 - (nothing active)
 

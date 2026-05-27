@@ -576,6 +576,64 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
       group.rotation.y = wallYaw
       group.visible = visible
 
+    } else if (o.type === 'door-pivot') {
+      // Centre-pivot door: the panel rotates about its own vertical centreline
+      // (the pivot axis sits at the opening centre). `openSide` flips which way
+      // it swings. Reuses the default (group.rotation.y) branch in tickDoorAnims.
+      const sideSign    = o.openSide === 'back' ? -1 : 1
+      const closedAngle = wallYaw
+      const openAngle   = wallYaw + sideSign * Math.PI / 2
+      const targetAngle = o.open ? openAngle : closedAngle
+      const pivotFp = `${matFp}:${o.openSide ?? 'front'}:${o.width.toFixed(3)}:${o.height.toFixed(3)}`
+
+      let group = meshMap.get(o.id)
+      if (!group || group.userData.swingFp !== pivotFp) {
+        if (group) { scene.remove(group); disposeMeshes(group); doorAnims.delete(o.id) }
+
+        const panel = new THREE.Mesh(
+          new THREE.BoxGeometry(o.width, o.height, DOOR_THICKNESS),
+          buildPanelMaterial(materialId, doorColor),
+        )
+        panel.position.set(0, o.height / 2, 0)   // centred on the pivot axis
+        panel.castShadow = true
+        panel.receiveShadow = true
+
+        group = new THREE.Group()
+        group.userData.kind    = 'door'
+        group.userData.id      = o.id
+        group.userData.matFp   = matFp
+        group.userData.swingFp = pivotFp
+        group.userData.panel   = panel
+        group.add(panel)
+
+        // Slim metal pivot post on the axis so the pivot reads even when closed.
+        const postMat = new THREE.MeshStandardMaterial({ color: 0x6a6a6a, roughness: 0.4, metalness: 0.6 })
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, o.height, 10), postMat)
+        post.position.set(0, o.height / 2, 0)
+        post.castShadow = true
+        group.add(post)
+
+        // Knob near one edge of the panel.
+        attachKnobPair(group, o.width / 2 - 0.08, 1.0)
+        group.rotation.y = targetAngle
+        group.userData.targetAngle = targetAngle
+        scene.add(group)
+        meshMap.set(o.id, group)
+      } else {
+        if (group.userData.matFp !== matFp) {
+          const panel = group.userData.panel ?? group.children[0]
+          if (panel?.material) { panel.material.dispose(); panel.material = buildPanelMaterial(materialId, doorColor) }
+          group.userData.matFp = matFp
+        }
+        const prev = group.userData.targetAngle
+        if (prev !== targetAngle) {
+          doorAnims.set(o.id, { group, startAngle: group.rotation.y, targetAngle, startTime: performance.now() })
+          group.userData.targetAngle = targetAngle
+        }
+      }
+      group.position.set(openCX, yOffset, openCZ)  // pivot at opening centre
+      group.visible = visible
+
     } else {
       // All window-* types: raised by sill height, centred on opening.
       const sillH = o.sillHeight ?? 0.9

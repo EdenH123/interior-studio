@@ -2,7 +2,7 @@ import { Group, Rect } from 'react-konva'
 import { PIXELS_PER_METER } from './constants'
 import { openingPlacement, projectOntoWall, wallLengthPx } from './openingGeometry'
 import {
-  DoorGlyph, DoubleDoorGlyph, SlidingDoorGlyph,
+  DoorGlyph, DoubleDoorGlyph, SlidingDoorGlyph, PivotDoorGlyph,
   WindowGlyph, FixedWindowGlyph, CasementGlyph, ArchedWindowGlyph, OpenArchGlyph,
 } from './OpeningGlyphs'
 
@@ -72,6 +72,7 @@ export default function Opening({ opening, wall, view, selected, onSelect, onShi
       {opening.type === 'door'           && <DoorGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} swingDir={opening.swingDir ?? 'left'} openSide={opening.openSide ?? 'front'} />}
       {opening.type === 'door-double'   && <DoubleDoorGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} openSide={opening.openSide ?? 'front'} />}
       {opening.type === 'door-sliding'  && <SlidingDoorGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} swingDir={opening.swingDir ?? 'left'} />}
+      {opening.type === 'door-pivot'    && <PivotDoorGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} openSide={opening.openSide ?? 'front'} />}
       {opening.type === 'window'        && <WindowGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
       {opening.type === 'window-fixed'  && <FixedWindowGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
       {opening.type === 'window-casement' && <CasementGlyph widthPx={p.widthPx} scale={view.scale} selected={selected} />}
