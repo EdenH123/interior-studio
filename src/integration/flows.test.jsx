@@ -9,7 +9,9 @@ import { renderHook, act } from '@testing-library/react'
 import useStore from '../store/useStore'
 import { buildExportData, validateImport } from '../utils/projectIO'
 import useFurnitureDrop from '../hooks/useFurnitureDrop'
+import useOpeningDrop from '../hooks/useOpeningDrop'
 import { FURNITURE_DRAG_MIME } from '../components/Sidebar'
+import { OPENING_DRAG_MIME } from '../components/canvas/openingsCatalog'
 import PropertiesPanel from '../components/PropertiesPanel'
 import useDrawWalls from '../hooks/useDrawWalls'
 
@@ -140,6 +142,40 @@ describe('Furniture drop flow', () => {
     expect(furniture[0].type).toBe('sofa')
     expect(furniture[0].x).toBe(150)
     expect(furniture[0].y).toBe(200)
+  })
+
+  // Regression: a window dropped while an upper level is active must snap to
+  // the upper level's wall, not a ground-floor wall at the same 2D coords.
+  it('useOpeningDrop only snaps to walls on the active level', () => {
+    // Ground-floor wall and an upper-level wall at the SAME 2D coordinates.
+    const ground = useStore.getState().activeLevel
+    useStore.getState().addWall(0, 0, 400, 0) // gets ground levelId
+    const groundWallId = useStore.getState().walls[0].id
+
+    useStore.getState().addLevel()
+    const upper = useStore.getState().levels.find((l) => l.id !== ground).id
+    useStore.getState().setActiveLevel(upper)
+    useStore.getState().addWall(0, 0, 400, 0) // gets upper levelId
+    const upperWallId = useStore.getState().walls.find((w) => w.id !== groundWallId).id
+
+    const view = { scale: 1, x: 0, y: 0 }
+    const { result } = renderHook(() => {
+      const ref = { current: { getBoundingClientRect: () => ({ left: 0, top: 0 }) } }
+      return useOpeningDrop(ref, view)
+    })
+
+    act(() => {
+      result.current.onDrop({
+        dataTransfer: { getData: (t) => (t === OPENING_DRAG_MIME ? 'window' : ''), types: [OPENING_DRAG_MIME] },
+        clientX: 200, clientY: 0, // on the wall line at the midpoint
+        preventDefault: vi.fn(),
+      })
+    })
+
+    const { openings } = useStore.getState()
+    expect(openings).toHaveLength(1)
+    expect(openings[0].wallId).toBe(upperWallId)
+    expect(openings[0].levelId).toBe(upper)
   })
 })
 
