@@ -105,7 +105,8 @@ interior-studio/
 │   │       ├── sceneReconcilers.js  # reconcileWalls (CSG cuts + painted overlay fallback) + reconcileRooms + Group-safe disposeAll; re-exports reconcileFurniture
 │   │       ├── wallCSG.js           # three-bvh-csg helper: builds wall BoxGeometry minus opening boxes; throws on failure
 │   │       ├── reconcileFurniture.js  # Group-wrapped furniture: box fallback ↔ loaded GLB upgrade in-place
-│   │       ├── reconcileDoors.js    # reconcileDoors + tickDoorAnims — hinged door panel Groups; click toggles open/closed with 300ms smoothstep animation
+│   │       ├── reconcileDoors.js    # reconcileDoors + tickDoorAnims — hinged/pivot/double/sliding door + window Groups; click toggles open/closed with 300ms smoothstep animation
+│   │       ├── reconcilePools.js    # reconcilePools — recessed water basin: wall skirt + floor slab + translucent water surface; rebuilt on verts/depth change
 │   │       ├── furnitureModelCache.js # pure-JS module: cache + getModelStatus + isModelLoaded + onceModelLoaded (no three import; safe to use from PropertiesPanel)
 │   │       ├── furnitureModels.js     # three-side helpers: GLTFLoader, cloneLoadedModel (deep clone materials), fitToBox; re-exports cache getters
 │   │       ├── selectionHighlight.js # applySelectionHighlight (traverse-based) + setObjectEmissive
@@ -138,6 +139,7 @@ interior-studio/
 │   │       ├── openingsSlice.js # doors + windows on walls — addOpening/updateOpening/removeOpening/toggleDoorOpen; door items have open:false default
 │   │       ├── roomsSlice.js
 │   │       ├── areasSlice.js    # outdoor areas (rooms without walls): areas[] + transient areaDraft + add/update/remove + draft actions
+│   │       ├── poolsSlice.js    # pools (water feature): pools[] {verts,name,depth} + transient poolDraft + add/update/remove/movePoolVertices + draft actions
 │   │       ├── underlaySlice.js
 │   │       ├── viewSlice.js     # show3d + drawStart
 │   │       ├── uiSlice.js       # selection + dragGhost (now carries kind/wallId/position) + toast
@@ -781,6 +783,15 @@ interior-studio/
   - New components: `AreaEditHandles.jsx` (mirrors `WallEditHandles`, index-based) + `AreaDimensions.jsx` (reuses `WallLengthLabel` per edge). `AreaDraftPreview` gains live segment labels. `CanvasArea` renders handles for the selected area and dimension labels for every area (on the Rooms layer).
   - Tests: +2 (`moveAreaVertices` moves by index / ignores out-of-range). 494 total passing.
   - NOTE: drag interaction + labels not visually verified in a live browser here; `moveAreaVertices` is unit-tested and the handles mirror the verified wall-handle pattern.
+
+- [x] Pools — dedicated water feature (2026-05-27)
+  - New `pool` entity + **Pool tool** (4th toolbar button): draw a polygon exactly like an area (click corners, click the first / Enter to close, Esc to cancel). A pool is `{ id, verts, name, depth, levelId }` (default depth 1.5 m).
+  - `poolsSlice.js` mirrors `areasSlice` (+ `depth`): `pools` + transient `poolDraft`, `addPool`/`updatePool`/`removePool`, `movePoolVertices`, draft actions. Joins `HISTORY_SLICE` + persist `partialize`; `normalizeProjectData` backfills `levelId`; `loadProject`/`setActiveTool` clear `poolDraft`.
+  - 3D: new `reconcilePools.js` builds a **recessed basin** — a vertical wall skirt from a small coping lip (+0.06 m) down to the basin floor (−depth), a basin-floor slab, and a translucent blue water surface just below the rim (`MeshPhysicalMaterial`, transmission). `useThree` gains `poolMeshes` + an effect on `[pools, levels, activeLevel, solo3d, layerRooms]`; disposed on unmount.
+  - 2D: pools render as a blue water fill (reuses `Room.jsx`), with per-side meter labels (`AreaDimensions`) and reshape handles when selected (`AreaEditHandles`, via `movePoolVertices`). `AreaDraftPreview` parameterized with a color palette so the Pool tool previews in water-blue. Pools ride the **Rooms** layer.
+  - Properties: `PoolProps` (name, **depth slider** 0.3–3 m, surface m²/vertex count, delete). Keyboard: Esc cancels draft, Enter finishes, Del removes a selected pool. i18n `toolbar.tool_pool(_title)` + `pool.*` (en/he).
+  - Tests: +6 (`poolsSlice.test.js` ×5, normalizeProject pools ×1). 500 total passing.
+  - NOTE: chose a polygon-drawn pool sharing the area UX (per the "dedicated feature" pick) — own entity/tool/3D basin, but reuses the generic polygon components. 3D basin + draw interaction not visually verified in a live browser here; geometry math + slice are unit-tested where possible. Follow-ups: proper offset-outward coping cap, water caustics/reflection, 3D click-to-select.
 
 ### 🚧 In Progress
 - (nothing active)

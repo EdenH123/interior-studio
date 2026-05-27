@@ -61,6 +61,12 @@ describe('normalizeProjectData', () => {
     expect(out.areas[0].levelId).toBe(GROUND_FLOOR_ID)
   })
 
+  it('coerces + backfills pools', () => {
+    expect(normalizeProjectData({}).pools).toEqual([])
+    const out = normalizeProjectData({ pools: [{ id: 'p1', verts: [], depth: 1.5 }] })
+    expect(out.pools[0].levelId).toBe(GROUND_FLOOR_ID)
+  })
+
   it('tolerates null/undefined input', () => {
     const out = normalizeProjectData(undefined)
     expect(out.walls).toEqual([])
