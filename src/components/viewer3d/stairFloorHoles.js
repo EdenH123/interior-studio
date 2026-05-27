@@ -79,3 +79,27 @@ export function computeStairHolesForRooms(rooms, stairs) {
   }
   return result
 }
+
+// Returns Map<roomId, Array<cornerArrays>> for void (open-to-above) regions.
+// Each void whose centroid falls inside a room contributes its full outline
+// (converted to shape-space metres) as a hole in that room's floor/ceiling.
+//
+// `rooms` — [{ id, verts:[{x,y}] }] (Konva px). `voids` — [{ verts:[{x,y}] }].
+export function computeVoidHolesForRooms(rooms, voids) {
+  const result = new Map()
+  for (const room of rooms) {
+    const holes = []
+    const scaledVerts = room.verts.map((v) => ({ x: v.x * K2T, y: v.y * K2T }))
+    for (const vd of voids) {
+      if (!vd.verts || vd.verts.length < 3) continue
+      const n = vd.verts.length
+      const cx = (vd.verts.reduce((s, v) => s + v.x, 0) / n) * K2T
+      const cy = (vd.verts.reduce((s, v) => s + v.y, 0) / n) * K2T
+      if (pointInPolygon(cx, cy, scaledVerts)) {
+        holes.push(vd.verts.map((v) => ({ x: v.x * K2T, y: v.y * K2T })))
+      }
+    }
+    result.set(room.id, holes)
+  }
+  return result
+}

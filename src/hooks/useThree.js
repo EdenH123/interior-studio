@@ -13,12 +13,12 @@ import { attachPicking } from '../components/viewer3d/picking'
 import { attachFurnitureDrag } from '../components/viewer3d/furnitureDrag'
 import { detectRooms } from '../components/canvas/roomDetection'
 import { resolveRailingMount } from '../components/canvas/wallSnapGeometry'
-import { reconcilePools } from '../components/viewer3d/reconcilePools'
+import { reconcilePools, buildGroundGeometry } from '../components/viewer3d/reconcilePools'
 import { getFloorMaterial, resolveFloorMaterialId } from '../components/canvas/floorMaterials'
 import { kelvinToRgb } from '../utils/colorTemp'
 import { isLightingType } from '../components/viewer3d/reconcileFurniture'
 import { computeLevelOffsets } from '../store/slices/levelsSlice'
-import { computeStairHolesForRooms } from '../components/viewer3d/stairFloorHoles'
+import { computeStairHolesForRooms, computeVoidHolesForRooms } from '../components/viewer3d/stairFloorHoles'
 import { DEFAULT_CEILING_COLOR, getCeilingMaterial, resolveCeilingMaterialId } from '../components/canvas/ceilingMaterials'
 import { getCustomModelUrl } from '../utils/customModelUrls'
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
@@ -70,6 +70,7 @@ export default function useThree(containerRef) {
   const lightMap    = useRef(new Map())
   const sunRef      = useRef(null)
   const ambientRef  = useRef(null)
+  const floorRef    = useRef(null)
 
   const walls       = useStore((s) => s.walls)
   const openings    = useStore((s) => s.openings)
@@ -77,6 +78,7 @@ export default function useThree(containerRef) {
   const customModels  = useStore((s) => s.customModels)
   const areas       = useStore((s) => s.areas)
   const pools       = useStore((s) => s.pools)
+  const voids       = useStore((s) => s.voids)
   const roomMeta    = useStore((s) => s.roomMeta)
   const selection   = useStore((s) => s.selection)
   const lighting    = useStore((s) => s.lighting)
@@ -159,9 +161,10 @@ export default function useThree(containerRef) {
     sunRef.current = sun
     scene.add(sun)
 
-    // Floor + grid.
+    // Floor + grid. Built as a ShapeGeometry (rotated like room floors) so a
+    // reactive effect can cut pool footprints out of it — see the pools effect.
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(FLOOR_SIZE, FLOOR_SIZE),
+      buildGroundGeometry(FLOOR_SIZE, []),
       new THREE.MeshStandardMaterial({
         color: 0x111827,
         roughness: 0.6,
@@ -169,9 +172,10 @@ export default function useThree(containerRef) {
         side: THREE.DoubleSide,
       }),
     )
-    floor.rotation.x    = -Math.PI / 2
+    floor.rotation.x    = Math.PI / 2
     floor.position.y    = -0.001
     floor.receiveShadow = true
+    floorRef.current    = floor
     scene.add(floor)
     scene.add(new THREE.GridHelper(FLOOR_SIZE, FLOOR_SIZE, 0x374151, 0x1f2937))
 
@@ -372,10 +376,26 @@ export default function useThree(containerRef) {
       )
       const floorHolesMap   = arrivingStairs.length  > 0 ? computeStairHolesForRooms(lvRooms, arrivingStairs)  : null
       const ceilHolesMap    = departingStairs.length > 0 ? computeStairHolesForRooms(lvRooms, departingStairs) : null
+
+      // Voids (open-to-above): a void on lv cuts lv's CEILING; a void on the
+      // level directly BELOW lv cuts lv's FLOOR (so the room below opens up).
+      const idx = sortedLevels.findIndex((l) => l.id === lv.id)
+      const belowId = idx > 0 ? sortedLevels[idx - 1].id : null
+      const voidsOnLv  = voids.filter((v) => (v.levelId ?? activeLevel) === lv.id)
+      const voidsBelow = belowId ? voids.filter((v) => (v.levelId ?? activeLevel) === belowId) : []
+      const ceilVoidMap  = voidsOnLv.length  > 0 ? computeVoidHolesForRooms(lvRooms, voidsOnLv)  : null
+      const floorVoidMap = voidsBelow.length > 0 ? computeVoidHolesForRooms(lvRooms, voidsBelow) : null
+
       return lvRooms.map((r) => ({
         ...r,
-        stairHoles:        floorHolesMap ? (floorHolesMap.get(r.id) ?? [])  : [],
-        ceilingStairHoles: ceilHolesMap  ? (ceilHolesMap.get(r.id)  ?? [])  : [],
+        stairHoles: [
+          ...(floorHolesMap ? (floorHolesMap.get(r.id) ?? []) : []),
+          ...(floorVoidMap  ? (floorVoidMap.get(r.id)  ?? []) : []),
+        ],
+        ceilingStairHoles: [
+          ...(ceilHolesMap ? (ceilHolesMap.get(r.id) ?? []) : []),
+          ...(ceilVoidMap  ? (ceilVoidMap.get(r.id)  ?? []) : []),
+        ],
       }))
     })
 
@@ -409,7 +429,7 @@ export default function useThree(containerRef) {
       for (const m of roomMeshes.current.values()) m.visible = false
       for (const m of ceilingMeshes.current.values()) m.visible = false
     }
-  }, [walls, roomMeta, furniture, levels, activeLevel, solo3d, ceilingsVisible, layerRooms])
+  }, [walls, roomMeta, furniture, voids, levels, activeLevel, solo3d, ceilingsVisible, layerRooms])
 
   // ── outdoor areas (floor slabs only — no walls, no ceiling) ──────────────────
   useEffect(() => {
@@ -439,6 +459,12 @@ export default function useThree(containerRef) {
     reconcilePools(stateRef.current.scene, pools, poolMeshes.current, levelOffsets,
       { solo: solo3d, activeLevelId: activeLevel })
     if (!layerRooms) for (const m of poolMeshes.current.values()) m.visible = false
+    // Cut the pool footprints out of the ground plane so the recessed basins
+    // are visible from above instead of hidden under it.
+    if (floorRef.current) {
+      floorRef.current.geometry.dispose()
+      floorRef.current.geometry = buildGroundGeometry(FLOOR_SIZE, pools)
+    }
   }, [pools, levels, activeLevel, solo3d, layerRooms])
 
   // ── selection highlight ──────────────────────────────────────────────────────

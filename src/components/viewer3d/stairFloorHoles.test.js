@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { stairHoleCorners, holesFp, computeStairHolesForRooms } from './stairFloorHoles'
+import { stairHoleCorners, holesFp, computeStairHolesForRooms, computeVoidHolesForRooms } from './stairFloorHoles'
 
 const K2T = 0.02
 
@@ -127,5 +127,28 @@ describe('computeStairHolesForRooms', () => {
   it('returns a Map entry for every room regardless of holes', () => {
     const result = computeStairHolesForRooms([squareRoom], [])
     expect(result.has('room1')).toBe(true)
+  })
+})
+
+describe('computeVoidHolesForRooms', () => {
+  // A 10×10 m room (500×500 px) at the origin.
+  const room = { id: 'r1', verts: [{ x: 0, y: 0 }, { x: 500, y: 0 }, { x: 500, y: 500 }, { x: 0, y: 500 }] }
+
+  it('adds the void outline (shape-space) as a hole when its centroid is inside the room', () => {
+    const vd = { verts: [{ x: 100, y: 100 }, { x: 200, y: 100 }, { x: 200, y: 200 }, { x: 100, y: 200 }] }
+    const map = computeVoidHolesForRooms([room], [vd])
+    const holes = map.get('r1')
+    expect(holes).toHaveLength(1)
+    // First corner converted to metres (×0.02).
+    expect(holes[0][0]).toEqual({ x: 2, y: 2 })
+  })
+
+  it('skips a void whose centroid falls outside the room', () => {
+    const vd = { verts: [{ x: 900, y: 900 }, { x: 950, y: 900 }, { x: 925, y: 950 }] }
+    expect(computeVoidHolesForRooms([room], [vd]).get('r1')).toEqual([])
+  })
+
+  it('ignores degenerate voids (< 3 verts)', () => {
+    expect(computeVoidHolesForRooms([room], [{ verts: [{ x: 1, y: 1 }] }]).get('r1')).toEqual([])
   })
 })

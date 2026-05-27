@@ -37,17 +37,17 @@ import CalibrationPrompt from './canvas/CalibrationPrompt'
 import { detectRooms } from './canvas/roomDetection'
 import { DEFAULT_ROOM_FILL, getFloorMaterial, materialOverlayFill } from './canvas/floorMaterials'
 import { getFurnitureSpec } from './canvas/furnitureCatalog'
-import { SNAP_RADIUS_SCREEN, WORLD_HALF, GRID_SIZE, PIXELS_PER_METER, snapTo90, snapTo45, findNearestSnapPoint } from './canvas/constants'
+import { SNAP_RADIUS_SCREEN, WORLD_HALF, GRID_SIZE, snapTo90, snapTo45, findNearestSnapPoint } from './canvas/constants'
 import { snapToGrid } from '../hooks/useViewport'
 import HudOverlay from './canvas/HudOverlay'
 
 const UNDERLAY_ID = 'underlay'
-const AREA_SNAP = PIXELS_PER_METER * 0.1 // snap area polygon points to 0.1 m
 const AREA_CLOSE_PX = 12                 // screen px within which a click "closes" the loop
 const AREA_DEFAULT_FILL = 'rgba(132, 204, 22, 0.14)' // outdoor-ish lime tint
 const POOL_FILL = 'rgba(42, 143, 201, 0.30)'         // pool-water blue
 const POOL_DRAFT = { fill: 'rgba(42,143,201,0.18)', stroke: '#2a8fc9', dotStroke: '#1d6fa5' }
-const snapArea = (v) => Math.round(v / AREA_SNAP) * AREA_SNAP
+const VOID_FILL = 'rgba(168, 85, 247, 0.16)'         // purple "open above" tint
+const VOID_DRAFT = { fill: 'rgba(168,85,247,0.14)', stroke: '#a855f7', dotStroke: '#7e22ce' }
 const areaCentroid = (verts) => {
   const n = verts.length || 1
   return { x: verts.reduce((s, v) => s + v.x, 0) / n, y: verts.reduce((s, v) => s + v.y, 0) / n }
@@ -70,6 +70,11 @@ export default function CanvasArea() {
   const addPoolPoint = useStore((s) => s.addPoolPoint)
   const finishPoolDraft = useStore((s) => s.finishPoolDraft)
   const movePoolVertices = useStore((s) => s.movePoolVertices)
+  const allVoids = useStore((s) => s.voids)
+  const voidDraft = useStore((s) => s.voidDraft)
+  const addVoidPoint = useStore((s) => s.addVoidPoint)
+  const finishVoidDraft = useStore((s) => s.finishVoidDraft)
+  const moveVoidVertices = useStore((s) => s.moveVoidVertices)
   const activeLevel = useStore((s) => s.activeLevel)
   const levels = useStore((s) => s.levels)
   const layers = useStore((s) => s.layers)
@@ -108,6 +113,7 @@ export default function CanvasArea() {
   const openings = allOpenings.filter(onLevel)
   const areas = allAreas.filter(onLevel)
   const pools = allPools.filter(onLevel)
+  const voids = allVoids.filter(onLevel)
 
   const lockAspectRatio = useStore((s) => s.lockAspectRatio)
   const { view, recenterIfUnset, handleWheel, handleStageDragEnd, setPanPosition } = useViewport()
@@ -183,6 +189,9 @@ export default function CanvasArea() {
   const selectedPool = activeTool === 'select' && layers.rooms && singleSel?.kind === 'pool'
     ? pools.find((x) => x.id === singleSel.id) ?? null
     : null
+  const selectedVoid = activeTool === 'select' && layers.rooms && singleSel?.kind === 'void'
+    ? voids.find((x) => x.id === singleSel.id) ?? null
+    : null
 
   const snapTarget = cursorWorld
     ? findNearestSnapPoint(cursorWorld, walls, SNAP_RADIUS_SCREEN / view.scale)
@@ -190,6 +199,18 @@ export default function CanvasArea() {
   const snapFn = altDown ? ((_s, e) => e) : shiftDown ? snapTo90 : snapTo45
   const previewEnd = drawStart && cursorWorld
     ? snapTarget ?? snapFn(drawStart, cursorWorld)
+    : null
+
+  // Active polygon tool (area / pool / void) config + the angle-snapped point
+  // the next click would drop, used for both the click handler and the preview.
+  const POLY_TOOLS = {
+    area: { draft: areaDraft, add: addAreaPoint, finish: finishAreaDraft },
+    pool: { draft: poolDraft, add: addPoolPoint, finish: finishPoolDraft },
+    void: { draft: voidDraft, add: addVoidPoint, finish: finishVoidDraft },
+  }
+  const polyCfg = POLY_TOOLS[activeTool] ?? null
+  const polyPreview = polyCfg && cursorWorld
+    ? (polyCfg.draft?.length ? snapFn(polyCfg.draft[polyCfg.draft.length - 1], cursorWorld) : cursorWorld)
     : null
 
   return (
@@ -223,36 +244,24 @@ export default function CanvasArea() {
                 return
               }
             }
-            // Area tool: each background click drops a polygon vertex; clicking
-            // back on the first point (or pressing Enter) closes it.
-            if (activeTool === 'area' && e.evt.button === 0 && e.target === stageRef.current) {
-              const pos = stageRef.current?.getRelativePointerPosition()
-              if (pos) {
-                const p = { x: snapArea(pos.x), y: snapArea(pos.y) }
-                if (areaDraft && areaDraft.length >= 3) {
-                  const first = areaDraft[0]
-                  if (Math.hypot(p.x - first.x, p.y - first.y) < AREA_CLOSE_PX / view.scale) {
-                    finishAreaDraft()
+            // Polygon tools (area / pool / void): each background click drops a
+            // vertex. Angles lock to 45° from the previous point like walls
+            // (Shift = 90°, Alt/Option = free). Clicking near the first point —
+            // or pressing Enter — closes the loop.
+            if (polyCfg && e.evt.button === 0 && e.target === stageRef.current) {
+              const raw = stageRef.current?.getRelativePointerPosition()
+              if (raw) {
+                const d = polyCfg.draft
+                const last = d?.[d.length - 1]
+                const p = last ? snapFn(last, raw) : raw
+                if (d && d.length >= 3) {
+                  const first = d[0]
+                  if (Math.hypot(raw.x - first.x, raw.y - first.y) < AREA_CLOSE_PX / view.scale) {
+                    polyCfg.finish()
                     return
                   }
                 }
-                addAreaPoint(p)
-              }
-              return
-            }
-            // Pool tool: same polygon flow as Area, for a water basin.
-            if (activeTool === 'pool' && e.evt.button === 0 && e.target === stageRef.current) {
-              const pos = stageRef.current?.getRelativePointerPosition()
-              if (pos) {
-                const p = { x: snapArea(pos.x), y: snapArea(pos.y) }
-                if (poolDraft && poolDraft.length >= 3) {
-                  const first = poolDraft[0]
-                  if (Math.hypot(p.x - first.x, p.y - first.y) < AREA_CLOSE_PX / view.scale) {
-                    finishPoolDraft()
-                    return
-                  }
-                }
-                addPoolPoint(p)
+                polyCfg.add(p)
               }
               return
             }
@@ -330,6 +339,15 @@ export default function CanvasArea() {
                 onSelect={(id) => select('pool', id)}
                 onShiftSelect={(id) => addToSelection('pool', id)} />
             ))}
+            {layers.rooms && voids.map((vd) => (
+              <Room key={`void-${vd.id}`}
+                room={{ id: vd.id, verts: vd.verts, centroid: areaCentroid(vd.verts) }}
+                selected={isSelected(selection, 'void', vd.id)}
+                fill={VOID_FILL} listening={activeTool === 'select'} scale={view.scale}
+                name={vd.name ?? ''}
+                onSelect={(id) => select('void', id)}
+                onShiftSelect={(id) => addToSelection('void', id)} />
+            ))}
             {layers.walls && walls.map((w) => (
               <Wall key={w.id} wall={w}
                 segments={wallSegmentsForRendering(w, layers.openings ? openings : [])}
@@ -347,6 +365,9 @@ export default function CanvasArea() {
             ))}
             {layers.rooms && pools.map((pool) => (
               <AreaDimensions key={`pdim-${pool.id}`} area={pool} scale={view.scale} />
+            ))}
+            {layers.rooms && voids.map((vd) => (
+              <AreaDimensions key={`vdim-${vd.id}`} area={vd} scale={view.scale} />
             ))}
             {layers.openings && openings.map((o) => {
               const wall = walls.find((w) => w.id === o.wallId)
@@ -390,6 +411,10 @@ export default function CanvasArea() {
               <AreaEditHandles area={selectedPool} scale={view.scale}
                 onMove={(moves) => movePoolVertices(selectedPool.id, moves)} />
             )}
+            {selectedVoid && (
+              <AreaEditHandles area={selectedVoid} scale={view.scale}
+                onMove={(moves) => moveVoidVertices(selectedVoid.id, moves)} />
+            )}
             <DragGhost
               ghost={dragGhost ?? (pendingPlacement && cursorWorld ? {
                 kind: 'furniture',
@@ -404,8 +429,9 @@ export default function CanvasArea() {
             />
             {aiProposal && <DiffOverlay diff={aiProposal.diff} scale={view.scale} />}
             {drawStart && previewEnd && <DrawPreview start={drawStart} end={previewEnd} scale={view.scale} />}
-            {activeTool === 'area' && <AreaDraftPreview draft={areaDraft} cursor={cursorWorld} scale={view.scale} />}
-            {activeTool === 'pool' && <AreaDraftPreview draft={poolDraft} cursor={cursorWorld} scale={view.scale} {...POOL_DRAFT} />}
+            {activeTool === 'area' && <AreaDraftPreview draft={areaDraft} cursor={polyPreview} scale={view.scale} />}
+            {activeTool === 'pool' && <AreaDraftPreview draft={poolDraft} cursor={polyPreview} scale={view.scale} {...POOL_DRAFT} />}
+            {activeTool === 'void' && <AreaDraftPreview draft={voidDraft} cursor={polyPreview} scale={view.scale} {...VOID_DRAFT} />}
             {snapTarget && !calibration && <SnapIndicator point={snapTarget} scale={view.scale} />}
             {marquee && (
               <Rect
@@ -422,7 +448,7 @@ export default function CanvasArea() {
         </Stage>
       )}
       <HudOverlay view={view} cursor={cursorWorld} drawing={!!drawStart} selection={selection} calibration={calibration} shiftDown={shiftDown} altDown={altDown} />
-      {allWalls.length === 0 && allFurniture.length === 0 && allAreas.length === 0 && allPools.length === 0 && !drawStart && !areaDraft && !poolDraft && !underlay && (
+      {allWalls.length === 0 && allFurniture.length === 0 && allAreas.length === 0 && allPools.length === 0 && allVoids.length === 0 && !drawStart && !areaDraft && !poolDraft && !voidDraft && !underlay && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="bg-gray-900/70 border border-gray-700 rounded-lg px-6 py-5 max-w-xs text-center backdrop-blur-sm">
             <div className="text-gray-100 text-sm font-semibold mb-3">{t('hud.empty_title')}</div>
