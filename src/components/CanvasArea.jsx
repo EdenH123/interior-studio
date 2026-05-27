@@ -23,6 +23,7 @@ import DrawPreview from './canvas/DrawPreview'
 import SnapIndicator from './canvas/SnapIndicator'
 import RotationHandle from './canvas/RotationHandle'
 import ResizeHandle from './canvas/ResizeHandle'
+import WallEditHandles from './canvas/WallEditHandles'
 import DragGhost from './canvas/DragGhost'
 import DiffOverlay from './canvas/DiffOverlay'
 import { registerStage } from './canvas/stageHandle'
@@ -69,6 +70,7 @@ export default function CanvasArea() {
   const aiProposal = useStore((s) => s.aiProposal)
   const selection = useStore((s) => s.selection)
   const removeWall = useStore((s) => s.removeWall)
+  const moveWallVertices = useStore((s) => s.moveWallVertices)
   const updateFurniture = useStore((s) => s.updateFurniture)
   const removeFurniture = useStore((s) => s.removeFurniture)
   const select = useStore((s) => s.select)
@@ -144,6 +146,10 @@ export default function CanvasArea() {
         const f = furniture.find((x) => x.id === singleSel.id)
         return f ? resolveRailingMount(f, walls) : null
       })()
+    : null
+  // Wall reshape handles: only in select mode, for a single selected wall.
+  const selectedWall = activeTool === 'select' && layers.walls && singleSel?.kind === 'wall'
+    ? walls.find((x) => x.id === singleSel.id) ?? null
     : null
 
   const snapTarget = cursorWorld
@@ -279,6 +285,9 @@ export default function CanvasArea() {
             {selectedFurniture && (
               <RotationHandle item={selectedFurniture} scale={view.scale}
                 onRotate={(deg) => updateFurniture(selectedFurniture.id, { rotation: deg })} />
+            )}
+            {selectedWall && (
+              <WallEditHandles wall={selectedWall} scale={view.scale} onMove={moveWallVertices} />
             )}
             <DragGhost
               ghost={dragGhost ?? (pendingPlacement && cursorWorld ? {

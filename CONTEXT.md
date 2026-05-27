@@ -737,6 +737,16 @@ interior-studio/
   - Test updated: `resolveRailingMount` asserts the railing centers (x=100 on a 200 px wall) and spans (width = 4 m). 476 total passing.
   - NOTE: still not visually verified in a live 3D browser here. If a perpendicular (front-of-wall) offset remains after this, it likely means the railing snapped to a different/parallel wall than expected — needs a look with the running app.
 
+- [x] Edit walls/rooms by dragging corner + edge handles (select mode) (2026-05-27)
+  - Reshaping a room used to mean deleting and redrawing. Now, in **select mode**, selecting a wall shows drag handles on the 2D canvas: two **corner circles** at its endpoints and one **edge square** at its midpoint.
+  - Corner drag → moves that vertex; every active-level wall sharing the corner follows, so the room reshapes and stays closed. Edge drag → slides the whole wall perpendicular; both endpoints move so the two adjoining walls stretch. Dragged geometry snaps to a 0.1 m grid.
+  - Store: new `moveWallVertices(moves)` action (`moves = [{from,to}]`) — sets every active-level wall endpoint coincident (≤1.5 px) with a `from` to its `to`, matched against pre-move coords so batched moves don't chain. Restricted to the active level so stacked floors aren't reshaped.
+  - `WallEditHandles.jsx` (new): corner `Circle`s + edge `Rect`, counter-scaled, `cancelBubble` so they don't start a marquee/pan/draw. Live store updates during drag (zundo's 300 ms debounce collapses a drag into one undo step).
+  - `CanvasArea` renders it when `activeTool==='select'` && a single wall is selected && walls layer visible. Wall-bound railings (derived from walls) and openings (normalised position) follow the reshape automatically; rooms re-detect.
+  - Kept in **select mode** by design (draw-mode wall clicks already start new walls, which would clash with grab-to-edit).
+  - Tests: +4 in `wallsSlice.test.js` (shared-corner move, non-coincident untouched, batched edge slide, active-level-only). 480 total passing.
+  - NOTE: handle drag interaction not visually verified in a live browser here; the `moveWallVertices` math is unit-tested and the handle drag mirrors the existing `ResizeHandle` pattern. Possible follow-up: show handles when a *room* is selected (all its corners/edges at once).
+
 ### 🚧 In Progress
 - (nothing active)
 
