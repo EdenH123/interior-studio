@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Stage, Layer, Line, Rect } from 'react-konva'
 import useStore from '../store/useStore'
 import useElementSize from '../hooks/useElementSize'
@@ -39,6 +40,7 @@ import HudOverlay from './canvas/HudOverlay'
 const UNDERLAY_ID = 'underlay'
 
 export default function CanvasArea() {
+  const { t } = useTranslation()
   const [containerRef, size] = useElementSize()
   const stageRef = useRef(null)
 
@@ -304,6 +306,18 @@ export default function CanvasArea() {
         </Stage>
       )}
       <HudOverlay view={view} cursor={cursorWorld} drawing={!!drawStart} selection={selection} calibration={calibration} shiftDown={shiftDown} altDown={altDown} />
+      {allWalls.length === 0 && allFurniture.length === 0 && !drawStart && !underlay && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="bg-gray-900/70 border border-gray-700 rounded-lg px-6 py-5 max-w-xs text-center backdrop-blur-sm">
+            <div className="text-gray-100 text-sm font-semibold mb-3">{t('hud.empty_title')}</div>
+            <ol className="text-gray-400 text-xs leading-relaxed space-y-1.5 text-start">
+              <li>1 · {t('hud.empty_step1')}</li>
+              <li>2 · {t('hud.empty_step2')}</li>
+              <li>3 · {t('hud.empty_step3')}</li>
+            </ol>
+          </div>
+        </div>
+      )}
       {calibration?.p1 && calibration?.p2 && (
         <CalibrationPrompt p1={calibration.p1} p2={calibration.p2}
           onConfirm={applyCalibration} onCancel={cancelCalibration} />

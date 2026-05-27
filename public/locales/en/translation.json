@@ -300,7 +300,11 @@
     "hint_opening": "drag along wall to reposition · edit size on the right · del to remove",
     "hint_room": "edit name + floor material on the right",
     "hint_underlay": "underlay selected · adjust on the right · drag to move (unlocked only)",
-    "hint_default": "click to start wall · alt+click wall to draw from it · right-click wall to delete · space+drag pan"
+    "hint_default": "click to start wall · alt+click wall to draw from it · right-click wall to delete · space+drag pan",
+    "empty_title": "Start your floor plan",
+    "empty_step1": "Draw walls — click two points, they chain automatically",
+    "empty_step2": "Drag furniture from the left panel onto the canvas",
+    "empty_step3": "Press 3D to walk through your design"
   },
   "lighting_toolbar": {
     "solo": "Solo",
