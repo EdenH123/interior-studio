@@ -51,6 +51,11 @@ export const createFurnitureSlice = (set) => ({
         }
       }
       const railingFields = spec.railingStyle ? { railingStyle: spec.railingStyle } : {}
+      // A railing dropped onto a wall binds to it: position (0–1 along wall)
+      // drives its live transform; mountHeight is derived from the wall.
+      const mountFields = opts.mountWallId
+        ? { mountWallId: opts.mountWallId, position: opts.position ?? 0.5 }
+        : {}
       return {
         furniture: [
           ...s.furniture,
@@ -66,6 +71,7 @@ export const createFurnitureSlice = (set) => ({
             ...wallMountFields,
             ...stairFields,
             ...railingFields,
+            ...mountFields,
           },
         ],
         selection: { items: [{ kind: 'furniture', id }] },

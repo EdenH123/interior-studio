@@ -90,3 +90,30 @@ describe('wallsSlice cross-slice: selection clearing', () => {
     expect(store.getState().selection).toEqual({ items: [{ kind: 'wall', id: b.id }] })
   })
 })
+
+describe('wallsSlice cross-slice: railing cascade', () => {
+  let store
+  beforeEach(() => {
+    store = create((set, get) => ({
+      ...createWallsSlice(set, get),
+      furniture: [],
+      selection: null,
+    }))
+  })
+
+  it('removes railings mounted on the deleted wall and clears their selection', () => {
+    store.getState().addWall(0, 0, 200, 0)
+    const wallId = store.getState().walls[0].id
+    store.setState({
+      furniture: [
+        { id: 'r1', type: 'railing-cable', mountWallId: wallId },
+        { id: 'f2', type: 'sofa' },                       // unrelated, stays
+      ],
+      selection: { items: [{ kind: 'furniture', id: 'r1' }] },
+    })
+    store.getState().removeWall(wallId)
+    const { furniture, selection } = store.getState()
+    expect(furniture.map((f) => f.id)).toEqual(['f2'])
+    expect(selection).toBeNull()
+  })
+})

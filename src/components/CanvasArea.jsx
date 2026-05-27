@@ -19,6 +19,7 @@ import WallLengthLabel from './canvas/WallLengthLabel'
 import Opening from './canvas/Opening'
 import Furniture from './canvas/Furniture'
 import { wallSegmentsForRendering } from './canvas/openingGeometry'
+import { resolveRailingMount } from './canvas/wallSnapGeometry'
 import DrawPreview from './canvas/DrawPreview'
 import SnapIndicator from './canvas/SnapIndicator'
 import RotationHandle from './canvas/RotationHandle'
@@ -140,7 +141,10 @@ export default function CanvasArea() {
   // Rotation handle only for a single selected furniture item.
   const singleSel = getSingleItem(selection)
   const selectedFurniture = layers.furniture && singleSel?.kind === 'furniture'
-    ? furniture.find((f) => f.id === singleSel.id) ?? null
+    ? (() => {
+        const f = furniture.find((x) => x.id === singleSel.id)
+        return f ? resolveRailingMount(f, walls) : null
+      })()
     : null
 
   const snapTarget = cursorWorld
@@ -259,7 +263,7 @@ export default function CanvasArea() {
                   onContextMenu={removeOpening} />
               )
             })}
-            {layers.furniture && furniture.map((f) => (
+            {layers.furniture && furniture.map((raw) => resolveRailingMount(raw, walls)).map((f) => (
               <Furniture key={f.id} item={f} scale={view.scale}
                 selected={isSelected(selection, 'furniture', f.id)}
                 onSelect={(id) => select('furniture', id)}

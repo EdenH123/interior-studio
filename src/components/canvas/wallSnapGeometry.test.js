@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { findWallSnap, normalizeAngle } from './wallSnapGeometry'
+import { findWallSnap, normalizeAngle, railingWallPlacement, resolveRailingMount } from './wallSnapGeometry'
 import { PIXELS_PER_METER, WALL_THICKNESS } from './constants'
 
 const WALL_HALF_THICK = WALL_THICKNESS / 2
@@ -82,5 +82,46 @@ describe('findWallSnap', () => {
     expect(snap).not.toBeNull()
     const expectedX = 100 - WALL_HALF_THICK - halfWidth - 1
     expect(snap.x).toBeCloseTo(expectedX, 3)
+  })
+})
+
+describe('railingWallPlacement', () => {
+  it('centers on the wall at t and aligns along it, base = wall height', () => {
+    // Horizontal wall 0..200 in x, 1 m tall (balcony).
+    const wall = { id: 'w', x1: 0, y1: 0, x2: 200, y2: 0, height: 1 }
+    const p = railingWallPlacement(wall, 0.5)
+    expect(p.x).toBe(100)
+    expect(p.y).toBe(0)
+    expect(p.rotation).toBe(0)          // along +x
+    expect(p.mountHeight).toBe(1)
+  })
+
+  it('orients along a vertical wall and defaults height to 2.4', () => {
+    const wall = { id: 'w', x1: 0, y1: 0, x2: 0, y2: 200 }
+    const p = railingWallPlacement(wall, 0.25)
+    expect(p.x).toBe(0)
+    expect(p.y).toBe(50)
+    expect(p.rotation).toBe(90)         // along +y (screen-down)
+    expect(p.mountHeight).toBe(2.4)
+  })
+})
+
+describe('resolveRailingMount', () => {
+  const walls = [{ id: 'w1', x1: 0, y1: 0, x2: 200, y2: 0, height: 1 }]
+
+  it('returns the item unchanged when not wall-bound', () => {
+    const item = { id: 'f', x: 5, y: 5, mountWallId: undefined }
+    expect(resolveRailingMount(item, walls)).toBe(item)
+  })
+
+  it('derives transform from the mounted wall and injects wallMounted', () => {
+    const item = { id: 'f', x: 0, y: 0, mountWallId: 'w1', position: 0.5, height: 1 }
+    const r = resolveRailingMount(item, walls)
+    expect(r).toMatchObject({ x: 100, y: 0, rotation: 0, wallMounted: true, mountHeight: 1 })
+  })
+
+  it('returns the item unchanged when its wall is gone', () => {
+    const item = { id: 'f', x: 9, y: 9, mountWallId: 'missing', position: 0.5 }
+    expect(resolveRailingMount(item, walls)).toBe(item)
   })
 })
