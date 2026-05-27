@@ -12,7 +12,10 @@ import { KONVA_TO_THREE } from './threeMath'
 
 const COPING_LIP = 0.06     // how far the rim rises above the surrounding ground (m)
 const COPING_WIDTH = 0.28   // flat coping border width around the rim (m)
-const WATER_DROP = 0.08     // water surface sits this far below the rim (m)
+// Water surface sits just above the surrounding ground (and the world grid at
+// y=0) so it both reads as a filled pool and HIDES the grid lines that would
+// otherwise show across the open basin. Still below the coping lip.
+const WATER_LEVEL = 0.02
 
 const LINER_COLOR = 0xcfe8f5  // pale tiled liner
 const WATER_COLOR = 0x2a8fc9  // pool blue
@@ -97,9 +100,12 @@ function buildPool(verts, depth) {
   const linerMat = new THREE.MeshStandardMaterial({
     color: LINER_COLOR, roughness: 0.45, metalness: 0, side: THREE.DoubleSide,
   })
-  const waterMat = new THREE.MeshPhysicalMaterial({
-    color: WATER_COLOR, roughness: 0.08, metalness: 0,
-    transmission: 0.6, thickness: depth, transparent: true, opacity: 0.8, depthWrite: false,
+  // Visibly-blue water: mostly opaque (so the basin tiling / world grid below
+  // doesn't read through) with a low-roughness sheen. depthWrite so it occludes
+  // the y=0 grid lines crossing the open pool.
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: WATER_COLOR, roughness: 0.12, metalness: 0.05,
+    transparent: true, opacity: 0.9, depthWrite: true,
   })
 
   // Walls (coping lip → basin floor)
@@ -114,10 +120,10 @@ function buildPool(verts, depth) {
   floor.receiveShadow = true
   group.add(floor)
 
-  // Water surface just below the rim
+  // Water surface near the top — covers the open basin (and the grid below it)
   const water = new THREE.Mesh(new THREE.ShapeGeometry(buildShape(verts)), waterMat)
   water.rotation.x = Math.PI / 2
-  water.position.y = -WATER_DROP
+  water.position.y = WATER_LEVEL
   water.renderOrder = 1
   group.add(water)
 

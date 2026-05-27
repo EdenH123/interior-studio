@@ -815,6 +815,12 @@ interior-studio/
   - 508 tests still passing (the hole-assignment helper was already unit-tested; these are wiring/prop fixes).
   - NOTE: not visually verified in a live browser; the room-listening change is a one-line prop fix matching the area/pool/void pattern, and the pool floor-cutting reuses the unit-tested `computeVoidHolesForRooms` + verified stair-hole `ShapeGeometry` path.
 
+- [x] Pool water visibility + clean interior, and toolbar tool grouping (2026-05-27)
+  - **Visible water + no grid showing inside the pool:** the water surface was a near-transparent transmission material sitting deep in the basin (−0.08 m), so it read as empty and the world grid (GridHelper at y=0) showed across the open basin like tiles. Now it's a mostly-opaque blue `MeshStandardMaterial` (opacity 0.9, `depthWrite: true`) raised to just above grade (`WATER_LEVEL = 0.02`, still below the coping), so it clearly reads as water AND occludes the y=0 grid lines crossing the pool footprint — the "tiles in the pool" go away.
+  - **Toolbar grouping:** Area / Pool / Void now live in their own bordered button group, separate from Select / Draw.
+  - 508 tests still passing (visual/material tweaks + a toolbar layout change).
+  - NOTE: not visually verified in a live browser; the water now sits above the y=0 world grid and is mostly opaque, which should hide the grid inside the basin and read as filled water.
+
 ### 🚧 In Progress
 - (nothing active)
 
