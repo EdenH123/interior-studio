@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { cache, notifyCacheChange } from './furnitureModelCache'
+import { cache, notifyCacheChange, touch, enforceLimit } from './furnitureModelCache'
 
 // Three-dependent half of the furniture-model pipeline. Lives in its own
 // module so the cache + status getters (`furnitureModelCache.js`) can be
@@ -27,6 +27,7 @@ export function loadFurnitureModel(url) {
       entry.scene = gltf.scene
       for (const fn of entry.listeners) fn(gltf.scene)
       entry.listeners.clear()
+      enforceLimit()
       notifyCacheChange()
     },
     undefined,
@@ -46,6 +47,7 @@ export function loadFurnitureModel(url) {
 export function cloneLoadedModel(url) {
   const entry = cache.get(url)
   if (entry?.state !== 'loaded') return null
+  touch(url) // mark most-recently-used so active models aren't evicted
   const copy = entry.scene.clone(true)
   copy.traverse((child) => {
     if (child.material) {
