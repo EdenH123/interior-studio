@@ -63,6 +63,43 @@ export function openingsOverlap(a, b, wall) {
   return Math.abs(a.position - b.position) < ha + hb
 }
 
+// Smallest opening we'll ever auto-fit to. Below this the "resize to fit"
+// offer is suppressed (a sub-0.4 m window/door isn't useful).
+export const MIN_OPENING_WIDTH_M = 0.4
+
+// Largest opening that fits at `position` on a wall, respecting the other
+// openings already on it. Returns { width (m), position (normalised, recentred
+// in the free gap) } or null when nothing usable fits (drop point is inside an
+// existing opening, or the free gap is narrower than MIN_OPENING_WIDTH_M).
+// Used to power the "Resize to fit" toast action when a dropped opening is too
+// wide for its wall.
+export function fitOpeningWidth(wall, openings, position, excludeId = null) {
+  const len = wallLengthPx(wall)
+  if (len <= 0) return null
+  const spans = openings
+    .filter((o) => o.wallId === wall.id && o.id !== excludeId)
+    .map((o) => {
+      const half = halfExtentNorm(o, len)
+      return [o.position - half, o.position + half]
+    })
+  // Drop point sits inside an existing opening — no room here.
+  for (const [s, e] of spans) {
+    if (position > s && position < e) return null
+  }
+  // Free gap [lo, hi] around the drop position, bounded by the wall ends and
+  // the nearest neighbours on each side.
+  let lo = 0, hi = 1
+  for (const [s, e] of spans) {
+    if (e <= position && e > lo) lo = e
+    if (s >= position && s < hi) hi = s
+  }
+  // Shrink 5% so the opening never sits flush against a wall end / neighbour.
+  const widthNorm = (hi - lo) * 0.95
+  const widthM = (widthNorm * len) / PIXELS_PER_METER
+  if (widthM < MIN_OPENING_WIDTH_M) return null
+  return { width: widthM, position: (lo + hi) / 2 }
+}
+
 // Sorts a wall's openings by position and returns the wall as a list of
 // solid segments interleaved with gap definitions. Used by Wall.jsx to
 // render the wall around its openings.

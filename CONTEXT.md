@@ -696,6 +696,14 @@ interior-studio/
   - Fix: `useOpeningDrop` now filters walls to the active level (`!w.levelId || w.levelId === activeLevel`) before snapping, matching how `CanvasArea` filters rendered walls. 3D drop (`useFurnitureDrop3D`) was already correct — it raycasts against per-level wall meshes stacked vertically.
   - Test: new `useOpeningDrop only snaps to walls on the active level` regression test in `flows.test.jsx`. 455 tests passing.
 
+- [x] "Resize to fit" for openings that are too wide for their wall (2026-05-27)
+  - Dropping a door/window wider than the wall (or that would overlap another opening) used to just show a dead-end warning toast. Now the toast offers a **Resize to fit** action: clicking it places a version shrunk to the available space.
+  - `openingGeometry.fitOpeningWidth(wall, openings, position, excludeId?)` — new pure helper. Computes the free gap around the drop position (bounded by wall ends + neighbouring openings), returns `{ width (m), position }` shrunk to 95% of the gap, or `null` when the drop is inside an existing opening or the gap is below `MIN_OPENING_WIDTH_M` (0.4 m, also new export).
+  - `openingsSlice.addOpening(type, wallId, position, overrides?)` — gained an optional `overrides.width`, and failures now carry a `code` (`'too-short'` | `'overlap'`) so callers can decide whether to offer the retry.
+  - Toast model extended: `pushToast(message, kind, action?)` where `action = { label, onClick }`; `Toast.jsx` renders it as an underlined button (runs the handler then dismisses). Storing a function is safe — toast is transient (not persisted / not in undo).
+  - Wired into both drop paths: `useOpeningDrop` (2D) and `useFurnitureDrop3D` (3D opening branch). Both recompute the fit width and, when one exists, show the action toast instead of the plain warning.
+  - Tests: +7 (`fitOpeningWidth` × 5 in openingGeometry.test.js; width-override + `code` assertions × 2 in openingsSlice.test.js). 462 total passing.
+
 ### 🚧 In Progress
 - (nothing active)
 

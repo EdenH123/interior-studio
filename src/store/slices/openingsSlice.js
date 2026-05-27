@@ -18,7 +18,11 @@ import { PIXELS_PER_METER } from '../../components/canvas/constants'
 export const createOpeningsSlice = (set, get) => ({
   openings: [],
 
-  addOpening: (type, wallId, positionT) => {
+  // `overrides` lets a caller place the opening at a non-catalog width — used
+  // by the "Resize to fit" toast action, which retries with a width the wall
+  // can actually take. Failures carry a `code` so callers can decide whether
+  // to offer that retry ('too-short' / 'overlap').
+  addOpening: (type, wallId, positionT, overrides = null) => {
     const spec = getOpeningSpec(type)
     if (!spec) return { ok: false, reason: `Unknown opening type "${type}".` }
     const state = get()
@@ -28,23 +32,23 @@ export const createOpeningsSlice = (set, get) => ({
     const candidate = {
       id: nanoid(6), type, wallId,
       position: positionT,
-      width: spec.width, height: spec.height, sillHeight: spec.sillHeight,
+      width: overrides?.width ?? spec.width, height: spec.height, sillHeight: spec.sillHeight,
       levelId: wall.levelId ?? state.activeLevel ?? null,
       ...(type.startsWith('door') ? { open: false, swingDir: 'left', openSide: 'front' } :
          type === 'window-casement' ? { open: false } : {}),
     }
     const wallLen = wallLengthPx(wall)
     if (candidate.width * PIXELS_PER_METER >= wallLen) {
-      return { ok: false, reason: `Wall is too short for a ${spec.label.toLowerCase()}.` }
+      return { ok: false, reason: `Wall is too short for a ${spec.label.toLowerCase()}.`, code: 'too-short' }
     }
     const clamped = clampPosition(candidate, wall)
-    if (clamped === null) return { ok: false, reason: 'Wall is too short for this opening.' }
+    if (clamped === null) return { ok: false, reason: 'Wall is too short for this opening.', code: 'too-short' }
     candidate.position = clamped
 
     const collides = state.openings.some(
       (o) => o.wallId === wallId && openingsOverlap(o, candidate, wall),
     )
-    if (collides) return { ok: false, reason: 'Opening would overlap another on this wall.' }
+    if (collides) return { ok: false, reason: 'Opening would overlap another on this wall.', code: 'overlap' }
 
     set((s) => ({
       openings: [...s.openings, candidate],

@@ -27,6 +27,13 @@ export default function Toast() {
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
       <div className={`pointer-events-auto px-4 py-2 rounded-md border text-sm shadow-lg max-w-md ${cls}`}>
         <span>{toast.message}</span>
+        {toast.action && (
+          <button type="button"
+            onClick={() => { toast.action.onClick(); dismiss() }}
+            className="ml-3 text-xs font-semibold underline underline-offset-2 hover:opacity-80">
+            {toast.action.label}
+          </button>
+        )}
         <button type="button" onClick={dismiss}
           className="ml-3 text-[11px] uppercase tracking-wider opacity-70 hover:opacity-100">
           dismiss

@@ -45,9 +45,13 @@ export const createUiSlice = (set) => ({
     set((s) => ({ dragGhost: s.dragGhost ? { ...s.dragGhost, x, y, ...extra } : null })),
   clearDragGhost: () => set({ dragGhost: null }),
 
+  // toast.action is an optional { label, onClick } pair rendered as a button
+  // next to the message — e.g. "Resize to fit" when a dropped opening is too
+  // wide for its wall. Storing a function here is fine: toast is transient
+  // (not persisted, not in undo history).
   toast: null,
-  pushToast: (message, kind = 'info') =>
-    set({ toast: { id: nanoid(4), message, kind } }),
+  pushToast: (message, kind = 'info', action = null) =>
+    set({ toast: { id: nanoid(4), message, kind, action } }),
   dismissToast: () => set({ toast: null }),
 
   // pendingPlacement is set when the user clicks "Place on canvas" in the
