@@ -1,4 +1,5 @@
 import { Line, Circle } from 'react-konva'
+import WallLengthLabel from './WallLengthLabel'
 
 // The in-progress outdoor-area polygon while drawing (Area tool): committed
 // segments, a dashed segment to the cursor, a translucent fill once it can
@@ -26,6 +27,14 @@ export default function AreaDraftPreview({ draft, cursor, scale }) {
           fill={i === 0 && closeable ? '#22d3ee' : '#ffffff'}
           stroke="#65a30d" strokeWidth={1.5 / scale} listening={false} />
       ))}
+      {/* Live per-side meter labels, like walls */}
+      {draft.slice(1).map((p, i) => (
+        <WallLengthLabel key={`seg-${i}`}
+          wall={{ x1: draft[i].x, y1: draft[i].y, x2: p.x, y2: p.y }} scale={scale} />
+      ))}
+      {cursor && (
+        <WallLengthLabel wall={{ x1: last.x, y1: last.y, x2: cursor.x, y2: cursor.y }} scale={scale} />
+      )}
     </>
   )
 }

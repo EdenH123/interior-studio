@@ -88,7 +88,9 @@ interior-studio/
 │   │   │   ├── Swatch.jsx          # shared material-picker chip used by RoomProps + WallProps + FurnitureProps
 │   │   │   ├── HudOverlay.jsx      # bottom-of-canvas chips: zoom %, cursor in meters, context-sensitive hint
 │   │   │   ├── DrawPreview.jsx     # the dashed-blue preview wall + start/end dots + live dimension label
-│   │   │   ├── AreaDraftPreview.jsx # in-progress outdoor-area polygon (lime polyline + cursor segment + fill + vertex dots; first dot cyan when closeable)
+│   │   │   ├── AreaDraftPreview.jsx # in-progress outdoor-area polygon (lime polyline + cursor segment + fill + vertex dots + live per-segment meter labels)
+│   │   │   ├── AreaEditHandles.jsx  # select-mode area reshape handles: corner circles (move vertex) + edge squares (slide side); index-based, snaps to 0.1 m
+│   │   │   ├── AreaDimensions.jsx   # per-edge floating "X.XX m" labels for an area (reuses WallLengthLabel per side)
 │   │   │   ├── WallEditHandles.jsx  # select-mode wall reshape handles: corner circles (move vertex) + edge square (slide wall); snaps to 0.1 m
 │   │   │   ├── Underlay.jsx        # Konva.Image with drag-when-unlocked + selection
 │   │   │   ├── UnderlayProps.jsx   # PropertiesPanel editor for the underlay (opacity, calibrate, remove, AI trace)
@@ -771,6 +773,14 @@ interior-studio/
   - 2D: new `PivotDoorGlyph` (jambs + closed panel line + two opposite quarter-arcs + a centre pivot dot) wired in `Opening.jsx`. Properties: `OpeningProps` now shows the "Opens toward" (openSide) control for `door-pivot` too.
   - Sidebar lists it automatically (maps the catalog). Tests: openingsSlice pivot-defaults ×1; Sidebar opening count 9→10 + asserts the "Pivot Door" tile. 492 total passing.
   - NOTE: 3D pivot animation not visually verified in a live browser here; it reuses the hinged-door rotate/anim path (unit-tested defaults) with the pivot moved to centre. Chose a centre-pivot (iconic, visually distinct); an offset pivot (mostly-into-room) is a small tweak if preferred.
+
+- [x] Outdoor areas: reshape handles + per-side meter labels (2026-05-27)
+  - Areas are now editable like walls. Selecting an area in select mode shows reshape handles: a **corner circle** at each polygon vertex (drag to move it) and an **edge square** at each side's midpoint (drag to slide the side perpendicular). Snaps to 0.1 m.
+  - Each side now shows a **floating "X.XX m" label**, exactly like walls — both on committed areas and live while drawing (each drawn segment + the segment to the cursor).
+  - Store: `moveAreaVertices(id, moves)` (`moves = [{index,x,y}]`) — moves polygon vertices by index, reading latest verts inside `set` (no stale-closure during a drag).
+  - New components: `AreaEditHandles.jsx` (mirrors `WallEditHandles`, index-based) + `AreaDimensions.jsx` (reuses `WallLengthLabel` per edge). `AreaDraftPreview` gains live segment labels. `CanvasArea` renders handles for the selected area and dimension labels for every area (on the Rooms layer).
+  - Tests: +2 (`moveAreaVertices` moves by index / ignores out-of-range). 494 total passing.
+  - NOTE: drag interaction + labels not visually verified in a live browser here; `moveAreaVertices` is unit-tested and the handles mirror the verified wall-handle pattern.
 
 ### 🚧 In Progress
 - (nothing active)

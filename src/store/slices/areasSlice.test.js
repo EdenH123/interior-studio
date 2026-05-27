@@ -41,6 +41,26 @@ describe('areasSlice', () => {
     expect(store.getState().selection).toBeNull()
   })
 
+  it('moveAreaVertices moves polygon vertices by index', () => {
+    store.getState().addArea(tri)
+    const id = store.getState().areas[0].id
+    store.getState().moveAreaVertices(id, [
+      { index: 0, x: -10, y: -20 },
+      { index: 2, x: 60, y: 90 },
+    ])
+    const a = store.getState().areas[0]
+    expect(a.verts[0]).toEqual({ x: -10, y: -20 })
+    expect(a.verts[1]).toEqual({ x: 100, y: 0 }) // untouched
+    expect(a.verts[2]).toEqual({ x: 60, y: 90 })
+  })
+
+  it('moveAreaVertices ignores out-of-range indices', () => {
+    store.getState().addArea(tri)
+    const id = store.getState().areas[0].id
+    store.getState().moveAreaVertices(id, [{ index: 9, x: 1, y: 1 }])
+    expect(store.getState().areas[0].verts).toEqual(tri)
+  })
+
   it('addAreaPoint appends to the draft', () => {
     store.getState().addAreaPoint({ x: 1, y: 2 })
     store.getState().addAreaPoint({ x: 3, y: 4 })
