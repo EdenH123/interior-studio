@@ -731,6 +731,12 @@ interior-studio/
   - Fix: moved the `useCanvasKeyboard()` call to `App` (always mounted), removed it from `CanvasArea`. Side benefit: all global shortcuts (undo/redo, delete, copy/paste, etc.) now work in the 3D view too.
   - Test: new `src/App.test.jsx` renders `App` with heavy children mocked (CanvasArea is a bare stub) and asserts `D` toggles `show3d` both directions — the 3D→2D case is the regression guard. 476 total passing.
 
+- [x] Wall-bound railings span + center on their wall (2026-05-27)
+  - A wall-bound railing was a fixed 1.2 m piece placed wherever it was dropped, so it read as "not in the middle of the wall." A balcony parapet should cover the wall: `resolveRailingMount` now centers the railing on the wall (position 0.5) and derives its `width` from the wall's length, so a wall-bound railing spans the whole wall edge-to-edge and re-spans when the wall is resized. (Perpendicular position was already on the wall centerline.)
+  - 3D drag ghost now previews the centered placement (wall centerline at midpoint) instead of the off-center ray-hit point.
+  - Test updated: `resolveRailingMount` asserts the railing centers (x=100 on a 200 px wall) and spans (width = 4 m). 476 total passing.
+  - NOTE: still not visually verified in a live 3D browser here. If a perpendicular (front-of-wall) offset remains after this, it likely means the railing snapped to a different/parallel wall than expected — needs a look with the running app.
+
 ### 🚧 In Progress
 - (nothing active)
 

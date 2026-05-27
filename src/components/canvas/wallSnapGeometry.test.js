@@ -114,10 +114,11 @@ describe('resolveRailingMount', () => {
     expect(resolveRailingMount(item, walls)).toBe(item)
   })
 
-  it('derives transform from the mounted wall and injects wallMounted', () => {
-    const item = { id: 'f', x: 0, y: 0, mountWallId: 'w1', position: 0.5, height: 1 }
+  it('centers on the wall, spans it (width = wall length), and injects wallMounted', () => {
+    // wall w1 is 200 px = 4 m long.
+    const item = { id: 'f', x: 0, y: 0, mountWallId: 'w1', position: 0.2, height: 1, width: 1.2 }
     const r = resolveRailingMount(item, walls)
-    expect(r).toMatchObject({ x: 100, y: 0, rotation: 0, wallMounted: true, mountHeight: 1 })
+    expect(r).toMatchObject({ x: 100, y: 0, rotation: 0, width: 4, wallMounted: true, mountHeight: 1 })
   })
 
   it('returns the item unchanged when its wall is gone', () => {
