@@ -7,6 +7,7 @@ import {
   reconcileWalls, reconcileFurniture, reconcileRooms, reconcileCeilings, disposeAll,
 } from '../components/viewer3d/sceneReconcilers'
 import { reconcileDoors, tickDoorAnims } from '../components/viewer3d/reconcileDoors'
+import { onCacheChange } from '../components/viewer3d/furnitureModelCache'
 import { applySelectionHighlight } from '../components/viewer3d/selectionHighlight'
 import { attachPicking } from '../components/viewer3d/picking'
 import { attachFurnitureDrag } from '../components/viewer3d/furnitureDrag'
@@ -84,6 +85,13 @@ export default function useThree(containerRef) {
   const toggleDoorOpen   = useStore((s) => s.toggleDoorOpen)
   const toggleWindowOpen = useStore((s) => s.toggleWindowOpen)
   const pushToast        = useStore((s) => s.pushToast)
+
+  // Render-on-demand: any subscribed store change re-runs this hook, so flag a
+  // render here. The reconciler effects below run synchronously after commit
+  // (before the next animation frame), so the next tick renders the applied
+  // change. Interaction, async model loads, animations, drag, and resize set
+  // the flag through their own paths.
+  if (stateRef.current) stateRef.current.needsRender = true
 
   // ── mount / unmount ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -165,15 +173,29 @@ export default function useThree(containerRef) {
     controls.target.set(0, 1, 0)
     controls.update()
 
+    // Flags the next frame to render. OrbitControls fires 'change' on every
+    // camera move (including damping ease-out), so listening to it covers
+    // interaction without rendering when idle.
+    const requestRender = () => { if (stateRef.current) stateRef.current.needsRender = true }
+    controls.addEventListener('change', requestRender)
+
     const tick = () => {
-      stateRef.current.raf = requestAnimationFrame(tick)
-      stateRef.current.onFrame?.()
-      tickDoorAnims(doorAnims.current)
+      const s = stateRef.current
+      s.raf = requestAnimationFrame(tick)
+      s.onFrame?.()
+      const doorsActive = tickDoorAnims(doorAnims.current)
       // Skip OrbitControls.update during walkthrough — damping would fight
       // PointerLockControls and prevent mouselook from working.
-      if (!stateRef.current.onFrame) controls.update()
-      renderer.render(scene, camera)
+      if (!s.onFrame) controls.update()
+      // Walkthrough drives the camera every frame, so always render then.
+      if (s.needsRender || doorsActive || s.onFrame) {
+        renderer.render(scene, camera)
+        s.needsRender = false
+      }
     }
+
+    // Async GLB loads swap meshes in-place outside React — request a render.
+    const offCacheChange = onCacheChange(requestRender)
 
     const ro = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect
@@ -181,6 +203,7 @@ export default function useThree(containerRef) {
       camera.aspect = width / height
       camera.updateProjectionMatrix()
       renderer.setSize(width, height)
+      requestRender()
     })
     ro.observe(container)
 
@@ -196,10 +219,15 @@ export default function useThree(containerRef) {
         onDragEnd: (id, x, y) => useStore.getState().updateFurniture(id, { x, y }),
         getSelection: () => useStore.getState().selection,
         isAllowed: () => !stateRef.current?.onFrame,  // disabled during walkthrough
+        requestRender,
       },
     )
 
-    stateRef.current = { scene, camera, renderer, controls, ro, raf: 0, detachPicking, detachDragging, onFrame: null }
+    stateRef.current = {
+      scene, camera, renderer, controls, ro, raf: 0,
+      detachPicking, detachDragging, onFrame: null,
+      needsRender: true, requestRender, offCacheChange,
+    }
 
     // Register the GLB export function so Toolbar can trigger it without prop-threading.
     registerSceneExport(() => {
@@ -222,8 +250,10 @@ export default function useThree(containerRef) {
       if (!s) return
       cancelAnimationFrame(s.raf)
       s.ro.disconnect()
+      s.offCacheChange?.()
       s.detachPicking()
       s.detachDragging?.()
+      s.controls.removeEventListener('change', s.requestRender)
       s.controls.dispose()
       disposeAll(s.scene, wallMeshes.current)
       disposeAll(s.scene, furnMeshes.current)
