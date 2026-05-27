@@ -61,6 +61,25 @@ describe('openingsSlice.addOpening', () => {
     const shortId = store.getState().walls[1].id
     const r = store.getState().addOpening('door', shortId, 0.5)
     expect(r.ok).toBe(false)
+    expect(r.code).toBe('too-short')
+  })
+
+  it('tags an overlap rejection with code "overlap"', () => {
+    const wallId = store.getState().walls[0].id
+    store.getState().addOpening('door', wallId, 0.5)
+    const r = store.getState().addOpening('window', wallId, 0.52)
+    expect(r.ok).toBe(false)
+    expect(r.code).toBe('overlap')
+  })
+
+  it('places at an overridden width when the wall is too short for the default', () => {
+    // 1 m wall — too short for a 1.2 m window, but a 0.8 m one fits.
+    store.getState().addWall(0, 0, 50, 0)
+    const shortId = store.getState().walls[1].id
+    expect(store.getState().addOpening('window', shortId, 0.5).ok).toBe(false)
+    const r = store.getState().addOpening('window', shortId, 0.5, { width: 0.8 })
+    expect(r.ok).toBe(true)
+    expect(store.getState().openings.find((o) => o.id === r.id).width).toBe(0.8)
   })
 
   it('clamps position so the footprint stays inside the wall', () => {

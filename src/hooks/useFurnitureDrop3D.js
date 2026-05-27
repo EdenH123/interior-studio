@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import useStore from '../store/useStore'
 import { FURNITURE_DRAG_MIME } from '../components/Sidebar'
 import { OPENING_DRAG_MIME, getOpeningSpec } from '../components/canvas/openingsCatalog'
+import { fitOpeningWidth } from '../components/canvas/openingGeometry'
 import { getFurnitureSpec } from '../components/canvas/furnitureCatalog'
 import { CUSTOM_MODEL_DRAG_MIME } from './useCustomModelDrop'
 
@@ -216,9 +217,22 @@ export default function useFurnitureDrop3D(containerRef, stateRef) {
         }
         const position = wallPositionFrom(wallHit.wallId, wallHit.point)
         const result = addOpening(openingType, wallHit.wallId, position)
-        if (!result?.ok) {
-          pushToast(result?.reason ?? 'Could not place opening here.', 'warn')
+        if (result?.ok) return
+        if (result?.code === 'too-short' || result?.code === 'overlap') {
+          const wall = useStore.getState().walls.find((w) => w.id === wallHit.wallId)
+          const fit = wall ? fitOpeningWidth(wall, useStore.getState().openings, position) : null
+          if (fit) {
+            pushToast(result.reason, 'warn', {
+              label: 'Resize to fit',
+              onClick: () => {
+                const retry = addOpening(openingType, wallHit.wallId, fit.position, { width: fit.width })
+                if (!retry?.ok) pushToast(retry?.reason ?? 'Could not place opening here.', 'warn')
+              },
+            })
+            return
+          }
         }
+        pushToast(result?.reason ?? 'Could not place opening here.', 'warn')
       }
     },
   }

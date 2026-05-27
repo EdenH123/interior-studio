@@ -1,7 +1,7 @@
 import useStore from '../store/useStore'
 import { clientToWorld } from './useViewport'
 import { OPENING_DRAG_MIME } from '../components/canvas/openingsCatalog'
-import { nearestWallSnap } from '../components/canvas/openingGeometry'
+import { nearestWallSnap, fitOpeningWidth } from '../components/canvas/openingGeometry'
 
 // Same shape as `useFurnitureDrop` (returns `{ onDragOver, onDragLeave,
 // onDrop }`) but the dragover projects the cursor onto the nearest wall
@@ -16,6 +16,7 @@ const SNAP_SCREEN_PX = 28 // pointer must be within ~28 screen px of a wall
 
 export default function useOpeningDrop(containerRef, view) {
   const allWalls = useStore((s) => s.walls)
+  const openings = useStore((s) => s.openings)
   const activeLevel = useStore((s) => s.activeLevel)
   const addOpening = useStore((s) => s.addOpening)
   const setDragGhostPos = useStore((s) => s.setDragGhostPos)
@@ -66,7 +67,23 @@ export default function useOpeningDrop(containerRef, view) {
         return
       }
       const result = addOpening(type, f.snap.wallId, f.snap.position)
-      if (!result.ok) pushToast(result.reason, 'warn')
+      if (result.ok) return
+      // If it didn't fit, offer to drop a version shrunk to the available
+      // space rather than refusing outright.
+      if (result.code === 'too-short' || result.code === 'overlap') {
+        const fit = fitOpeningWidth(f.snap.wall, openings, f.snap.position)
+        if (fit) {
+          pushToast(result.reason, 'warn', {
+            label: 'Resize to fit',
+            onClick: () => {
+              const retry = addOpening(type, f.snap.wallId, fit.position, { width: fit.width })
+              if (!retry.ok) pushToast(retry.reason, 'warn')
+            },
+          })
+          return
+        }
+      }
+      pushToast(result.reason, 'warn')
     },
   }
 }

@@ -8,6 +8,8 @@ import {
   wallSegmentsForRendering,
   openingPlacement,
   wallMountedPlacement,
+  fitOpeningWidth,
+  MIN_OPENING_WIDTH_M,
 } from './openingGeometry'
 
 const wallH = { id: 'h', x1: 0, y1: 0, x2: 500, y2: 0 }
@@ -154,5 +156,40 @@ describe('wallMountedPlacement', () => {
     const world = { x: 250, y: -50 }
     const result = wallMountedPlacement(snap, depthM, world)
     expect(result.y).toBeCloseTo(-15)            // 30/2 = 15 px above
+  })
+})
+
+describe('fitOpeningWidth', () => {
+  // wallH is 500 px = 10 m.
+  it('fills (almost) the whole wall when empty', () => {
+    const fit = fitOpeningWidth(wallH, [], 0.5)
+    expect(fit.position).toBeCloseTo(0.5)
+    expect(fit.width).toBeCloseTo(9.5) // 0.95 * 10 m
+  })
+
+  it('fits the free gap beside an existing opening', () => {
+    // Opening at 0.2 spanning width 2 m → half = 0.1 → span [0.1, 0.3].
+    const existing = [{ id: 'o1', wallId: 'h', position: 0.2, width: 2 }]
+    const fit = fitOpeningWidth(wallH, existing, 0.6)
+    expect(fit.position).toBeCloseTo(0.65)     // centre of [0.3, 1]
+    expect(fit.width).toBeCloseTo(6.65)        // 0.95 * 0.7 * 10 m
+  })
+
+  it('returns null when the drop point is inside an existing opening', () => {
+    const existing = [{ id: 'o1', wallId: 'h', position: 0.2, width: 2 }]
+    expect(fitOpeningWidth(wallH, existing, 0.2)).toBeNull()
+  })
+
+  it('returns null when the free space is below the minimum width', () => {
+    const tiny = { id: 't', x1: 0, y1: 0, x2: 15, y2: 0 } // 0.3 m wall
+    expect(fitOpeningWidth(tiny, [], 0.5)).toBeNull()
+    // sanity: the threshold constant is exported and sensible
+    expect(MIN_OPENING_WIDTH_M).toBeGreaterThan(0)
+  })
+
+  it('ignores openings on other walls', () => {
+    const other = [{ id: 'o1', wallId: 'someOtherWall', position: 0.5, width: 4 }]
+    const fit = fitOpeningWidth(wallH, other, 0.5)
+    expect(fit.width).toBeCloseTo(9.5)
   })
 })

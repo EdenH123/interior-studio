@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- draw mode: click an existing wall to start a new wall from that point -->
+_Last updated: 2026-05-27_  <!-- "Resize to fit" for openings too wide for their wall -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -112,6 +112,11 @@ To place an opening:
 3. The wall stays whole visually but renders as two segments around the
    gap. In 3D the hole is actually carved out of the wall geometry and the
    appropriate door panel or window frame fills the opening.
+
+If the opening is too wide for the wall you drop it on (or it would overlap
+another opening), it won't be placed at its default size — but instead of
+just refusing, the notification offers a **Resize to fit** button. Click it
+to drop a version automatically shrunk to the available space on that wall.
 
 ### Opening and closing doors in 3D
 
