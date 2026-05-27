@@ -127,7 +127,7 @@ export default function useThree(containerRef) {
     // Sun / directional light — position driven by lighting.timeOfDay.
     const sun = new THREE.DirectionalLight(0xffffff, 1.5)
     sun.castShadow = true
-    sun.shadow.mapSize.setScalar(2048)
+    sun.shadow.mapSize.setScalar(1024)
     sun.shadow.camera.near   = 0.1
     sun.shadow.camera.far    = 200
     sun.shadow.camera.left   = -30
