@@ -45,23 +45,6 @@ export default function FurnitureProps({ item, onUpdate }) {
       <Row label={t('furniture.model')} value={describeModelStatus(item.model ?? item.customModelId, t)} />
       {item.wallMounted && <MountHeightField item={item} onUpdate={onUpdate} />}
 
-      {item.wallMounted && (
-        <div className="mt-3">
-          <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">{t('furniture.mount_height')}</div>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min={0} max={4} step={0.05}
-              value={(item.mountHeight ?? 1.2).toFixed(2)}
-              onChange={(e) => onUpdate(item.id, { mountHeight: parseFloat(e.target.value) || 0 })}
-              dir="ltr"
-              className="w-20 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-gray-200 text-xs font-mono"
-            />
-            <span className="text-gray-500 text-[10px]">{t('furniture.above_floor')}</span>
-          </div>
-        </div>
-      )}
-
       {spec?.parts?.length > 0 && (
         <div className="mt-3">
           <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-2">{t('furniture.part_colors')}</div>
@@ -139,12 +122,12 @@ function DimField({ label, dim, item, onCommit }) {
 
 function MountHeightField({ item, onUpdate }) {
   const { t } = useTranslation()
-  const [val, setVal] = useState((item.mountHeight ?? 0).toFixed(2))
-  useEffect(() => { setVal((item.mountHeight ?? 0).toFixed(2)) }, [item.mountHeight])
+  const [val, setVal] = useState((item.mountHeight ?? 1.2).toFixed(2))
+  useEffect(() => { setVal((item.mountHeight ?? 1.2).toFixed(2)) }, [item.mountHeight])
 
   function commit() {
     const m = parseFloat(val)
-    if (!isFinite(m) || m < 0 || m > 4) { setVal((item.mountHeight ?? 0).toFixed(2)); return }
+    if (!isFinite(m) || m < 0 || m > 4) { setVal((item.mountHeight ?? 1.2).toFixed(2)); return }
     onUpdate(item.id, { mountHeight: Math.round(m * 100) / 100 })
     setVal(m.toFixed(2))
   }
@@ -152,18 +135,21 @@ function MountHeightField({ item, onUpdate }) {
   return (
     <label className="block mt-2">
       <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('furniture.mount_height')}</span>
-      <input
-        type="number" step="0.05" min="0" max="4"
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') { e.preventDefault(); commit() }
-          if (e.key === 'Escape') { e.preventDefault(); setVal((item.mountHeight ?? 0).toFixed(2)); e.currentTarget.blur() }
-        }}
-        dir="ltr"
-        className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-sm font-mono focus:border-blue-500 focus:outline-none"
-      />
+      <div className="flex items-center gap-2 mt-1">
+        <input
+          type="number" step="0.05" min="0" max="4"
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commit() }
+            if (e.key === 'Escape') { e.preventDefault(); setVal((item.mountHeight ?? 1.2).toFixed(2)); e.currentTarget.blur() }
+          }}
+          dir="ltr"
+          className="w-20 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-sm font-mono focus:border-blue-500 focus:outline-none"
+        />
+        <span className="text-gray-500 text-[10px]">{t('furniture.above_floor')}</span>
+      </div>
     </label>
   )
 }
