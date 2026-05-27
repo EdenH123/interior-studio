@@ -11,10 +11,12 @@ import { KONVA_TO_THREE } from './threeMath'
 // changes; otherwise only the Y position is updated.
 
 const COPING_LIP = 0.06     // how far the rim rises above the surrounding ground (m)
+const COPING_WIDTH = 0.28   // flat coping border width around the rim (m)
 const WATER_DROP = 0.08     // water surface sits this far below the rim (m)
 
 const LINER_COLOR = 0xcfe8f5  // pale tiled liner
 const WATER_COLOR = 0x2a8fc9  // pool blue
+const COPING_COLOR = 0xd7dde2 // light stone coping
 
 function fingerprint(verts, depth) {
   return `${depth.toFixed(3)}:` + verts.map((v) => `${Math.round(v.x)},${Math.round(v.y)}`).join('|')
@@ -41,6 +43,48 @@ function buildWalls(verts, yTop, yBottom) {
     // two triangles: (aTop,bTop,bBot) + (aTop,bBot,aBot)
     pos.push(ax, yTop, az,  bx, yTop, bz,  bx, yBottom, bz)
     pos.push(ax, yTop, az,  bx, yBottom, bz,  ax, yBottom, az)
+  }
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+  geo.computeVertexNormals()
+  return geo
+}
+
+// Flat coping ring around the rim at y=COPING_LIP. For each edge we add a
+// quad offset outward (away from the centroid) by COPING_WIDTH, then fill each
+// convex corner with a triangle so the border has no gaps. Verts in Konva px.
+function buildCoping(verts, y) {
+  const n = verts.length
+  const cx = verts.reduce((s, v) => s + v.x, 0) / n
+  const cy = verts.reduce((s, v) => s + v.y, 0) / n
+  const W = COPING_WIDTH
+  // World-space inner/outer point per edge endpoint.
+  const inner = verts.map((v) => ({ x: v.x * KONVA_TO_THREE, z: v.y * KONVA_TO_THREE }))
+  const edges = []
+  for (let i = 0; i < n; i++) {
+    const a = verts[i], b = verts[(i + 1) % n]
+    const dx = b.x - a.x, dy = b.y - a.y
+    const len = Math.hypot(dx, dy) || 1
+    let nx = -dy / len, nz = dx / len
+    // Outward = away from centroid.
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
+    if ((mx - cx) * nx + (my - cy) * nz < 0) { nx = -nx; nz = -nz }
+    const ai = inner[i], bi = inner[(i + 1) % n]
+    edges.push({
+      ai, bi,
+      ao: { x: ai.x + nx * W, z: ai.z + nz * W },
+      bo: { x: bi.x + nx * W, z: bi.z + nz * W },
+    })
+  }
+  const pos = []
+  const tri = (p, q, r) => pos.push(p.x, y, p.z, q.x, y, q.z, r.x, y, r.z)
+  for (let i = 0; i < n; i++) {
+    const e = edges[i]
+    tri(e.ai, e.bi, e.bo)
+    tri(e.ai, e.bo, e.ao)
+    // Corner fill at vertex (i+1): between this edge's outer-end and next edge's outer-start.
+    const next = edges[(i + 1) % n]
+    tri(e.bi, e.bo, next.ao)
   }
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
@@ -77,7 +121,41 @@ function buildPool(verts, depth) {
   water.renderOrder = 1
   group.add(water)
 
+  // Flat stone coping ring around the rim
+  const copingMat = new THREE.MeshStandardMaterial({
+    color: COPING_COLOR, roughness: 0.7, metalness: 0, side: THREE.DoubleSide,
+  })
+  const coping = new THREE.Mesh(buildCoping(verts, COPING_LIP), copingMat)
+  coping.receiveShadow = true
+  coping.castShadow = true
+  group.add(coping)
+
   return group
+}
+
+// Big ground plane (size metres) with each pool's footprint cut out, so the
+// recessed basins are visible from above instead of hidden under the ground.
+// Built in the same shape convention as room floors (shape x→world x, shape
+// y→world z; caller rotates x=π/2).
+export function buildGroundGeometry(size, pools) {
+  const shape = new THREE.Shape()
+  const h = size / 2
+  shape.moveTo(-h, -h)
+  shape.lineTo(h, -h)
+  shape.lineTo(h, h)
+  shape.lineTo(-h, h)
+  shape.closePath()
+  for (const p of pools) {
+    if (!p.verts || p.verts.length < 3) continue
+    const hole = new THREE.Path()
+    hole.moveTo(p.verts[0].x * KONVA_TO_THREE, p.verts[0].y * KONVA_TO_THREE)
+    for (let i = 1; i < p.verts.length; i++) {
+      hole.lineTo(p.verts[i].x * KONVA_TO_THREE, p.verts[i].y * KONVA_TO_THREE)
+    }
+    hole.closePath()
+    shape.holes.push(hole)
+  }
+  return new THREE.ShapeGeometry(shape)
 }
 
 function disposeGroup(group) {

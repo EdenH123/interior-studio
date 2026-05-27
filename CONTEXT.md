@@ -803,6 +803,12 @@ interior-studio/
   - Tests: +8 (`voidsSlice.test.js` ×4, `computeVoidHolesForRooms` ×3, normalizeProject void ×1). 508 total passing.
   - NOTE: 3D hole-cutting + draw interaction not visually verified in a live browser; void-hole assignment + slice are unit-tested, and the cut reuses the verified stair-hole path. A void currently cuts ROOM floors/ceilings above (not area/pool slabs) — fine for the double-height use case. Voids show only on their own level in 2D.
 
+- [x] Pool refinements: cut the ground + real coping edges (2026-05-27)
+  - **Hole in the ground:** the global ground plane was a solid `PlaneGeometry` at y≈−0.001 that hid the recessed basin from above. It's now a `ShapeGeometry` (built in the room-floor coordinate convention, `rotation.x = π/2`) with **each pool's footprint cut out as a hole** (`buildGroundGeometry(size, pools)` in `reconcilePools.js`). `useThree` keeps a `floorRef` and rebuilds its geometry in the pools effect, so a pool reads as a true in-ground basin you can see down into.
+  - **Real pool edges:** `reconcilePools` now adds a flat stone **coping ring** around the rim at `COPING_LIP` — per-edge quads offset outward (away from the centroid) by `COPING_WIDTH` (0.28 m) plus a corner-fill triangle at each vertex so the border is gap-free for any polygon. Plus the existing basin walls + translucent water surface.
+  - Tests: covered indirectly (no new unit tests — geometry builders; existing pool slice tests still green). 508 total passing.
+  - NOTE: 3D appearance (coping ring, ground hole alignment) not visually verified in a live browser; the ground hole reuses the verified room-floor shape convention (`×KONVA_TO_THREE`, `rotation.x = π/2`) so pool holes line up with the basins. Follow-up: water reflections/caustics.
+
 ### 🚧 In Progress
 - (nothing active)
 

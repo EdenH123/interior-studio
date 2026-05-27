@@ -13,7 +13,7 @@ import { attachPicking } from '../components/viewer3d/picking'
 import { attachFurnitureDrag } from '../components/viewer3d/furnitureDrag'
 import { detectRooms } from '../components/canvas/roomDetection'
 import { resolveRailingMount } from '../components/canvas/wallSnapGeometry'
-import { reconcilePools } from '../components/viewer3d/reconcilePools'
+import { reconcilePools, buildGroundGeometry } from '../components/viewer3d/reconcilePools'
 import { getFloorMaterial, resolveFloorMaterialId } from '../components/canvas/floorMaterials'
 import { kelvinToRgb } from '../utils/colorTemp'
 import { isLightingType } from '../components/viewer3d/reconcileFurniture'
@@ -70,6 +70,7 @@ export default function useThree(containerRef) {
   const lightMap    = useRef(new Map())
   const sunRef      = useRef(null)
   const ambientRef  = useRef(null)
+  const floorRef    = useRef(null)
 
   const walls       = useStore((s) => s.walls)
   const openings    = useStore((s) => s.openings)
@@ -160,9 +161,10 @@ export default function useThree(containerRef) {
     sunRef.current = sun
     scene.add(sun)
 
-    // Floor + grid.
+    // Floor + grid. Built as a ShapeGeometry (rotated like room floors) so a
+    // reactive effect can cut pool footprints out of it — see the pools effect.
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(FLOOR_SIZE, FLOOR_SIZE),
+      buildGroundGeometry(FLOOR_SIZE, []),
       new THREE.MeshStandardMaterial({
         color: 0x111827,
         roughness: 0.6,
@@ -170,9 +172,10 @@ export default function useThree(containerRef) {
         side: THREE.DoubleSide,
       }),
     )
-    floor.rotation.x    = -Math.PI / 2
+    floor.rotation.x    = Math.PI / 2
     floor.position.y    = -0.001
     floor.receiveShadow = true
+    floorRef.current    = floor
     scene.add(floor)
     scene.add(new THREE.GridHelper(FLOOR_SIZE, FLOOR_SIZE, 0x374151, 0x1f2937))
 
@@ -456,6 +459,12 @@ export default function useThree(containerRef) {
     reconcilePools(stateRef.current.scene, pools, poolMeshes.current, levelOffsets,
       { solo: solo3d, activeLevelId: activeLevel })
     if (!layerRooms) for (const m of poolMeshes.current.values()) m.visible = false
+    // Cut the pool footprints out of the ground plane so the recessed basins
+    // are visible from above instead of hidden under it.
+    if (floorRef.current) {
+      floorRef.current.geometry.dispose()
+      floorRef.current.geometry = buildGroundGeometry(FLOOR_SIZE, pools)
+    }
   }, [pools, levels, activeLevel, solo3d, layerRooms])
 
   // ── selection highlight ──────────────────────────────────────────────────────

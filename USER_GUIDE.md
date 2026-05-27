@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- double-height voids + wall-style angle snapping for area/pool/void -->
+_Last updated: 2026-05-27_  <!-- double-height voids; wall-style angle snapping; pool cut into ground + coping -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -487,10 +487,11 @@ corners** of the pool, then click the first point — or press **Enter** —
 to close it (**Esc** cancels). Each side shows its length in metres as you
 go.
 
-In 3D the pool becomes a **sunken basin**: the outline drops below the
-surrounding ground, the sides become basin walls, and a translucent blue
-**water surface** fills it near the rim. In 2D it shows as a water-blue
-patch.
+In 3D the pool becomes a **sunken basin cut into the ground**: the pool's
+footprint is removed from the ground so the basin sits **below grade**, the
+sides become tiled basin walls, a flat stone **coping** border rings the
+rim, and a translucent blue **water surface** fills it near the top. In 2D
+it shows as a water-blue patch.
 
 Select a pool in **Select** mode to:
 
