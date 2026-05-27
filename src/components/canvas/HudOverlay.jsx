@@ -4,22 +4,20 @@ import { getSingleItem, selectionItems } from '../../store/selectionHelpers'
 
 // Small floating chips shown over the 2D canvas: zoom % and cursor coords
 // in meters (bottom-left) and a context-sensitive hint (bottom-right).
-export default function HudOverlay({ view, cursor, drawing, spaceDown, selection, calibration, shiftDown, altDown }) {
+export default function HudOverlay({ view, cursor, drawing, selection, calibration, shiftDown, altDown }) {
   const { t } = useTranslation()
   const single = getSingleItem(selection)
   const count = selectionItems(selection).length
   const snapModeHint = altDown
     ? t('hud.snap_free')
     : shiftDown ? t('hud.snap_90') : t('hud.snap_45')
-  const hint = spaceDown
-    ? t('hud.hint_pan')
-    : calibration
-      ? !calibration.p1
-        ? t('hud.hint_calib_p1')
-        : !calibration.p2
-          ? t('hud.hint_calib_p2')
-          : t('hud.hint_calib_distance')
-      : drawing
+  const hint = calibration
+    ? !calibration.p1
+      ? t('hud.hint_calib_p1')
+      : !calibration.p2
+        ? t('hud.hint_calib_p2')
+        : t('hud.hint_calib_distance')
+    : drawing
         ? t('hud.hint_drawing', { snap: snapModeHint })
         : count > 1
           ? t('hud.hint_multi', { count })

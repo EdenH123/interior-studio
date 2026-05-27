@@ -663,7 +663,11 @@ export function reconcileDoors(scene, walls, openings, meshMap, doorAnims, opts 
   }
 }
 
+// Returns true if any animation was active this tick, so the render loop can
+// request a frame. Captured before the loop so the final frame — which settles
+// the panel and deletes the entry — still triggers one last render.
 export function tickDoorAnims(doorAnims) {
+  const active = doorAnims.size > 0
   const now = performance.now()
   for (const [id, anim] of doorAnims) {
     const t = Math.min(1, (now - anim.startTime) / DOOR_ANIM_MS)
@@ -681,4 +685,5 @@ export function tickDoorAnims(doorAnims) {
     }
     if (t >= 1) doorAnims.delete(id)
   }
+  return active
 }

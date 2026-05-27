@@ -7,6 +7,7 @@ import {
   reconcileWalls, reconcileFurniture, reconcileRooms, reconcileCeilings, disposeAll,
 } from '../components/viewer3d/sceneReconcilers'
 import { reconcileDoors, tickDoorAnims } from '../components/viewer3d/reconcileDoors'
+import { onCacheChange } from '../components/viewer3d/furnitureModelCache'
 import { applySelectionHighlight } from '../components/viewer3d/selectionHighlight'
 import { attachPicking } from '../components/viewer3d/picking'
 import { attachFurnitureDrag } from '../components/viewer3d/furnitureDrag'
@@ -78,12 +79,24 @@ export default function useThree(containerRef) {
   const solo3d          = useStore((s) => s.solo3d)
   const xrayCeiling     = useStore((s) => s.xrayCeiling)
   const ceilingsVisible = useStore((s) => s.ceilingsVisible)
-  const layers          = useStore((s) => s.layers)
+  // Narrow per-layer subscriptions so toggling one layer only re-runs the
+  // effect that depends on it, not all four reconcilers.
+  const layerWalls      = useStore((s) => s.layers.walls)
+  const layerOpenings   = useStore((s) => s.layers.openings)
+  const layerFurniture  = useStore((s) => s.layers.furniture)
+  const layerRooms      = useStore((s) => s.layers.rooms)
   const select          = useStore((s) => s.select)
   const clearSelection  = useStore((s) => s.clearSelection)
   const toggleDoorOpen   = useStore((s) => s.toggleDoorOpen)
   const toggleWindowOpen = useStore((s) => s.toggleWindowOpen)
   const pushToast        = useStore((s) => s.pushToast)
+
+  // Render-on-demand: any subscribed store change re-runs this hook, so flag a
+  // render here. The reconciler effects below run synchronously after commit
+  // (before the next animation frame), so the next tick renders the applied
+  // change. Interaction, async model loads, animations, drag, and resize set
+  // the flag through their own paths.
+  if (stateRef.current) stateRef.current.needsRender = true
 
   // ── mount / unmount ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -127,7 +140,7 @@ export default function useThree(containerRef) {
     // Sun / directional light — position driven by lighting.timeOfDay.
     const sun = new THREE.DirectionalLight(0xffffff, 1.5)
     sun.castShadow = true
-    sun.shadow.mapSize.setScalar(2048)
+    sun.shadow.mapSize.setScalar(1024)
     sun.shadow.camera.near   = 0.1
     sun.shadow.camera.far    = 200
     sun.shadow.camera.left   = -30
@@ -165,15 +178,29 @@ export default function useThree(containerRef) {
     controls.target.set(0, 1, 0)
     controls.update()
 
+    // Flags the next frame to render. OrbitControls fires 'change' on every
+    // camera move (including damping ease-out), so listening to it covers
+    // interaction without rendering when idle.
+    const requestRender = () => { if (stateRef.current) stateRef.current.needsRender = true }
+    controls.addEventListener('change', requestRender)
+
     const tick = () => {
-      stateRef.current.raf = requestAnimationFrame(tick)
-      stateRef.current.onFrame?.()
-      tickDoorAnims(doorAnims.current)
+      const s = stateRef.current
+      s.raf = requestAnimationFrame(tick)
+      s.onFrame?.()
+      const doorsActive = tickDoorAnims(doorAnims.current)
       // Skip OrbitControls.update during walkthrough — damping would fight
       // PointerLockControls and prevent mouselook from working.
-      if (!stateRef.current.onFrame) controls.update()
-      renderer.render(scene, camera)
+      if (!s.onFrame) controls.update()
+      // Walkthrough drives the camera every frame, so always render then.
+      if (s.needsRender || doorsActive || s.onFrame) {
+        renderer.render(scene, camera)
+        s.needsRender = false
+      }
     }
+
+    // Async GLB loads swap meshes in-place outside React — request a render.
+    const offCacheChange = onCacheChange(requestRender)
 
     const ro = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect
@@ -181,6 +208,7 @@ export default function useThree(containerRef) {
       camera.aspect = width / height
       camera.updateProjectionMatrix()
       renderer.setSize(width, height)
+      requestRender()
     })
     ro.observe(container)
 
@@ -196,10 +224,15 @@ export default function useThree(containerRef) {
         onDragEnd: (id, x, y) => useStore.getState().updateFurniture(id, { x, y }),
         getSelection: () => useStore.getState().selection,
         isAllowed: () => !stateRef.current?.onFrame,  // disabled during walkthrough
+        requestRender,
       },
     )
 
-    stateRef.current = { scene, camera, renderer, controls, ro, raf: 0, detachPicking, detachDragging, onFrame: null }
+    stateRef.current = {
+      scene, camera, renderer, controls, ro, raf: 0,
+      detachPicking, detachDragging, onFrame: null,
+      needsRender: true, requestRender, offCacheChange,
+    }
 
     // Register the GLB export function so Toolbar can trigger it without prop-threading.
     registerSceneExport(() => {
@@ -222,8 +255,10 @@ export default function useThree(containerRef) {
       if (!s) return
       cancelAnimationFrame(s.raf)
       s.ro.disconnect()
+      s.offCacheChange?.()
       s.detachPicking()
       s.detachDragging?.()
+      s.controls.removeEventListener('change', s.requestRender)
       s.controls.dispose()
       disposeAll(s.scene, wallMeshes.current)
       disposeAll(s.scene, furnMeshes.current)
@@ -253,10 +288,10 @@ export default function useThree(containerRef) {
       levelOffsets, levelHeights, activeLevelId: activeLevel, solo: solo3d, xray: xrayCeiling,
     })
     // Apply layer visibility after reconciling (walls layer controls wall meshes)
-    if (!layers.walls) {
+    if (!layerWalls) {
       for (const m of wallMeshes.current.values()) m.visible = false
     }
-  }, [walls, openings, levels, activeLevel, solo3d, xrayCeiling, layers])
+  }, [walls, openings, levels, activeLevel, solo3d, xrayCeiling, layerWalls])
 
   // ── doors ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -266,10 +301,10 @@ export default function useThree(containerRef) {
       levelOffsets, activeLevelId: activeLevel, solo: solo3d,
     })
     // Door panels are openings; hide if either walls or openings layer is off
-    if (!layers.walls || !layers.openings) {
+    if (!layerWalls || !layerOpenings) {
       for (const m of doorMeshes.current.values()) m.visible = false
     }
-  }, [walls, openings, levels, activeLevel, solo3d, layers])
+  }, [walls, openings, levels, activeLevel, solo3d, layerWalls, layerOpenings])
 
   // ── furniture + lights ───────────────────────────────────────────────────────
   // Resolve custom-model blob URLs (created lazily from stored base64).
@@ -293,10 +328,10 @@ export default function useThree(containerRef) {
       { levelOffsets, levelHeights, activeLevelId: activeLevel, solo: solo3d },
     )
     // Apply layer visibility after reconciling
-    if (!layers.furniture) {
+    if (!layerFurniture) {
       for (const m of furnMeshes.current.values()) m.visible = false
     }
-  }, [resolvedFurniture, lighting.lightsOn, levels, activeLevel, solo3d, layers])
+  }, [resolvedFurniture, lighting.lightsOn, levels, activeLevel, solo3d, layerFurniture])
 
   // ── rooms + ceilings ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -358,11 +393,11 @@ export default function useThree(containerRef) {
       ceilingColorFor, levelOffsets, levels,
       { solo: solo3d, activeLevelId: activeLevel, visible: ceilingsVisible }, ceilingMatIdFor)
     // Apply layer visibility after reconciling (rooms layer controls floors + ceilings)
-    if (!layers.rooms) {
+    if (!layerRooms) {
       for (const m of roomMeshes.current.values()) m.visible = false
       for (const m of ceilingMeshes.current.values()) m.visible = false
     }
-  }, [walls, roomMeta, furniture, levels, activeLevel, solo3d, ceilingsVisible, layers])
+  }, [walls, roomMeta, furniture, levels, activeLevel, solo3d, ceilingsVisible, layerRooms])
 
   // ── selection highlight ──────────────────────────────────────────────────────
   useEffect(() => {

@@ -79,6 +79,7 @@ for (const mesh of doc.getRoot().listMeshes()) {
 console.log('Optimising…')
 await doc.transform(
   dedup(),
+  weld(),
   prune(),
   // quantizePosition:10 → 1 mm precision at 1 m scale (enough for furniture)
   quantize({ quantizePosition: 10, quantizeNormal: 8 }),

@@ -15,3 +15,19 @@ html, body, #root {
   font-family: 'Heebo', system-ui, sans-serif;
   letter-spacing: 0;
 }
+
+/* Keyboard-only focus rings for interactive elements. focus-visible keeps
+   mouse clicks clean while giving keyboard users a clear, consistent
+   indicator app-wide without annotating every button. */
+@layer base {
+  button:focus-visible,
+  a:focus-visible,
+  [role="button"]:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+}

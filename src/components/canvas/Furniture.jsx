@@ -15,7 +15,6 @@ export default function Furniture({ item, selected, scale, onSelect, onShiftSele
   const dragOffset = useRef(null)
   // Rotation to apply on dragEnd when a wall snap is active.
   const pendingRotation = useRef(null)
-  const walls = useStore((s) => s.walls)
   const w = item.width * PIXELS_PER_METER
   const d = item.depth * PIXELS_PER_METER
   const fill = furnitureColorFor(item)
@@ -44,9 +43,11 @@ export default function Furniture({ item, selected, scale, onSelect, onShiftSele
         e.target.y(worldY)
         // Wall snap: override position if within threshold of a wall face.
         if (!item.wallMounted) {
+          // Read walls lazily at drag time so this component doesn't hold a
+          // standing subscription that re-renders every instance on any wall edit.
           const wallSnap = findWallSnap(
             { x: worldX, y: worldY, width: item.width, depth: item.depth, rotation: item.rotation },
-            walls,
+            useStore.getState().walls,
             scale,
           )
           if (wallSnap) {

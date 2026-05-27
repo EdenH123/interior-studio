@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-24_  <!-- 7 opening types, wall height/thickness, structural textures, furniture snap-to-wall, copy/paste, 45° angle walls, furniture alignment -->
+_Last updated: 2026-05-27_  <!-- first-run empty-state hint, keyboard focus rings -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -21,6 +21,10 @@ The screen has four areas:
 - **Right panel** — properties of whatever is currently selected.
 
 ## Drawing walls
+
+When the canvas is empty, a short **"Start your floor plan"** card appears in
+the center with three steps to get you going. It disappears the moment you
+draw your first wall or drop a piece of furniture.
 
 1. Click anywhere empty on the canvas to drop the **start point**. A blue
    dot appears.

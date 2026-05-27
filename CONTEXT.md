@@ -663,6 +663,18 @@ interior-studio/
   - **Hebrew font**: Google Fonts Heebo loaded in `index.html`; applied via `:lang(he)` in `src/index.css`.
   - **Components fully translated**: `Toolbar`, `Sidebar`, `PropertiesPanel`, `AiPanel`, `LayersPanel`, `LevelsPanel`, `KeyboardShortcutsModal`, `Viewer3D`, `LightingToolbar`, `WallProps`, `FurnitureProps`, `OpeningProps`, `MultiSelectProps`, `LightingProps`, `StairProps`, `UnderlayProps`.
 
+- [x] Performance, architecture & UX upgrade batch + critical crash fix (2026-05-27)
+  - **Critical fix**: the app was crashing to a blank screen on load — `CanvasArea.jsx` passed `spaceDown={spaceDown}` to `HudOverlay` but `spaceDown` was never defined (`useModifierKeys` returns only `shiftDown`/`altDown`), throwing a `ReferenceError` on every render with no error boundary. Removed the prop and the obsolete `hud.hint_pan` branch (Space now toggles Select/Draw, not hold-to-pan). The app now renders again.
+  - **Build/test were red on arrival**: `i18next`/`react-i18next`/`i18next-http-backend` were in package.json but not installed (`npm install` fixed the build); 11 component tests failed because the test env never initialised i18n — `src/test/setup.js` now inits i18next synchronously from the bundled English resources so `t()` returns real strings.
+  - **Perf**: compressed `chair.glb` 501→249 kB (weld + 50% decimation + re-quantize, keeps KHR_mesh_quantization; new `scripts/compress-chair.mjs`, `weld()` added to `process-sheenchair.mjs`); `React.memo(Grid)` so its 402 lines build once; render-on-demand in `useThree.js` (RAF only renders when a `needsRender` flag is set by store change / OrbitControls `change` / `onCacheChange` / door anim / drag / resize; walkthrough always renders); sun shadow map 2048→1024; narrowed over-broad subscriptions (`Furniture.jsx` reads walls via `getState()` at drag time instead of a standing subscription; `useThree.js` subscribes to per-layer booleans instead of the whole `layers` object).
+  - **Bundle**: `vite.config.js` `manualChunks` isolates Konva; `ImportModelModal` is now `React.lazy` (it statically imported three.js + GLTFLoader). Main entry chunk dropped from ~1,108 kB to ~480 kB (303→143 kB gzip); three.js now loads only with the 3D view or import dialog.
+  - **Memory**: GLB model cache (`furnitureModelCache.js`) bounded with LRU (cap 40, evicts oldest loaded entries, never in-flight; `touch` on clone) + new test.
+  - **Architecture**: extracted `src/store/normalizeProject.js` (`normalizeProjectData` + `migratePersistedState` version chain) shared by `loadProject` and the persist `migrate`, removing duplicated level-assignment logic + the previously-untested migrate path; added `normalizeProject.test.js`.
+  - **UX**: first-run empty-state hint on the canvas (stateless — shows when no walls/furniture and not mid-draw; new `hud.empty_*` strings in en + he); global `focus-visible` outline in `index.css` for keyboard accessibility.
+  - **Security**: Gemini API key moved from `?key=` query param to the `x-goog-api-key` header (`claudeApi.js`) — no longer leaks into history/proxy logs.
+  - **Doc drift corrected**: this CONTEXT.md previously implied the AI used Anthropic (it's Gemini), persist v1 (it's v2), and an SSAO/Bloom EffectComposer chain (no postprocessing exists). Noted for future sessions.
+  - Tests: 423→446 passing (added LRU cache + normalizeProject suites). `Fix #58`-era room/tool work untouched.
+
 ### 🚧 In Progress
 - (nothing active)
 
@@ -672,6 +684,7 @@ interior-studio/
 - [ ] AI prompt caching — split static system prompt from dynamic project snapshot via Anthropic `cache_control` blocks.
 - [ ] AI markdown rendering — the chat transcript shows plain whitespace-preserved text today; rendering headings + lists + code blocks would make responses more scannable.
 - [ ] Underlay selection from 3D (today 3D picking only finds walls / furniture / rooms; underlay is a 2D-only concept)
+- [ ] **Move binary blobs to IndexedDB** (deferred from the 2026-05-27 upgrade batch — needs review). Underlay images + custom GLBs share the ~5 MB localStorage blob; one quota error fails the whole persist write, losing the entire project. Move binaries to IndexedDB (whole-store async StateStorage is simplest). Critical: migrate existing localStorage data on first load so no saved project is lost, update Toolbar's localStorage read-back verification, and add an IndexedDB mock to the test setup. Data-safety-sensitive — kept out of the auto-merged batch deliberately.
 
 ## Key Data Structures
 ```javascript

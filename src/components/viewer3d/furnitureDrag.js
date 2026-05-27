@@ -13,7 +13,7 @@ import { KONVA_TO_THREE } from './threeMath'
 
 const DRAG_START_PX = 4
 
-export function attachFurnitureDrag(renderer, camera, furnMeshes, controls, { onDragEnd, getSelection, isAllowed }) {
+export function attachFurnitureDrag(renderer, camera, furnMeshes, controls, { onDragEnd, getSelection, isAllowed, requestRender }) {
   const raycaster = new THREE.Raycaster()
   const pointer   = new THREE.Vector2()
   const hitPt     = new THREE.Vector3()
@@ -91,6 +91,7 @@ export function attachFurnitureDrag(renderer, camera, furnMeshes, controls, { on
       if (group) {
         group.position.x = hitPt.x - dragState.offsetX
         group.position.z = hitPt.z - dragState.offsetZ
+        requestRender?.()
       }
     }
   }

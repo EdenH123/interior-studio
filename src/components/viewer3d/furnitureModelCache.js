@@ -11,6 +11,30 @@
 
 export const cache = new Map()
 
+// Bound the cache so a long session with many distinct models doesn't grow
+// the heap without limit. Map preserves insertion order, so the oldest
+// entries sit at the front. `touch` re-inserts a key to mark it most-recently
+// used; `enforceLimit` drops the oldest *loaded* entries past the cap (never
+// in-flight loads, which still have pending listeners). Eviction only removes
+// the cache reference — clones in the scene keep their own materials and the
+// model simply reloads from the browser cache if placed again.
+const CACHE_LIMIT = 40
+
+export function touch(url) {
+  const entry = cache.get(url)
+  if (!entry) return
+  cache.delete(url)
+  cache.set(url, entry)
+}
+
+export function enforceLimit() {
+  if (cache.size <= CACHE_LIMIT) return
+  for (const [url, entry] of cache) {
+    if (cache.size <= CACHE_LIMIT) break
+    if (entry.state === 'loaded') cache.delete(url)
+  }
+}
+
 // Global change listeners — notified on every load-state transition so
 // React components (e.g. the 3D viewer's loading indicator) can re-render.
 const changeListeners = new Set()

@@ -7,11 +7,12 @@
 // Anthropic-style message objects to Gemini's content format, including
 // the vision case (Anthropic source.base64 → Gemini inline_data).
 //
-// Auth: the API key travels as a ?key= query parameter. Google's free-tier
-// Gemini Flash is rate-limited to 15 RPM / 1 500 RPD at no cost. Same
-// caveat as before — any browser-visible key can be extracted from devtools;
-// get a key from https://aistudio.google.com/app/apikey and keep its scope
-// narrow.
+// Auth: the API key travels in the x-goog-api-key header, not the URL query
+// string — a query-string key leaks into browser history, proxy logs, and
+// Referer headers. Google's free-tier Gemini Flash is rate-limited to
+// 15 RPM / 1 500 RPD at no cost. Same caveat as before — any browser-visible
+// key can be extracted from devtools; get a key from
+// https://aistudio.google.com/app/apikey and keep its scope narrow.
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
 
@@ -38,7 +39,7 @@ function toGeminiContent(msg) {
 }
 
 export async function* streamClaude({ apiKey, model, system, messages, maxTokens = 2048 }) {
-  const url = `${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`
+  const url = `${GEMINI_BASE}/${model}:streamGenerateContent?alt=sse`
 
   // Drop empty-string messages that the UI may insert as placeholder slots.
   const contents = messages
@@ -53,7 +54,10 @@ export async function* streamClaude({ apiKey, model, system, messages, maxTokens
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
     body: JSON.stringify(body),
   })
 

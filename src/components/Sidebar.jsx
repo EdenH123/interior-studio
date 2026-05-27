@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CATEGORIES, FURNITURE } from './canvas/furnitureCatalog'
 import { OPENINGS, OPENING_DRAG_MIME } from './canvas/openingsCatalog'
@@ -6,8 +6,12 @@ import useStore from '../store/useStore'
 import LayersPanel from './LayersPanel'
 import LevelsPanel from './LevelsPanel'
 import IkeaProductSearch from './IkeaProductSearch'
-import ImportModelModal from './ImportModelModal'
 import { CUSTOM_MODEL_DRAG_MIME } from '../hooks/useCustomModelDrop'
+
+// Lazy: ImportModelModal pulls in three.js + GLTFLoader to parse uploaded
+// GLBs. Keeping it out of the eager bundle means the 2D app doesn't ship
+// three.js until the user actually opens the import dialog.
+const ImportModelModal = lazy(() => import('./ImportModelModal'))
 
 export const FURNITURE_DRAG_MIME = 'application/x-interior-studio-furniture'
 
@@ -76,8 +80,12 @@ export default function Sidebar() {
       <div className="px-3 py-2 border-t border-gray-700 text-[11px] text-gray-500 font-mono leading-snug">
         {t('sidebar.drag_hint')}
       </div>
-      {showImport && <ImportModelModal onClose={() => setShowImport(false)} />}
-      {editModel  && <ImportModelModal editModel={editModel} onClose={() => setEditModel(null)} />}
+      {(showImport || editModel) && (
+        <Suspense fallback={null}>
+          {showImport && <ImportModelModal onClose={() => setShowImport(false)} />}
+          {editModel  && <ImportModelModal editModel={editModel} onClose={() => setEditModel(null)} />}
+        </Suspense>
+      )}
     </aside>
   )
 }
