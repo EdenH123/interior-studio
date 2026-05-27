@@ -23,6 +23,7 @@ export default function PropertiesPanel() {
   const { t } = useTranslation()
   const selection = useStore((s) => s.selection)
   const walls = useStore((s) => s.walls)
+  const activeLevel = useStore((s) => s.activeLevel)
   const furniture = useStore((s) => s.furniture)
   const roomMeta = useStore((s) => s.roomMeta)
   const updateRoomMeta = useStore((s) => s.updateRoomMeta)
@@ -39,9 +40,16 @@ export default function PropertiesPanel() {
 
   const items = selectionItems(selection)
   const single = getSingleItem(selection)
+  // Detect rooms from the ACTIVE level's walls only, exactly as CanvasArea
+  // does. Running detectRooms over every level's walls at once produces
+  // different polygon fingerprints (coincident edges from stacked floors),
+  // so the clicked room's id wouldn't match and upper-level rooms couldn't
+  // be inspected.
   const rooms = useMemo(
-    () => (single?.kind === 'room' ? detectRooms(walls) : []),
-    [walls, single],
+    () => (single?.kind === 'room'
+      ? detectRooms(walls.filter((w) => !w.levelId || w.levelId === activeLevel))
+      : []),
+    [walls, activeLevel, single],
   )
 
   let body = <Empty />
@@ -128,15 +136,26 @@ function RoomProps({ room, meta, onUpdate }) {
           onChange={(id) => onUpdate(room.id, { floorMaterial: id })}
         />
       </div>
-      <div className="mt-3" data-tour="material-ceiling">
-        <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">{t('room.ceiling_material')}</div>
-        <MaterialPicker
-          materials={CEILING_MATERIALS}
-          currentId={meta.ceilingMaterial}
-          resolveId={resolveCeilingMaterialId}
-          onChange={(id) => onUpdate(room.id, { ceilingMaterial: id })}
+      <label className="mt-3 flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={!meta.noCeiling}
+          onChange={(e) => onUpdate(room.id, { noCeiling: !e.target.checked })}
+          className="accent-blue-500"
         />
-      </div>
+        <span className="text-gray-300 text-xs">{t('room.has_ceiling')}</span>
+      </label>
+      {!meta.noCeiling && (
+        <div className="mt-3" data-tour="material-ceiling">
+          <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">{t('room.ceiling_material')}</div>
+          <MaterialPicker
+            materials={CEILING_MATERIALS}
+            currentId={meta.ceilingMaterial}
+            resolveId={resolveCeilingMaterialId}
+            onChange={(id) => onUpdate(room.id, { ceilingMaterial: id })}
+          />
+        </div>
+      )}
       <div className="mt-3">
         <Row label={t('room.area')} value={`${area.toFixed(2)} m²`} />
         <Row label={t('room.vertices')} value={room.verts.length} />

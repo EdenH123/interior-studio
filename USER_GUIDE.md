@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- "Resize to fit" for openings too wide for their wall -->
+_Last updated: 2026-05-27_  <!-- per-room ceiling toggle; room selection fixed on all levels -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -364,10 +364,21 @@ to select it. The right panel shows the room's editor:
 Room names and materials are saved automatically and survive page
 refresh, just like walls and furniture.
 
+### Removing a room's ceiling (e.g. a balcony)
+
+With a room selected, the right panel has a **Ceiling** checkbox above the
+ceiling-material picker. It's on by default. Uncheck it to remove that
+room's ceiling entirely in 3D — useful for a balcony or an open courtyard.
+The ceiling-material picker hides while the box is unchecked, and the
+setting is saved with the project. (This is per-room, distinct from the
+global **Ceilings** toggle in the 3D toolbar, which just hides all ceilings
+at once without changing your rooms.)
+
 ### Ceiling material
 
-With a room selected, the right panel shows a **Ceiling** picker below the
-floor material picker. Seven finishes are available:
+With a room selected (and its **Ceiling** checkbox on), the right panel
+shows a **Ceiling** picker below the floor material picker. Seven finishes
+are available:
 
 | Finish | Category |
 |---|---|

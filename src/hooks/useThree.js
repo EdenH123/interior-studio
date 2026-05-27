@@ -366,30 +366,29 @@ export default function useThree(containerRef) {
       }))
     })
 
+    // Room ids are `${levelId}:${fingerprint}`; roomMeta is keyed by the bare
+    // fingerprint, so strip the level prefix before lookup.
+    const bareFp = (id) => (id.includes(':') ? id.split(':').slice(1).join(':') : id)
     const floorColorFor = (id) => {
-      const fp = id.includes(':') ? id.split(':').slice(1).join(':') : id
-      const matId = roomMeta[fp]?.floorMaterial
+      const matId = roomMeta[bareFp(id)]?.floorMaterial
       const mat = matId ? getFloorMaterial(matId) : null
       return mat?.color ?? DEFAULT_FLOOR_COLOR
     }
-    const floorMatIdFor = (id) => {
-      const fp = id.includes(':') ? id.split(':').slice(1).join(':') : id
-      return resolveFloorMaterialId(roomMeta[fp]?.floorMaterial) ?? null
-    }
+    const floorMatIdFor = (id) => resolveFloorMaterialId(roomMeta[bareFp(id)]?.floorMaterial) ?? null
     const ceilingColorFor = (id) => {
-      const fp = id.includes(':') ? id.split(':').slice(1).join(':') : id
-      const matId = roomMeta[fp]?.ceilingMaterial
+      const matId = roomMeta[bareFp(id)]?.ceilingMaterial
       const mat = matId ? getCeilingMaterial(matId) : null
       return mat?.color ?? DEFAULT_CEILING_COLOR
     }
-    const ceilingMatIdFor = (id) => {
-      const fp = id.includes(':') ? id.split(':').slice(1).join(':') : id
-      return resolveCeilingMaterialId(roomMeta[fp]?.ceilingMaterial)
-    }
+    const ceilingMatIdFor = (id) => resolveCeilingMaterialId(roomMeta[bareFp(id)]?.ceilingMaterial)
+
+    // Per-room "no ceiling" (e.g. a balcony): skip those rooms so the ceiling
+    // reconciler removes any existing mesh for them.
+    const roomsWithCeiling = allRooms.filter((r) => !roomMeta[bareFp(r.id)]?.noCeiling)
 
     reconcileRooms(stateRef.current.scene, allRooms, roomMeshes.current,
       floorColorFor, levelOffsets, { solo: solo3d, activeLevelId: activeLevel }, floorMatIdFor)
-    reconcileCeilings(stateRef.current.scene, allRooms, ceilingMeshes.current,
+    reconcileCeilings(stateRef.current.scene, roomsWithCeiling, ceilingMeshes.current,
       ceilingColorFor, levelOffsets, levels,
       { solo: solo3d, activeLevelId: activeLevel, visible: ceilingsVisible }, ceilingMatIdFor)
     // Apply layer visibility after reconciling (rooms layer controls floors + ceilings)

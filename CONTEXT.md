@@ -704,6 +704,14 @@ interior-studio/
   - Wired into both drop paths: `useOpeningDrop` (2D) and `useFurnitureDrop3D` (3D opening branch). Both recompute the fit width and, when one exists, show the action toast instead of the plain warning.
   - Tests: +7 (`fitOpeningWidth` × 5 in openingGeometry.test.js; width-override + `code` assertions × 2 in openingsSlice.test.js). 462 total passing.
 
+- [x] Fix: room selection on non-ground levels + per-room ceiling toggle (2026-05-27)
+  - **Bug**: clicking a room only showed its properties on the ground floor. `PropertiesPanel` ran `detectRooms(walls)` over ALL walls, but `CanvasArea` detects rooms from the active level's walls only. With stacked floors the mixed planar graph yields different polygon fingerprints, so the clicked room's id never matched → empty panel. Fix: `PropertiesPanel` now filters walls to the active level (`!w.levelId || w.levelId === activeLevel`) before `detectRooms`, mirroring `CanvasArea`.
+  - **Per-room ceiling toggle**: `RoomProps` gains a "Ceiling" checkbox (on by default). Unchecking sets `roomMeta[id].noCeiling = true` and hides the ceiling-material picker. In 3D, `useThree` filters out `noCeiling` rooms before `reconcileCeilings`, so the reconciler removes their ceiling mesh (e.g. a balcony). `noCeiling` persists with `roomMeta`; absence = has ceiling, so no migration needed.
+  - Refactored the four repeated level-prefix-strip closures in `useThree`'s room effect into one `bareFp(id)` helper.
+  - **Known limitation**: `roomMeta` is keyed by bare polygon fingerprint, so two identically-shaped rooms on different levels still share metadata (name / materials / `noCeiling`). Balconies usually differ in footprint, so this rarely bites; making meta level-aware would need a keyed migration (deferred).
+  - i18n: added `room.has_ceiling` (en "Ceiling" / he "תקרה").
+  - Tests: +1 (`flows.test.jsx`: room editor shows for a room on a non-ground level + ceiling checkbox on by default). 463 total passing.
+
 ### 🚧 In Progress
 - (nothing active)
 
