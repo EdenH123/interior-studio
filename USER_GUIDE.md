@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- outdoor areas: rooms without walls, drawn with the Area tool -->
+_Last updated: 2026-05-27_  <!-- pivot door (centre-pivot opening type) -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -98,6 +98,7 @@ seven types to choose from:
 | Hinged Door | 0.9 m | Standard swing door; panel opens 90° in 3D |
 | Double Door | 1.6 m | Two panels sharing a center hinge; both swing in 3D |
 | Sliding Door | 1.2 m | Panel slides to one side; static in 3D |
+| Pivot Door | 1.0 m | Panel pivots about its centre line; opens 90° in 3D (click to open/close). Use "Opens toward" to flip the direction |
 | Window | 1.2 m | Standard sash, 0.9 m sill height |
 | Fixed Window | 1.5 m | Non-opening pane, 0.9 m sill height |
 | Casement | 1.0 m | Side-hinged swing-out frame, 0.9 m sill height |

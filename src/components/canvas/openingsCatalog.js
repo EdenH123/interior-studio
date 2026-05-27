@@ -9,6 +9,7 @@ export const OPENINGS = [
   { type: 'door',            label: 'Hinged Door',   width: 0.9, height: 2.1, sillHeight: 0   },
   { type: 'door-double',     label: 'Double Door',   width: 1.6, height: 2.1, sillHeight: 0   },
   { type: 'door-sliding',    label: 'Sliding Door',  width: 1.2, height: 2.1, sillHeight: 0   },
+  { type: 'door-pivot',      label: 'Pivot Door',    width: 1.0, height: 2.1, sillHeight: 0   },
   { type: 'window',          label: 'Window',        width: 1.2, height: 1.4, sillHeight: 0.9 },
   { type: 'window-fixed',    label: 'Fixed Window',  width: 1.5, height: 1.2, sillHeight: 0.9 },
   { type: 'window-casement', label: 'Casement',      width: 1.0, height: 1.2, sillHeight: 0.9 },

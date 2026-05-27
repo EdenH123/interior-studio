@@ -147,7 +147,7 @@ export default function OpeningProps({ opening, wall, onUpdate, pushToast }) {
         </div>
       )}
 
-      {(opening.type === 'door' || opening.type === 'door-double') && (
+      {(opening.type === 'door' || opening.type === 'door-double' || opening.type === 'door-pivot') && (
         <div className="mt-3">
           <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('opening.opens_toward')}</span>
           <div className="flex gap-1 mt-1">
