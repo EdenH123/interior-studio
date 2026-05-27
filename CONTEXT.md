@@ -675,6 +675,14 @@ interior-studio/
   - **Doc drift corrected**: this CONTEXT.md previously implied the AI used Anthropic (it's Gemini), persist v1 (it's v2), and an SSAO/Bloom EffectComposer chain (no postprocessing exists). Noted for future sessions.
   - Tests: 423→446 passing (added LRU cache + normalizeProject suites). `Fix #58`-era room/tool work untouched.
 
+- [x] Persistence moved from localStorage to IndexedDB (2026-05-27)
+  - New `src/store/idbStorage.js` — hand-rolled IndexedDB `StateStorage` (no runtime dependency) wired into `persist` via `createJSONStorage(() => idbStorage)` in `useStore.js`. Removes the ~5 MB localStorage ceiling, so a large underlay image or custom GLB can't blow the budget and fail the whole persist write (the previous failure mode that lost the entire project).
+  - **Transparent migration**: on first read, if IndexedDB is empty the adapter reads any legacy `localStorage['interior-studio']` payload, copies it into IDB, and clears the localStorage copy — existing users' projects move over with zero loss. Verified in-browser (legacy seed → reload → migrated, localStorage cleared, walls + underlay intact).
+  - Hydration is now async; `onRehydrateStorage` clears zundo history after load so the first Ctrl+Z can't revert the hydration (verified: undo disabled immediately after load).
+  - `Toolbar.handleFile` lost its localStorage read-back quota check (`persistedUnderlayMatches` + the "too large to save" error toast + `QUOTA_WARN_BYTES` import) — obsolete now that IDB has no practical cap; the "downscaled to fit" info toast stays.
+  - Tests: `fake-indexeddb` added as a devDependency and imported in `src/test/setup.js`; new `idbStorage.test.js` covers round-trip + the localStorage→IDB migration. 446 → 452 passing.
+  - Shipped as its own PR for review (not auto-merged) — data-safety-sensitive.
+
 ### 🚧 In Progress
 - (nothing active)
 
@@ -684,7 +692,6 @@ interior-studio/
 - [ ] AI prompt caching — split static system prompt from dynamic project snapshot via Anthropic `cache_control` blocks.
 - [ ] AI markdown rendering — the chat transcript shows plain whitespace-preserved text today; rendering headings + lists + code blocks would make responses more scannable.
 - [ ] Underlay selection from 3D (today 3D picking only finds walls / furniture / rooms; underlay is a 2D-only concept)
-- [ ] **Move binary blobs to IndexedDB** (deferred from the 2026-05-27 upgrade batch — needs review). Underlay images + custom GLBs share the ~5 MB localStorage blob; one quota error fails the whole persist write, losing the entire project. Move binaries to IndexedDB (whole-store async StateStorage is simplest). Critical: migrate existing localStorage data on first load so no saved project is lost, update Toolbar's localStorage read-back verification, and add an IndexedDB mock to the test setup. Data-safety-sensitive — kept out of the auto-merged batch deliberately.
 
 ## Key Data Structures
 ```javascript

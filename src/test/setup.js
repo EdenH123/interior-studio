@@ -1,5 +1,9 @@
 // Vitest global setup. Loaded before every test file via vitest.config.js.
 
+// jsdom has no IndexedDB; the store persists to it. Provide a fake so the
+// store's persist middleware works in tests (and the IDB storage adapter can
+// be exercised directly).
+import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom/vitest'
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'

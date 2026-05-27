@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { temporal } from 'zundo'
+import { idbStorage } from './idbStorage'
 import { nanoid } from 'nanoid/non-secure'
 import { createWallsSlice } from './slices/wallsSlice'
 import { createFurnitureSlice } from './slices/furnitureSlice'
@@ -189,6 +190,15 @@ const useStore = create(persist(
   {
     name: 'interior-studio',
     version: 2,
+    // Persist to IndexedDB (no ~5 MB localStorage cap, so big underlay images
+    // and custom GLBs can't blow the budget and lose the whole project). The
+    // adapter transparently migrates any existing localStorage payload on
+    // first read. Hydration is async; zundo history is cleared in
+    // onRehydrateStorage so the first undo doesn't revert the load.
+    storage: createJSONStorage(() => idbStorage),
+    onRehydrateStorage: () => () => {
+      useStore?.temporal?.getState().clear()
+    },
     // Migration is a version chain in normalizeProject.js, shared with
     // loadProject so the level-assignment rules can't drift. v1 → v2 seeds
     // levels + backfills levelId on legacy items.
