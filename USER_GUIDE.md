@@ -1,6 +1,6 @@
 # Interior Studio — User Guide
 
-_Last updated: 2026-05-27_  <!-- reshape rooms via wall corner/edge drag handles (select mode) -->
+_Last updated: 2026-05-27_  <!-- outdoor areas: rooms without walls, drawn with the Area tool -->
 
 
 A short tour of everything Interior Studio can do today. Read it
@@ -436,6 +436,27 @@ detected room to start the chain, then continue inside. Or use
 snap-to-endpoint: click near an existing wall endpoint to start a chain
 from there — that works inside a room because the endpoint is on the
 room's boundary.
+
+## Outdoor areas (rooms without walls)
+
+For spaces that have a floor but no walls — a patio, deck, balcony, or
+garden — use the **Area** tool (the third button in the top toolbar, next
+to Select and Draw).
+
+1. Click **Area** to enter area mode.
+2. **Click each corner** of the space on the canvas. A lime outline grows
+   as you go, and a translucent fill appears once you have at least three
+   points.
+3. **Close the shape** by clicking back on the first point (it highlights
+   in cyan when you're close enough), or just press **Enter**. Press
+   **Esc** to cancel a half-drawn area.
+
+The finished area shows as a floor patch in both 2D and 3D — no walls, no
+ceiling. Switch to **Select** mode and click it to set its **name** and
+**floor material** (the same wood/tile/marble/etc. catalog as rooms), or
+to **delete** it (Delete key or the button in its properties). Areas live
+on the active level and ride the **Rooms** layer toggle. Corners snap to a
+0.1 m grid.
 
 ## Floor-plan underlay
 

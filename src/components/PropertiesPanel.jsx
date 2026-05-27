@@ -25,6 +25,9 @@ export default function PropertiesPanel() {
   const walls = useStore((s) => s.walls)
   const activeLevel = useStore((s) => s.activeLevel)
   const furniture = useStore((s) => s.furniture)
+  const areas = useStore((s) => s.areas)
+  const updateArea = useStore((s) => s.updateArea)
+  const removeArea = useStore((s) => s.removeArea)
   const roomMeta = useStore((s) => s.roomMeta)
   const updateRoomMeta = useStore((s) => s.updateRoomMeta)
   const updateWall = useStore((s) => s.updateWall)
@@ -77,6 +80,9 @@ export default function PropertiesPanel() {
   } else if (single?.kind === 'room') {
     const r = rooms.find((x) => x.id === single.id)
     if (r) body = <RoomProps room={r} meta={roomMeta[r.id] ?? {}} onUpdate={updateRoomMeta} />
+  } else if (single?.kind === 'area') {
+    const a = areas.find((x) => x.id === single.id)
+    if (a) body = <AreaProps area={a} onUpdate={updateArea} onRemove={removeArea} />
   } else if (single?.kind === 'opening') {
     const o = openings.find((x) => x.id === single.id)
     const wall = o ? walls.find((w) => w.id === o.wallId) : null
@@ -160,6 +166,46 @@ function RoomProps({ room, meta, onUpdate }) {
         <Row label={t('room.area')} value={`${area.toFixed(2)} m²`} />
         <Row label={t('room.vertices')} value={room.verts.length} />
       </div>
+    </div>
+  )
+}
+
+function AreaProps({ area, onUpdate, onRemove }) {
+  const { t } = useTranslation()
+  const size = polygonAreaM2(area.verts)
+  return (
+    <div>
+      <h3 className="text-gray-200 text-xs uppercase tracking-widest mb-2">{t('area.title')}</h3>
+      <label className="block">
+        <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('area.name')}</span>
+        <input
+          type="text"
+          value={area.name ?? ''}
+          onChange={(e) => onUpdate(area.id, { name: e.target.value })}
+          placeholder={t('area.name_placeholder')}
+          className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-sm focus:border-blue-500 focus:outline-none"
+        />
+      </label>
+      <div className="mt-3">
+        <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-1">{t('area.floor_material')}</div>
+        <MaterialPicker
+          materials={FLOOR_MATERIALS}
+          currentId={area.floorMaterial}
+          resolveId={resolveFloorMaterialId}
+          onChange={(id) => onUpdate(area.id, { floorMaterial: id })}
+        />
+      </div>
+      <div className="mt-3">
+        <Row label={t('area.size')} value={`${Math.abs(size).toFixed(2)} m²`} />
+        <Row label={t('area.vertices')} value={area.verts.length} />
+      </div>
+      <button
+        type="button"
+        onClick={() => onRemove(area.id)}
+        className="mt-3 w-full text-xs font-mono px-2 py-1.5 rounded border border-red-800 bg-red-950 text-red-200 hover:bg-red-900"
+      >
+        {t('area.delete')}
+      </button>
     </div>
   )
 }

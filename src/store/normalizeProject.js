@@ -24,6 +24,7 @@ export function normalizeProjectData(data) {
     walls: withLevel(d.walls),
     furniture: withLevel(d.furniture),
     openings: withLevel(d.openings),
+    areas: withLevel(d.areas),
     roomMeta: d.roomMeta && typeof d.roomMeta === 'object' ? d.roomMeta : {},
     underlay: d.underlay && typeof d.underlay === 'object' ? d.underlay : null,
     levels,

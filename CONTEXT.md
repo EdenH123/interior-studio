@@ -88,6 +88,8 @@ interior-studio/
 │   │   │   ├── Swatch.jsx          # shared material-picker chip used by RoomProps + WallProps + FurnitureProps
 │   │   │   ├── HudOverlay.jsx      # bottom-of-canvas chips: zoom %, cursor in meters, context-sensitive hint
 │   │   │   ├── DrawPreview.jsx     # the dashed-blue preview wall + start/end dots + live dimension label
+│   │   │   ├── AreaDraftPreview.jsx # in-progress outdoor-area polygon (lime polyline + cursor segment + fill + vertex dots; first dot cyan when closeable)
+│   │   │   ├── WallEditHandles.jsx  # select-mode wall reshape handles: corner circles (move vertex) + edge square (slide wall); snaps to 0.1 m
 │   │   │   ├── Underlay.jsx        # Konva.Image with drag-when-unlocked + selection
 │   │   │   ├── UnderlayProps.jsx   # PropertiesPanel editor for the underlay (opacity, calibrate, remove, AI trace)
 │   │   │   ├── WallProps.jsx       # PropertiesPanel editor for a selected wall — editable Length (m), Height (m), Thickness (m) inputs + material picker
@@ -133,6 +135,7 @@ interior-studio/
 │   │       ├── furnitureSlice.js
 │   │       ├── openingsSlice.js # doors + windows on walls — addOpening/updateOpening/removeOpening/toggleDoorOpen; door items have open:false default
 │   │       ├── roomsSlice.js
+│   │       ├── areasSlice.js    # outdoor areas (rooms without walls): areas[] + transient areaDraft + add/update/remove + draft actions
 │   │       ├── underlaySlice.js
 │   │       ├── viewSlice.js     # show3d + drawStart
 │   │       ├── uiSlice.js       # selection + dragGhost (now carries kind/wallId/position) + toast
@@ -751,6 +754,16 @@ interior-studio/
   - In select mode nothing cleared the selection on a background click — `useDrawWalls` only calls `clearSelection()` in *draw* mode (it returns early in select mode), and the marquee only acted on a drag. So a selected wall (or any object) stayed selected when you clicked away. Surfaced now that wall editing lives in select mode.
   - Fix: `useMarquee`'s `onMouseUp` now clears the selection when the press landed on the stage background (`anchor` set) and there was no drag (`active` false). Shape clicks are unaffected (they don't set `anchor`), and dragging a wall edit-handle doesn't deselect (handles `cancelBubble`, so the press never reaches the stage).
   - Test: new `src/hooks/useMarquee.test.js` (+2) — background click clears selection; a press on a shape leaves it. 482 total passing.
+
+- [x] Outdoor areas — rooms without walls (2026-05-27)
+  - New first-class **Area** entity: a user-drawn polygon `{ id, verts, name, floorMaterial, levelId }` that renders as a tinted floor region in 2D and a floor slab in 3D, with NO walls and NO ceiling (patios, decks, gardens). Wall-derived rooms are unchanged; this is additive.
+  - `areasSlice.js` (new): `areas` + transient `areaDraft` + `addArea` / `updateArea` / `removeArea` (clears matching selection) + draft actions `addAreaPoint` / `finishAreaDraft` (commits ≥3 pts) / `cancelAreaDraft`. `areas` joins `HISTORY_SLICE` + persist `partialize`; `normalizeProjectData` backfills `levelId` (so loadProject/migrate handle it); `loadProject` clears `areaDraft`.
+  - New **Area tool** (third toolbar button, `activeTool: 'area'`): each background click drops a polygon vertex (snapped to 0.1 m); clicking back on the first point — or **Enter** — closes it; **Esc** cancels. `setActiveTool`/`toggleActiveTool` clear the draft; `useDrawWalls` now only draws when `activeTool === 'draw'` (so area mode doesn't draw walls).
+  - 2D: committed areas reuse `Room.jsx` (passed area-shaped props + computed centroid; lime default tint, or the floor-material overlay); listen only in select mode. `AreaDraftPreview.jsx` (new) shows the in-progress polyline + cursor segment + fill + vertex dots (first dot cyan when closeable).
+  - 3D: `useThree` gains `areaMeshes` + an effect that reconciles area floor slabs via the existing `reconcileRooms` (no ceiling call), relabeling meshes `kind:'area'`. Disposed on unmount.
+  - Selection/props: `select('area', id)`; `PropertiesPanel` routes `'area'` → new `AreaProps` (name, floor-material picker, area m²/vertex count, Delete). `useCanvasKeyboard`: Esc cancels draft, Enter finishes, Del removes a selected area. Areas ride the **Rooms** layer toggle. i18n `toolbar.tool_area(_title)` + `area.*` (en/he).
+  - Tests: +9 (`areasSlice.test.js` ×8, normalizeProject area backfill ×1). 491 total passing.
+  - NOTE: 2D draw/select/edit verified via store + unit tests; the canvas-click interaction and 3D slab not visually verified in a live browser here. Follow-ups: dedicated "Areas" layer toggle; vertex-edit handles for areas (reuse the wall handle pattern); 3D click-to-select an area.
 
 ### 🚧 In Progress
 - (nothing active)

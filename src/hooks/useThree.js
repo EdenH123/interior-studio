@@ -61,6 +61,7 @@ export default function useThree(containerRef) {
   const wallMeshes    = useRef(new Map())
   const furnMeshes    = useRef(new Map())
   const roomMeshes    = useRef(new Map())
+  const areaMeshes    = useRef(new Map())
   const ceilingMeshes = useRef(new Map())
   const doorMeshes    = useRef(new Map())
   const doorAnims   = useRef(new Map())
@@ -72,6 +73,7 @@ export default function useThree(containerRef) {
   const openings    = useStore((s) => s.openings)
   const furniture     = useStore((s) => s.furniture)
   const customModels  = useStore((s) => s.customModels)
+  const areas       = useStore((s) => s.areas)
   const roomMeta    = useStore((s) => s.roomMeta)
   const selection   = useStore((s) => s.selection)
   const lighting    = useStore((s) => s.lighting)
@@ -264,6 +266,7 @@ export default function useThree(containerRef) {
       disposeAll(s.scene, wallMeshes.current)
       disposeAll(s.scene, furnMeshes.current)
       disposeAll(s.scene, roomMeshes.current)
+      disposeAll(s.scene, areaMeshes.current)
       disposeAll(s.scene, ceilingMeshes.current)
       disposeAll(s.scene, doorMeshes.current)
       for (const [, light] of lightMap.current) {
@@ -403,6 +406,27 @@ export default function useThree(containerRef) {
       for (const m of ceilingMeshes.current.values()) m.visible = false
     }
   }, [walls, roomMeta, furniture, levels, activeLevel, solo3d, ceilingsVisible, layerRooms])
+
+  // ── outdoor areas (floor slabs only — no walls, no ceiling) ──────────────────
+  useEffect(() => {
+    if (!stateRef.current) return
+    const levelOffsets = computeLevelOffsets(levels)
+    const asRooms = areas.map((a) => ({ id: `area:${a.id}`, verts: a.verts, levelId: a.levelId }))
+    const areaFor = (id) => areas.find((x) => `area:${x.id}` === id)
+    const colorFor = (id) => {
+      const mat = areaFor(id)?.floorMaterial ? getFloorMaterial(areaFor(id).floorMaterial) : null
+      return mat?.color ?? DEFAULT_FLOOR_COLOR
+    }
+    const matIdFor = (id) => resolveFloorMaterialId(areaFor(id)?.floorMaterial) ?? null
+    reconcileRooms(stateRef.current.scene, asRooms, areaMeshes.current,
+      colorFor, levelOffsets, { solo: solo3d, activeLevelId: activeLevel }, matIdFor)
+    // reconcileRooms tags meshes kind='room'/id='area:…'; relabel for areas.
+    for (const [key, m] of areaMeshes.current) {
+      m.userData.kind = 'area'
+      m.userData.id = key.startsWith('area:') ? key.slice(5) : key
+      if (!layerRooms) m.visible = false
+    }
+  }, [areas, levels, activeLevel, solo3d, layerRooms])
 
   // ── selection highlight ──────────────────────────────────────────────────────
   useEffect(() => {

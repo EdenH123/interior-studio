@@ -75,9 +75,9 @@ export const createUiSlice = (set) => ({
   // Active tool: 'select' lets you pan by dragging and click-to-select
   // without drawing walls. 'draw' is the default wall-drawing mode.
   activeTool: 'draw',
-  setActiveTool: (tool) => set({ activeTool: tool, drawStart: null }),
+  setActiveTool: (tool) => set({ activeTool: tool, drawStart: null, areaDraft: null }),
   toggleActiveTool: () =>
-    set((s) => ({ activeTool: s.activeTool === 'draw' ? 'select' : 'draw', drawStart: null })),
+    set((s) => ({ activeTool: s.activeTool === 'draw' ? 'select' : 'draw', drawStart: null, areaDraft: null })),
 
   // Keyboard shortcuts cheat-sheet overlay.
   showShortcuts: false,
