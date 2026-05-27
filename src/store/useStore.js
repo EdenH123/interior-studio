@@ -12,10 +12,11 @@ import { createUiSlice } from './slices/uiSlice'
 import { createLayersSlice } from './slices/layersSlice'
 import { createLightingSlice } from './slices/lightingSlice'
 import { createWalkthroughSlice } from './slices/walkthroughSlice'
-import { createLevelsSlice, GROUND_FLOOR_ID, DEFAULT_LEVEL_HEIGHT } from './slices/levelsSlice'
+import { createLevelsSlice } from './slices/levelsSlice'
 import { createCustomModelsSlice } from './slices/customModelsSlice'
 import { createTourSlice } from './slices/tourSlice'
 import { createLanguageSlice } from './slices/languageSlice'
+import { normalizeProjectData, migratePersistedState } from './normalizeProject'
 
 // Tiny debounce — used by zundo's handleSet so a continuous flow (rotation
 // drag, name typing) collapses into one history entry per pause instead
@@ -79,30 +80,13 @@ const useStore = create(persist(
     // Old project files (pre-levels) have no levelId on items; we assign the
     // ground floor id so they're visible on level 0 without data loss.
     loadProject: (data) =>
-      set((s) => {
-        const levels = Array.isArray(data?.levels) && data.levels.length > 0
-          ? data.levels
-          : [{ id: GROUND_FLOOR_ID, name: 'Ground Floor', height: DEFAULT_LEVEL_HEIGHT, order: 0 }]
-        const firstLevelId = [...levels].sort((a, b) => a.order - b.order)[0].id
-        const activeLevel = data?.activeLevel ?? firstLevelId
-        const migrateItems = (arr) =>
-          (Array.isArray(arr) ? arr : []).map((item) =>
-            item.levelId ? item : { ...item, levelId: firstLevelId },
-          )
-        return {
-          walls: migrateItems(data?.walls),
-          furniture: migrateItems(data?.furniture),
-          openings: migrateItems(data?.openings),
-          roomMeta: data?.roomMeta && typeof data.roomMeta === 'object' ? data.roomMeta : {},
-          underlay: data?.underlay && typeof data.underlay === 'object' ? data.underlay : null,
-          levels,
-          activeLevel,
-          selection: null,
-          drawStart: null,
-          calibration: null,
-          dragGhost: null,
-        }
-      }),
+      set(() => ({
+        ...normalizeProjectData(data),
+        selection: null,
+        drawStart: null,
+        calibration: null,
+        dragGhost: null,
+      })),
 
     // Cross-slice selector. Lives on the composer so callers don't need to
     // know which slice owns selection vs furniture. Returns the furniture item
@@ -205,24 +189,10 @@ const useStore = create(persist(
   {
     name: 'interior-studio',
     version: 2,
-    // v1 → v2: levelId added to all items; levels + activeLevel added to root.
-    migrate: (state, version) => {
-      if (version < 2) {
-        const migrateItems = (arr) =>
-          (Array.isArray(arr) ? arr : []).map((item) =>
-            item.levelId ? item : { ...item, levelId: GROUND_FLOOR_ID },
-          )
-        return {
-          ...state,
-          walls:     migrateItems(state.walls),
-          furniture: migrateItems(state.furniture),
-          openings:  migrateItems(state.openings),
-          levels: [{ id: GROUND_FLOOR_ID, name: 'Ground Floor', height: DEFAULT_LEVEL_HEIGHT, order: 0 }],
-          activeLevel: GROUND_FLOOR_ID,
-        }
-      }
-      return state
-    },
+    // Migration is a version chain in normalizeProject.js, shared with
+    // loadProject so the level-assignment rules can't drift. v1 → v2 seeds
+    // levels + backfills levelId on legacy items.
+    migrate: migratePersistedState,
     // Only persist project data + layer visibility. Transient UI state
     // (selection, mid-draw, view-mode toggle, drag-ghost, toast) is excluded.
     // solo3d/xrayCeiling are session preferences — not persisted.
