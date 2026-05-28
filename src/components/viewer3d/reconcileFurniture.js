@@ -9,6 +9,7 @@ import { furnitureColorFor, furnitureMaterialPropsFor } from '../canvas/furnitur
 import { kelvinToRgb } from '../../utils/colorTemp'
 import { buildStairsGeometry } from './stairsGeometry'
 import { buildRailingGeometry, buildStairRailingGeometry, buildSpiralRailingGeometry } from './railingGeometry'
+import { stairOpenSides } from './stairFloorHoles'
 
 const WALL_HEIGHT = 2.4  // metres — matches sceneReconcilers
 const MAX_LIGHTS  = 8    // hard cap on active Three.js lights for performance
@@ -44,7 +45,7 @@ function lightSourceY(type, yOffset, height) {
 // Furniture meshes are wrapped in a `THREE.Group` so we can swap the visual
 // (BoxGeometry fallback ↔ loaded GLB) without recreating the addressable
 // scene object that picking and selection-highlight reference.
-export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map(), lightsOn = true, opts = {}) {
+export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map(), lightsOn = true, opts = {}, walls = []) {
   const present = new Set()
 
   // Count currently-on lighting items to enforce the cap.
@@ -80,6 +81,16 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
     const partColors   = f.partColors ?? {}
     const partColorsKey = JSON.stringify(partColors)
 
+    // Stair railings only render on sides that aren't against a wall. Filter
+    // walls to the same level so adjacency is only counted for walls on this
+    // floor. Non-stair items leave railingSides at the default [-1, 1].
+    let railingSides = [-1, 1]
+    if (isStairItem && f.addRailing) {
+      const lvlWalls = walls.filter((w) => (w.levelId ?? null) === (f.levelId ?? null))
+      railingSides = stairOpenSides(f, lvlWalls)
+    }
+    const railingSidesFp = railingSides.join(',')
+
     let group = meshMap.get(f.id)
     if (!group) {
       group = new THREE.Group()
@@ -97,6 +108,8 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       group.userData.railingStyle = f.railingStyle ?? null
       group.userData.addRailing   = f.addRailing   ?? false
       group.userData.railingType  = f.railingType  ?? 'wood'
+      group.userData.railingSides = railingSides
+      group.userData.railingSidesFp = railingSidesFp
       scene.add(group)
       meshMap.set(f.id, group)
       if (group.userData.modelUrl) populateModelOrSchedule(group)
@@ -112,6 +125,7 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       const stairStyleChanged = group.userData.stairStyle !== (f.stairStyle ?? null)
       const railingChanged    = group.userData.addRailing  !== (f.addRailing  ?? false)
                              || group.userData.railingType !== (f.railingType  ?? 'wood')
+                             || group.userData.railingSidesFp !== railingSidesFp
       group.userData.dims = { width: f.width, depth: f.depth, height: effectiveHeight }
       group.userData.tintColor    = tintColor
       group.userData.tintMatProps = tintMatProps
@@ -120,6 +134,8 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       group.userData.stairStyle   = f.stairStyle  ?? null
       group.userData.addRailing   = f.addRailing  ?? false
       group.userData.railingType  = f.railingType ?? 'wood'
+      group.userData.railingSides = railingSides
+      group.userData.railingSidesFp = railingSidesFp
       if (dimsChanged || stairStyleChanged || railingChanged || ((tintChanged || partColorsChanged) && group.userData.childKind === 'model')) {
         group.userData.color = color
         rebuildChild(group)
@@ -253,17 +269,21 @@ function populateBoxFallback(group) {
 
   // Stair railing — second child mesh with its own material.
   if (isStairs && addRailing) {
-    addStairRailingMesh(group, width, depth, height, stairStyle, railingType)
+    const railingSides = group.userData.railingSides ?? [-1, 1]
+    if (railingSides.length > 0) {
+      addStairRailingMesh(group, width, depth, height, stairStyle, railingType, railingSides)
+    }
   }
 
   group.userData.childKind = 'box'
 }
 
-function addStairRailingMesh(group, W, D, H, stairStyle, railType) {
+function addStairRailingMesh(group, W, D, H, stairStyle, railType, sides = [-1, 1]) {
   const NUM_STEPS = 12
+  // Spiral stairs are radial (no L/R sides), so ignore the sides filter there.
   const railGeo = stairStyle === 'spiral'
     ? buildSpiralRailingGeometry(W, D, H, NUM_STEPS, railType)
-    : buildStairRailingGeometry(W, D, H, NUM_STEPS, railType)
+    : buildStairRailingGeometry(W, D, H, NUM_STEPS, railType, sides)
 
   const color = RAILING_COLOR[railType] ?? '#888888'
   let railMat

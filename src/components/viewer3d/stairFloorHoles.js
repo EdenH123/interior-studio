@@ -103,3 +103,49 @@ export function computeVoidHolesForRooms(rooms, voids) {
   }
   return result
 }
+
+// Which long sides of a stair are NOT against a wall — used to skip railings
+// on the wall-attached side. Returns a subset of [-1, 1] (local-x sign).
+//
+// `stair` carries x,y (Konva px), width/depth (m), rotation (deg).
+// `walls` are wall segments in Konva px (same active level — caller filters).
+// `thresholdPx` is how close a wall must be to the side edge to count as
+// "attached" (default 15 px ≈ 0.30 m — wall thickness + a small slack).
+const PPM = 50  // PIXELS_PER_METER — match canvas/constants.js
+const DEFAULT_SIDE_WALL_THRESHOLD_PX = 15
+
+function pointToSegDist(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1
+  const len2 = dx * dx + dy * dy
+  if (len2 < 1e-6) return Math.hypot(px - x1, py - y1)
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / len2))
+  const cx = x1 + t * dx, cy = y1 + t * dy
+  return Math.hypot(px - cx, py - cy)
+}
+
+export function stairOpenSides(stair, walls, thresholdPx = DEFAULT_SIDE_WALL_THRESHOLD_PX) {
+  const θ = (stair.rotation * Math.PI) / 180
+  const hwPx = (stair.width / 2) * PPM
+  const hdPx = (stair.depth / 2) * PPM
+  const cosθ = Math.cos(θ), sinθ = Math.sin(θ)
+  const open = []
+  for (const side of [-1, 1]) {
+    // Sample 3 points along this side edge: at -d/2 (top of run), 0 (mid), +d/2 (bottom).
+    // The side is "attached" when ALL three are close to some wall — avoids
+    // false positives where just one corner brushes a perpendicular wall.
+    let attached = true
+    for (const ly of [-hdPx, 0, hdPx]) {
+      const lx = side * hwPx
+      const px = stair.x + lx * cosθ - ly * sinθ
+      const py = stair.y + lx * sinθ + ly * cosθ
+      let nearest = Infinity
+      for (const w of walls) {
+        const d = pointToSegDist(px, py, w.x1, w.y1, w.x2, w.y2)
+        if (d < nearest) nearest = d
+      }
+      if (nearest > thresholdPx) { attached = false; break }
+    }
+    if (!attached) open.push(side)
+  }
+  return open
+}

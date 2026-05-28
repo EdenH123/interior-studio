@@ -5,13 +5,15 @@ import * as THREE from 'three'
 // treads. All geometry spans y=[0..stairHeight], same origin as stairsGeometry.
 //
 // W = stair width, D = stair depth, H = stair height, N = step count, style =
-// 'wood' | 'metal' | 'cable' | 'glass'
-export function buildStairRailingGeometry(W, D, H, N, style) {
+// 'wood' | 'metal' | 'cable' | 'glass'. `sides` selects which sides of the
+// staircase get railings — pass [-1] or [1] to skip the side that's against a
+// wall (default both sides).
+export function buildStairRailingGeometry(W, D, H, N, style, sides = [-1, 1]) {
   const parts = []
-  if      (style === 'wood')  buildStairWoodRailing(parts, W, D, H, N)
-  else if (style === 'metal') buildStairMetalRailing(parts, W, D, H, N)
-  else if (style === 'cable') buildStairCableRailing(parts, W, D, H, N)
-  else if (style === 'glass') buildStairGlassRailing(parts, W, D, H, N)
+  if      (style === 'wood')  buildStairWoodRailing(parts, W, D, H, N, sides)
+  else if (style === 'metal') buildStairMetalRailing(parts, W, D, H, N, sides)
+  else if (style === 'cable') buildStairCableRailing(parts, W, D, H, N, sides)
+  else if (style === 'glass') buildStairGlassRailing(parts, W, D, H, N, sides)
   return mergeGeos(parts)
 }
 
@@ -52,7 +54,7 @@ export function buildSpiralRailingGeometry(W, D, H, N, style) {
 // ─── Stair railing styles ─────────────────────────────────────────────────────
 
 // Wood: chunky square balusters (one per step) + wide diagonal handrail + newels.
-function buildStairWoodRailing(parts, W, D, H, N) {
+function buildStairWoodRailing(parts, W, D, H, N, sides) {
   const RAILING_H = 0.90
   const RAIL_T    = 0.06   // handrail cross-section height (perpendicular to slope)
   const RAIL_W    = 0.07   // handrail cross-section width in X
@@ -65,7 +67,7 @@ function buildStairWoodRailing(parts, W, D, H, N) {
   const stepH     = H / N
   const balH      = RAILING_H - RAIL_T  // baluster height from step to handrail bottom
 
-  for (const side of [-1, 1]) {
+  for (const side of sides) {
     const sx = side * (W / 2 - RAIL_W / 2 - 0.01)
 
     // Diagonal handrail slab
@@ -85,7 +87,7 @@ function buildStairWoodRailing(parts, W, D, H, N) {
 }
 
 // Metal: thin posts every step + slim diagonal handrail + diagonal mid-rail.
-function buildStairMetalRailing(parts, W, D, H, N) {
+function buildStairMetalRailing(parts, W, D, H, N, sides) {
   const RAILING_H = 0.90
   const RAIL_T    = 0.035
   const RAIL_W    = 0.04
@@ -98,7 +100,7 @@ function buildStairMetalRailing(parts, W, D, H, N) {
   const stepH     = H / N
   const postH     = RAILING_H - RAIL_T
 
-  for (const side of [-1, 1]) {
+  for (const side of sides) {
     const sx = side * (W / 2 - RAIL_W / 2 - 0.01)
 
     // Main handrail
@@ -121,7 +123,7 @@ function buildStairMetalRailing(parts, W, D, H, N) {
 }
 
 // Cable: stout end/mid posts + diagonal cables parallel to handrail.
-function buildStairCableRailing(parts, W, D, H, N) {
+function buildStairCableRailing(parts, W, D, H, N, sides) {
   const RAILING_H  = 0.90
   const RAIL_T     = 0.035
   const RAIL_W     = 0.04
@@ -133,7 +135,7 @@ function buildStairCableRailing(parts, W, D, H, N) {
   const theta      = Math.atan2(H, D)
   const numPosts   = N > 8 ? 3 : 2
 
-  for (const side of [-1, 1]) {
+  for (const side of sides) {
     const sx = side * (W / 2 - RAIL_W / 2 - 0.01)
 
     // Main handrail cap
@@ -157,7 +159,7 @@ function buildStairCableRailing(parts, W, D, H, N) {
 }
 
 // Glass: continuous glass panels per step (vertical) + diagonal metal cap.
-function buildStairGlassRailing(parts, W, D, H, N) {
+function buildStairGlassRailing(parts, W, D, H, N, sides) {
   const RAILING_H = 0.90
   const CAP_T     = 0.04   // metal handrail cap
   const CAP_W     = 0.05
@@ -169,7 +171,7 @@ function buildStairGlassRailing(parts, W, D, H, N) {
   const stepH     = H / N
   const panelH    = RAILING_H - CAP_T
 
-  for (const side of [-1, 1]) {
+  for (const side of sides) {
     const sx = side * (W / 2 - GLASS_T / 2 - 0.02)
 
     // Diagonal metal handrail cap

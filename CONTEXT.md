@@ -833,6 +833,12 @@ interior-studio/
   - The polygon click handler gated on `e.target === stageRef.current`, so clicking a wall (which captures the hit on its body Line) was ignored — you could only start an area/pool/void from inside a room, not on a wall corner. Now the gate also accepts targets with `name === 'wall-body'`, and `snapPolyPoint` snaps the vertex to the wall endpoint/line. You can now start (and continue) a void/area/pool exactly on a wall.
   - 508 tests still passing.
 
+- [x] Stair railings only on the open side (skip the wall-attached side) (2026-05-27)
+  - When a staircase sits against a wall, the railing now only renders on the side(s) NOT against the wall. `stairOpenSides(stair, walls)` (in `stairFloorHoles.js`) samples 3 points along each long side and counts a side as "attached" only when ALL three sample points are within ~0.30 m of a wall — avoids false positives from a perpendicular wall just brushing one end.
+  - `reconcileFurniture` now takes `walls`, computes `railingSides` per stair (filtered to walls on the same level), stamps it on `userData.railingSidesFp` so the railing rebuilds when the adjacency changes, and forwards the sides through `addStairRailingMesh` → `buildStairRailingGeometry`. All four straight stair builders (wood / metal / cable / glass) accept a `sides` array (default `[-1, 1]`). Spiral railings ignore it (radial — no L/R sides). `useThree` passes walls and adds them to the furniture-effect deps so railings refresh when walls move/are added.
+  - Tests: +4 in `stairFloorHoles.test.js` (`stairOpenSides`: no walls → both open; parallel wall → only opposite side open; perpendicular wall at one end → both still open; flanked → none). 512 total passing.
+  - NOTE: 3D appearance not visually verified in a live browser; the geometry change is a per-side filter and the adjacency math is unit-tested.
+
 ### 🚧 In Progress
 - (nothing active)
 
