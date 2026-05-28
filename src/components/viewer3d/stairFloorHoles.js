@@ -81,10 +81,14 @@ export function computeStairHolesForRooms(rooms, stairs) {
 }
 
 // Returns Map<roomId, Array<cornerArrays>> for void (open-to-above) regions.
-// Each void whose centroid falls inside a room contributes its full outline
-// (converted to shape-space metres) as a hole in that room's floor/ceiling.
+// A void is assigned to a room if its CENTROID — or any of its vertices — is
+// inside the room polygon (handles non-convex voids whose centroid drifts
+// outside the upper room). Each hole's vertices are nudged inward toward the
+// void's centroid by `HOLE_INSET_M` (5 mm) so wall-to-wall voids don't sit
+// exactly on the outer boundary, which would break earcut triangulation.
 //
 // `rooms` — [{ id, verts:[{x,y}] }] (Konva px). `voids` — [{ verts:[{x,y}] }].
+const HOLE_INSET_M = 0.005
 export function computeVoidHolesForRooms(rooms, voids) {
   const result = new Map()
   for (const room of rooms) {
@@ -95,9 +99,22 @@ export function computeVoidHolesForRooms(rooms, voids) {
       const n = vd.verts.length
       const cx = (vd.verts.reduce((s, v) => s + v.x, 0) / n) * K2T
       const cy = (vd.verts.reduce((s, v) => s + v.y, 0) / n) * K2T
-      if (pointInPolygon(cx, cy, scaledVerts)) {
-        holes.push(vd.verts.map((v) => ({ x: v.x * K2T, y: v.y * K2T })))
+      let inside = pointInPolygon(cx, cy, scaledVerts)
+      if (!inside) {
+        for (const v of vd.verts) {
+          if (pointInPolygon(v.x * K2T, v.y * K2T, scaledVerts)) { inside = true; break }
+        }
       }
+      if (!inside) continue
+      // Inset each hole vertex slightly toward the void's centroid so
+      // wall-to-wall vertices don't land exactly on the room's edge.
+      const corners = vd.verts.map((v) => {
+        const px = v.x * K2T, py = v.y * K2T
+        const dx = cx - px, dy = cy - py
+        const len = Math.hypot(dx, dy) || 1
+        return { x: px + (dx / len) * HOLE_INSET_M, y: py + (dy / len) * HOLE_INSET_M }
+      })
+      holes.push(corners)
     }
     result.set(room.id, holes)
   }
