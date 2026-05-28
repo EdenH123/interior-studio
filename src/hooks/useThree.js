@@ -442,9 +442,19 @@ export default function useThree(containerRef) {
     if (!stateRef.current) return
     const levelOffsets = computeLevelOffsets(levels)
     const baseAreas = areas.map((a) => ({ id: `area:${a.id}`, verts: a.verts, levelId: a.levelId }))
-    // Pools cut their footprint out of any area floor they sit inside.
-    const poolHoleMap = pools.length > 0 ? computeVoidHolesForRooms(baseAreas, pools) : null
-    const asRooms = baseAreas.map((r) => ({ ...r, stairHoles: poolHoleMap?.get(r.id) ?? [] }))
+    const sortedLevels = [...levels].sort((a, b) => a.order - b.order)
+    // Per area, cut its floor for:
+    //   • pools sitting inside it on the same level
+    //   • voids on the level directly BELOW (open-to-above for area floors)
+    const asRooms = baseAreas.map((r) => {
+      const lvIdx = sortedLevels.findIndex((l) => l.id === (r.levelId ?? activeLevel))
+      const belowId = lvIdx > 0 ? sortedLevels[lvIdx - 1].id : null
+      const samePools = pools.filter((p) => (p.levelId ?? activeLevel) === (r.levelId ?? activeLevel))
+      const belowVoids = belowId ? voids.filter((v) => (v.levelId ?? activeLevel) === belowId) : []
+      const holesSrc = [...samePools, ...belowVoids]
+      const holeMap = holesSrc.length > 0 ? computeVoidHolesForRooms([r], holesSrc) : null
+      return { ...r, stairHoles: holeMap?.get(r.id) ?? [] }
+    })
     const areaFor = (id) => areas.find((x) => `area:${x.id}` === id)
     const colorFor = (id) => {
       const mat = areaFor(id)?.floorMaterial ? getFloorMaterial(areaFor(id).floorMaterial) : null
@@ -459,7 +469,7 @@ export default function useThree(containerRef) {
       m.userData.id = key.startsWith('area:') ? key.slice(5) : key
       if (!layerRooms) m.visible = false
     }
-  }, [areas, pools, levels, activeLevel, solo3d, layerRooms])
+  }, [areas, pools, voids, levels, activeLevel, solo3d, layerRooms])
 
   // ── pools (recessed water basins) ────────────────────────────────────────────
   useEffect(() => {

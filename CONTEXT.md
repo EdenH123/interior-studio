@@ -839,6 +839,10 @@ interior-studio/
   - Tests: +4 in `stairFloorHoles.test.js` (`stairOpenSides`: no walls → both open; parallel wall → only opposite side open; perpendicular wall at one end → both still open; flanked → none). 512 total passing.
   - NOTE: 3D appearance not visually verified in a live browser; the geometry change is a per-side filter and the adjacency math is unit-tested.
 
+- [x] Fix: voids didn't cut the floor above when it was an area (2026-05-27)
+  - The void floor-hole machinery only cut **detected rooms** on the level above (walls-derived). If the upper floor was an outdoor **area** (drawn polygon) — common case for an outdoor mezzanine / second-floor patio — the void had no effect on it, so it cut the ceiling of level X but not the floor of level X+1. The areas effect now also cuts each area's floor with voids from the level directly below (mirroring how it already cuts area floors with same-level pools). Pool cutting on areas was also tightened to same-level pools only.
+  - 512 tests still passing.
+
 ### 🚧 In Progress
 - (nothing active)
 
