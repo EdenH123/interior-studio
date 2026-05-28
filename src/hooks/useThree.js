@@ -343,12 +343,13 @@ export default function useThree(containerRef) {
       stateRef.current.scene, resolvedFurniture, furnMeshes.current,
       lightMap.current, lighting.lightsOn,
       { levelOffsets, levelHeights, activeLevelId: activeLevel, solo: solo3d },
+      walls,
     )
     // Apply layer visibility after reconciling
     if (!layerFurniture) {
       for (const m of furnMeshes.current.values()) m.visible = false
     }
-  }, [resolvedFurniture, lighting.lightsOn, levels, activeLevel, solo3d, layerFurniture])
+  }, [resolvedFurniture, walls, lighting.lightsOn, levels, activeLevel, solo3d, layerFurniture])
 
   // ── rooms + ceilings ─────────────────────────────────────────────────────────
   useEffect(() => {

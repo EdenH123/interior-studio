@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { stairHoleCorners, holesFp, computeStairHolesForRooms, computeVoidHolesForRooms } from './stairFloorHoles'
+import { stairHoleCorners, holesFp, computeStairHolesForRooms, computeVoidHolesForRooms, stairOpenSides } from './stairFloorHoles'
 
 const K2T = 0.02
 
@@ -150,5 +150,34 @@ describe('computeVoidHolesForRooms', () => {
 
   it('ignores degenerate voids (< 3 verts)', () => {
     expect(computeVoidHolesForRooms([room], [{ verts: [{ x: 1, y: 1 }] }]).get('r1')).toEqual([])
+  })
+})
+
+describe('stairOpenSides', () => {
+  // 1×3 m stair at origin, rotation 0 → long sides parallel to Y at x=±25 px.
+  const stair = { x: 0, y: 0, width: 1, depth: 3, rotation: 0 }
+
+  it('returns both sides open with no walls', () => {
+    expect(stairOpenSides(stair, [])).toEqual([-1, 1])
+  })
+
+  it('marks a side as attached when a parallel wall runs along it', () => {
+    // Right-side wall at x ≈ +25 (within 15 px threshold) covering the depth.
+    const wall = { id: 'w', x1: 25, y1: -100, x2: 25, y2: 100 }
+    // Only the LEFT side stays open.
+    expect(stairOpenSides(stair, [wall])).toEqual([-1])
+  })
+
+  it('keeps both sides open when the wall only brushes one end (perpendicular)', () => {
+    // A wall perpendicular to the stair, touching the top end (y=-75) but not
+    // running alongside — only one sample point is close, so it's NOT attached.
+    const wall = { id: 'w', x1: -100, y1: -75, x2: 100, y2: -75 }
+    expect(stairOpenSides(stair, [wall])).toEqual([-1, 1])
+  })
+
+  it('returns [] when walls flank both long sides', () => {
+    const left  = { id: 'L', x1: -25, y1: -100, x2: -25, y2: 100 }
+    const right = { id: 'R', x1:  25, y1: -100, x2:  25, y2: 100 }
+    expect(stairOpenSides(stair, [left, right])).toEqual([])
   })
 })

@@ -273,12 +273,15 @@ export default function CanvasArea() {
                 return
               }
             }
-            // Polygon tools (area / pool / void): each background click drops a
-            // vertex. Points snap to nearby wall endpoints/lines (trace a void
-            // wall-to-wall), else lock to 45° from the previous point (Shift =
-            // 90°, Alt/Option = free). Clicking near the first point — or
-            // pressing Enter — closes the loop.
-            if (polyCfg && e.evt.button === 0 && e.target === stageRef.current) {
+            // Polygon tools (area / pool / void): drop a vertex on background
+            // clicks AND on clicks that land on a wall body — so you can start
+            // / continue tracing exactly along walls. snapPolyPoint snaps to
+            // the wall endpoint/line for true wall-to-wall outlines; else
+            // angle-locks 45° from the previous point (Shift = 90°, Alt = free).
+            // Clicking near the first point — or pressing Enter — closes the loop.
+            const polyOnStage = polyCfg && e.target === stageRef.current
+            const polyOnWall  = polyCfg && e.target?.getAttr?.('name') === 'wall-body'
+            if (polyCfg && e.evt.button === 0 && (polyOnStage || polyOnWall)) {
               const raw = stageRef.current?.getRelativePointerPosition()
               if (raw) {
                 const d = polyCfg.draft
