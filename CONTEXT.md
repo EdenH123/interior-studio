@@ -829,6 +829,10 @@ interior-studio/
   - 508 tests still passing.
   - NOTE: not visually verified in a live browser. The water fix (DoubleSide) is the clear cause of the reported "no water"; the wall-snap reuses unit-tested helpers; the stair ghost is a 2D overlay using the same arrival rule as the (verified) 3D hole-cut.
 
+- [x] Fix: polygon tools couldn't start a vertex on a wall (2026-05-27)
+  - The polygon click handler gated on `e.target === stageRef.current`, so clicking a wall (which captures the hit on its body Line) was ignored — you could only start an area/pool/void from inside a room, not on a wall corner. Now the gate also accepts targets with `name === 'wall-body'`, and `snapPolyPoint` snaps the vertex to the wall endpoint/line. You can now start (and continue) a void/area/pool exactly on a wall.
+  - 508 tests still passing.
+
 ### 🚧 In Progress
 - (nothing active)
 
