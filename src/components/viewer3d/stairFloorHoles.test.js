@@ -139,8 +139,9 @@ describe('computeVoidHolesForRooms', () => {
     const map = computeVoidHolesForRooms([room], [vd])
     const holes = map.get('r1')
     expect(holes).toHaveLength(1)
-    // First corner converted to metres (×0.02).
-    expect(holes[0][0]).toEqual({ x: 2, y: 2 })
+    // First corner converted to metres (×0.02), then inset 5 mm toward the centroid.
+    expect(holes[0][0].x).toBeCloseTo(2, 2)
+    expect(holes[0][0].y).toBeCloseTo(2, 2)
   })
 
   it('skips a void whose centroid falls outside the room', () => {
