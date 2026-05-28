@@ -24,6 +24,7 @@ import AreaDraftPreview from './canvas/AreaDraftPreview'
 import AreaEditHandles from './canvas/AreaEditHandles'
 import AreaDimensions from './canvas/AreaDimensions'
 import StairArrivalGhost from './canvas/StairArrivalGhost'
+import VoidFromBelowGhost from './canvas/VoidFromBelowGhost'
 import SnapIndicator from './canvas/SnapIndicator'
 import RotationHandle from './canvas/RotationHandle'
 import ResizeHandle from './canvas/ResizeHandle'
@@ -187,6 +188,16 @@ export default function CanvasArea() {
       return fromIdx >= 0 && fromIdx + 1 === activeIdx
     })
   }, [levels, activeLevel, allFurniture])
+
+  // Voids on the level directly BELOW the active one — drawn as a dashed
+  // purple outline so you can see where the floor below opens up into here.
+  const voidsFromBelow = useMemo(() => {
+    const sorted = [...levels].sort((a, b) => a.order - b.order)
+    const activeIdx = sorted.findIndex((l) => l.id === activeLevel)
+    if (activeIdx <= 0) return []
+    const belowId = sorted[activeIdx - 1].id
+    return allVoids.filter((v) => (v.levelId ?? sorted[0]?.id) === belowId)
+  }, [levels, activeLevel, allVoids])
   // Rotation handle only for a single selected furniture item.
   const singleSel = getSingleItem(selection)
   const selectedFurniture = layers.furniture && singleSel?.kind === 'furniture'
@@ -338,6 +349,9 @@ export default function CanvasArea() {
             ))}
             {layers.furniture && arrivingStairs.map((s) => (
               <StairArrivalGhost key={`stair-up-${s.id}`} item={s} scale={view.scale} />
+            ))}
+            {layers.rooms && voidsFromBelow.map((v) => (
+              <VoidFromBelowGhost key={`void-below-${v.id}`} item={v} scale={view.scale} />
             ))}
             {layers.rooms && rooms.map((room) => {
               const meta = roomMeta[room.id]
