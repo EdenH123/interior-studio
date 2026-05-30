@@ -67,6 +67,13 @@ export const createUiSlice = (set) => ({
   setClipboard: (items) => set({ clipboard: items }),
   clearClipboard: () => set({ clipboard: null }),
 
+  // Cursor-positioned paste: cmd+V enters this transient mode with the items
+  // (snapshot of the clipboard) and an anchor (their bbox center). The ghost
+  // follows the cursor offset by (cursor − anchor); a canvas click commits via
+  // composer.commitPaste; Esc cancels via cancelPaste.
+  pendingPaste: null,
+  cancelPaste: () => set({ pendingPaste: null }),
+
   // Whether the W/D/H dimension inputs + corner-drag resize handle should
   // maintain the item's aspect ratio. Defaults to true. Not persisted.
   lockAspectRatio: true,

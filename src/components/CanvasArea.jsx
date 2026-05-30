@@ -25,6 +25,7 @@ import AreaEditHandles from './canvas/AreaEditHandles'
 import AreaDimensions from './canvas/AreaDimensions'
 import StairArrivalGhost from './canvas/StairArrivalGhost'
 import VoidFromBelowGhost from './canvas/VoidFromBelowGhost'
+import PasteGhost from './canvas/PasteGhost'
 import SnapIndicator from './canvas/SnapIndicator'
 import RotationHandle from './canvas/RotationHandle'
 import ResizeHandle from './canvas/ResizeHandle'
@@ -93,6 +94,9 @@ export default function CanvasArea() {
   const applyCalibration = useStore((s) => s.applyCalibration)
   const dragGhost = useStore((s) => s.dragGhost)
   const pendingPlacement = useStore((s) => s.pendingPlacement)
+  const pendingPaste = useStore((s) => s.pendingPaste)
+  const commitPaste = useStore((s) => s.commitPaste)
+  const cancelPaste = useStore((s) => s.cancelPaste)
   const clearPendingPlacement = useStore((s) => s.clearPendingPlacement)
   const addFurniture         = useStore((s) => s.addFurniture)
   const addFurnitureWithSpec = useStore((s) => s.addFurnitureWithSpec)
@@ -264,7 +268,7 @@ export default function CanvasArea() {
       data-tour="canvas"
       {...dragHandlers}
       className="flex-1 bg-gray-950 overflow-hidden relative"
-      style={{ cursor: activeTool === 'select' ? 'default' : 'crosshair' }}
+      style={{ cursor: pendingPaste ? 'crosshair' : (activeTool === 'select' ? 'default' : 'crosshair') }}
     >
       {size.width > 0 && size.height > 0 && (
         <Stage
@@ -498,6 +502,12 @@ export default function CanvasArea() {
               />
             )}
             <CalibrationOverlay calibration={calibration} scale={view.scale} onPlace={setCalibrationPoint} />
+            {pendingPaste && (
+              <PasteGhost
+                pendingPaste={pendingPaste} cursor={cursorWorld} scale={view.scale}
+                onCommit={commitPaste} onCancel={cancelPaste}
+              />
+            )}
           </Layer>
         </Stage>
       )}

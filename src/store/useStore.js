@@ -97,6 +97,7 @@ const useStore = create(persist(
         areaDraft: null,
         poolDraft: null,
         voidDraft: null,
+        pendingPaste: null,
         calibration: null,
         dragGhost: null,
       })),
@@ -145,38 +146,63 @@ const useStore = create(persist(
         }
       }),
 
-    // Paste clipboard items in one `set` call so undo reverts the entire
-    // paste as a single step. Walls are offset +50 px on both axes; openings
-    // are only pasted when their source wall was also in the clipboard
-    // (otherwise they'd be orphaned). Pasted items become the new selection.
+    // Cmd+V enters a "pending paste" mode: a ghost preview follows the cursor
+    // and a canvas click drops the items there. The anchor is the bbox centre
+    // of all furniture positions + wall endpoints; openings ride their walls
+    // (skipped from anchoring, kept relative). Pressing Cmd+V again before
+    // committing just refreshes the snapshot from the current clipboard.
     pasteClipboard: () =>
       set((s) => {
         if (!s.clipboard || s.clipboard.length === 0) return s
-        const wallIdMap = {} // oldId → newId for walls in the clipboard
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+        let n = 0
+        for (const { kind, item } of s.clipboard) {
+          if (kind === 'furniture') {
+            if (item.x < minX) minX = item.x; if (item.x > maxX) maxX = item.x
+            if (item.y < minY) minY = item.y; if (item.y > maxY) maxY = item.y
+            n++
+          } else if (kind === 'wall') {
+            for (const [x, y] of [[item.x1, item.y1], [item.x2, item.y2]]) {
+              if (x < minX) minX = x; if (x > maxX) maxX = x
+              if (y < minY) minY = y; if (y > maxY) maxY = y
+              n++
+            }
+          }
+        }
+        const anchor = n > 0 ? { x: (minX + maxX) / 2, y: (minY + maxY) / 2 } : { x: 0, y: 0 }
+        return { pendingPaste: { items: s.clipboard, anchor }, pendingPlacement: null }
+      }),
+
+    // Commit the pending paste at the given world point. All clipboard
+    // positions are offset by (worldPoint − anchor); openings keep their
+    // position-along-wall and only land if their source wall is also being
+    // pasted (otherwise orphaned and skipped). Wrapped in one `set` so undo
+    // reverts the whole paste in a single step.
+    commitPaste: ({ x: cx, y: cy }) =>
+      set((s) => {
+        const pp = s.pendingPaste
+        if (!pp || !pp.items || pp.items.length === 0) return s
+        const dx = cx - pp.anchor.x, dy = cy - pp.anchor.y
+        const wallIdMap = {}
         const newFurniture = []
         const newWalls = []
         const newOpenings = []
-
-        // First pass: create walls (needed to build the id map before openings).
-        for (const { kind, item } of s.clipboard) {
+        for (const { kind, item } of pp.items) {
           if (kind === 'wall') {
             const newId = nanoid(6)
             wallIdMap[item.id] = newId
-            newWalls.push({ ...item, id: newId, x1: item.x1 + 50, y1: item.y1 + 50, x2: item.x2 + 50, y2: item.y2 + 50 })
+            newWalls.push({ ...item, id: newId, x1: item.x1 + dx, y1: item.y1 + dy, x2: item.x2 + dx, y2: item.y2 + dy })
           }
         }
-
-        // Second pass: furniture and openings.
-        for (const { kind, item } of s.clipboard) {
+        for (const { kind, item } of pp.items) {
           if (kind === 'furniture') {
-            newFurniture.push({ ...item, id: nanoid(6), x: item.x + 50, y: item.y + 50 })
+            newFurniture.push({ ...item, id: nanoid(6), x: item.x + dx, y: item.y + dy })
           } else if (kind === 'opening') {
             const newWallId = wallIdMap[item.wallId]
-            if (!newWallId) continue // wall not in clipboard — skip
+            if (!newWallId) continue
             newOpenings.push({ ...item, id: nanoid(6), wallId: newWallId })
           }
         }
-
         return {
           furniture: [...s.furniture, ...newFurniture],
           walls: [...s.walls, ...newWalls],
@@ -188,6 +214,7 @@ const useStore = create(persist(
               ...newOpenings.map((o) => ({ kind: 'opening', id: o.id })),
             ],
           },
+          pendingPaste: null,
         }
       }),
   }), {
