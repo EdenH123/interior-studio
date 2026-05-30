@@ -412,6 +412,7 @@ export default function CanvasArea() {
                 segments={wallSegmentsForRendering(w, layers.openings ? openings : [])}
                 selected={isSelected(selection, 'wall', w.id)}
                 drawMode={activeTool !== 'select'}
+                placing={!!pendingPlacement || !!pendingPaste}
                 onClick={(id) => select('wall', id)}
                 onShiftSelect={(id) => addToSelection('wall', id)}
                 onTranslateDrag={translateSelection}
