@@ -5,6 +5,7 @@ import { FURNITURE_DRAG_MIME } from '../components/Sidebar'
 import { getFurnitureSpec } from '../components/canvas/furnitureCatalog'
 import { nearestWallSnap, wallMountedPlacement } from '../components/canvas/openingGeometry'
 import { findWallSnap, railingWallPlacement } from '../components/canvas/wallSnapGeometry'
+import { findStackTarget } from '../components/canvas/stackGeometry'
 
 // Wall-mounted catalog items (wallMounted: true) behave like openings on
 // dragover: they snap to the nearest wall within WALL_SNAP_SCREEN_PX and
@@ -15,15 +16,20 @@ const WALL_SNAP_SCREEN_PX = 60
 
 export default function useFurnitureDrop(containerRef, view) {
   const walls       = useStore((s) => s.walls)
+  const furniture   = useStore((s) => s.furniture)
   const activeLevel = useStore((s) => s.activeLevel)
   const dragGhost   = useStore((s) => s.dragGhost)
   const addFurniture    = useStore((s) => s.addFurniture)
+  const updateFurniture = useStore((s) => s.updateFurniture)
   const setDragGhostPos = useStore((s) => s.setDragGhostPos)
   const clearDragGhost  = useStore((s) => s.clearDragGhost)
   const pushToast       = useStore((s) => s.pushToast)
 
   // Only snap to walls on the active level.
   const levelWalls = walls.filter((w) => !w.levelId || w.levelId === activeLevel)
+  // Stack candidates: same-level furniture (filtered inside findStackTarget too,
+  // but pre-filtering avoids walking irrelevant items every dragover frame).
+  const levelFurniture = furniture.filter((f) => !f.levelId || f.levelId === activeLevel)
 
   function worldAt(clientX, clientY) {
     const rect = containerRef.current?.getBoundingClientRect()
@@ -66,14 +72,21 @@ export default function useFurnitureDrop(containerRef, view) {
           setDragGhostPos(world.x, world.y, { wallSnap: false, rotation: 0 })
         }
       } else {
+        // Stack-on-furniture wins over wall snap when the cursor is inside
+        // another item's footprint. Show the stack indicator on the ghost.
+        const stackTarget = findStackTarget(world, null, levelFurniture)
+        if (stackTarget) {
+          setDragGhostPos(world.x, world.y, { wallSnap: undefined, rotation: undefined, stackOn: stackTarget.id })
+          return
+        }
         const p = snapToGrid(world, GRID_SIZE)
         const floorSnap = spec
           ? findWallSnap({ x: p.x, y: p.y, width: spec.width, depth: spec.depth }, levelWalls, view.scale, WALL_SNAP_SCREEN_PX)
           : null
         if (floorSnap) {
-          setDragGhostPos(floorSnap.x, floorSnap.y, { wallSnap: undefined, rotation: floorSnap.rotation })
+          setDragGhostPos(floorSnap.x, floorSnap.y, { wallSnap: undefined, rotation: floorSnap.rotation, stackOn: undefined })
         } else {
-          setDragGhostPos(p.x, p.y, { wallSnap: undefined, rotation: undefined })
+          setDragGhostPos(p.x, p.y, { wallSnap: undefined, rotation: undefined, stackOn: undefined })
         }
       }
     },
@@ -109,6 +122,13 @@ export default function useFurnitureDrop(containerRef, view) {
         const p = wallMountedPlacement(snap, spec.depth, world)
         addFurniture(type, p.x, p.y, { rotation: p.rotation })
       } else {
+        // Drop on top of another furniture → stack on it.
+        const stackTarget = findStackTarget(world, null, levelFurniture)
+        if (stackTarget) {
+          const id = addFurniture(type, world.x, world.y, { rotation: 0 })
+          if (id) updateFurniture(id, { stackedOn: stackTarget.id, levelId: stackTarget.levelId })
+          return
+        }
         const p = snapToGrid(world, GRID_SIZE)
         const floorSnap = spec
           ? findWallSnap({ x: p.x, y: p.y, width: spec.width, depth: spec.depth }, levelWalls, view.scale, WALL_SNAP_SCREEN_PX)

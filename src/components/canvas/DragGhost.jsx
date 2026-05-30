@@ -1,4 +1,4 @@
-import { Group, Rect, Line, Circle } from 'react-konva'
+import { Group, Rect, Line, Circle, Text } from 'react-konva'
 import { PIXELS_PER_METER } from './constants'
 import { getFurnitureSpec } from './furnitureCatalog'
 import { getOpeningSpec } from './openingsCatalog'
@@ -40,15 +40,28 @@ function FurnitureGhost({ ghost, scale }) {
 
   const w = width * PIXELS_PER_METER
   const d = depth * PIXELS_PER_METER
+  // Orange ghost + "↑ stack" badge when dropping ON another furniture.
+  const stacking = !!ghost.stackOn
+  const stroke = stacking ? '#f59e0b' : '#3b82f6'
   return (
     <Group x={ghost.x} y={ghost.y} rotation={ghost.rotation ?? 0} listening={false}>
       <Rect
         x={-w / 2} y={-d / 2} width={w} height={d}
         fill={color} opacity={0.45}
-        stroke="#3b82f6" strokeWidth={1.5 / scale}
+        stroke={stroke} strokeWidth={1.5 / scale}
         dash={[8 / scale, 4 / scale]}
         cornerRadius={3 / scale}
       />
+      {stacking && (
+        <Text
+          text="↑ stack"
+          fontSize={11 / scale}
+          fill="#f59e0b"
+          x={-w / 2} y={-d / 2 - 14 / scale}
+          width={w} align="center"
+          listening={false}
+        />
+      )}
     </Group>
   )
 }

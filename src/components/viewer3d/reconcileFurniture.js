@@ -10,6 +10,7 @@ import { kelvinToRgb } from '../../utils/colorTemp'
 import { buildStairsGeometry } from './stairsGeometry'
 import { buildRailingGeometry, buildStairRailingGeometry, buildSpiralRailingGeometry } from './railingGeometry'
 import { stairOpenSides } from './stairFloorHoles'
+import { resolveStackedYOffset } from '../canvas/stackGeometry'
 
 const WALL_HEIGHT = 2.4  // metres — matches sceneReconcilers
 const MAX_LIGHTS  = 8    // hard cap on active Three.js lights for performance
@@ -56,6 +57,11 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
 
   let assignedCount = 0
 
+  // Pre-index for stack resolution (parents looked up by id while walking the
+  // stackedOn chain). Built once per reconcile pass.
+  const furnitureById = new Map(furniture.map((x) => [x.id, x]))
+  const getAutoYOff = (x) => lightYOffset(x.type, x.height)
+
   for (const f of furniture) {
     present.add(f.id)
     const pos = konvaToFloor(f.x, f.y)
@@ -70,9 +76,10 @@ export function reconcileFurniture(scene, furniture, meshMap, lightMap = new Map
       : f.height
 
     // ── mesh group ──────────────────────────────────────────────────────────
-    // Wall-mounted items use mountHeight (bottom of item above floor level).
-    // Lighting items use their ceiling/floor offset. Everything else: 0.
-    const yOff = f.wallMounted ? (f.mountHeight ?? 1.2) : lightYOffset(f.type, f.height)
+    // yOff = bottom of this item's bounding box above the level floor.
+    // Resolution order: stack chain (recursive parent.top) > explicit
+    // `elevation` > wall-mount > lighting auto-offset > 0.
+    const yOff = resolveStackedYOffset(f, furnitureById, getAutoYOff)
     // tintColor is non-null only when the user has explicitly set a material
     // override — it's null when the piece uses its catalog default color so
     // the GLB's authored materials are left untouched.

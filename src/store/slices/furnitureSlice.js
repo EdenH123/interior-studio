@@ -117,7 +117,11 @@ export const createFurnitureSlice = (set) => ({
   },
   removeFurniture: (id) =>
     set((s) => ({
-      furniture: s.furniture.filter((f) => f.id !== id),
+      // Cascade: any item stacked on the removed one falls back to the floor
+      // (stackedOn cleared). Children keep their x/y where they were rendered.
+      furniture: s.furniture
+        .filter((f) => f.id !== id)
+        .map((f) => (f.stackedOn === id ? { ...f, stackedOn: null } : f)),
       selection: (() => {
         const items = (s.selection?.items ?? []).filter((i) => !(i.kind === 'furniture' && i.id === id))
         return items.length ? { items } : null

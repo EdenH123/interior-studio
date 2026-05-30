@@ -3,6 +3,7 @@ import { Group, Rect, Text, Line, Circle } from 'react-konva'
 import { PIXELS_PER_METER } from './constants'
 import { furnitureColorFor } from './furnitureMaterials'
 import { findWallSnap } from './wallSnapGeometry'
+import { findStackTarget } from './stackGeometry'
 import useStore from '../../store/useStore'
 
 const SELECTION_COLOR = '#3b82f6'
@@ -15,6 +16,9 @@ export default function Furniture({ item, selected, scale, onSelect, onShiftSele
   const dragOffset = useRef(null)
   // Rotation to apply on dragEnd when a wall snap is active.
   const pendingRotation = useRef(null)
+  // Stack target id captured during drag; applied on dragEnd. null when the
+  // drag should explicitly clear any existing stack relationship.
+  const pendingStackId = useRef(undefined)
   const w = item.width * PIXELS_PER_METER
   const d = item.depth * PIXELS_PER_METER
   const fill = furnitureColorFor(item)
@@ -32,6 +36,12 @@ export default function Furniture({ item, selected, scale, onSelect, onShiftSele
       onDragStart={(e) => {
         const p = e.target.getStage().getRelativePointerPosition()
         dragOffset.current = { dx: p.x - item.x, dy: p.y - item.y }
+        // Stack-detect only when this item is the SOLE furniture in the
+        // current selection — multi-drag is pure group-translate, so we
+        // freeze any existing stackedOn relationships.
+        const sel = useStore.getState().selection?.items ?? []
+        const furnInSel = sel.filter((i) => i.kind === 'furniture')
+        dragOffset.current.allowStack = furnInSel.length <= 1
         onDragStart?.(item.id, { x: item.x, y: item.y })
       }}
       onDragMove={(e) => {
@@ -41,13 +51,23 @@ export default function Furniture({ item, selected, scale, onSelect, onShiftSele
         const worldY = p.y - dragOffset.current.dy
         e.target.x(worldX)
         e.target.y(worldY)
-        // Wall snap: override position if within threshold of a wall face.
-        if (!item.wallMounted) {
-          // Read walls lazily at drag time so this component doesn't hold a
-          // standing subscription that re-renders every instance on any wall edit.
+        // Read state lazily at drag time so this component doesn't hold a
+        // standing subscription that re-renders every instance on any edit.
+        const state = useStore.getState()
+        // Stack-on-furniture beats wall snap: when the cursor is INSIDE another
+        // furniture's footprint, defer to stacking (don't pull to a wall edge).
+        if (!item.wallMounted && dragOffset.current.allowStack) {
+          const stackTarget = findStackTarget({ x: worldX, y: worldY }, item, state.furniture)
+          if (stackTarget) {
+            pendingStackId.current = stackTarget.id
+            pendingRotation.current = null
+            return
+          }
+          pendingStackId.current = null  // dragged off any stack target
+          // Wall snap: override position if within threshold of a wall face.
           const wallSnap = findWallSnap(
             { x: worldX, y: worldY, width: item.width, depth: item.depth, rotation: item.rotation },
-            useStore.getState().walls,
+            state.walls,
             scale,
           )
           if (wallSnap) {
@@ -64,11 +84,25 @@ export default function Furniture({ item, selected, scale, onSelect, onShiftSele
         const finalX = node.x()
         const finalY = node.y()
         const finalRotation = pendingRotation.current
+        const stackId = pendingStackId.current
         dragOffset.current = null
         pendingRotation.current = null
-        onDragEnd?.(item.id, finalRotation != null
-          ? { x: finalX, y: finalY, rotation: finalRotation }
-          : { x: finalX, y: finalY })
+        pendingStackId.current = undefined
+        const patch = { x: finalX, y: finalY }
+        if (finalRotation != null) patch.rotation = finalRotation
+        // Stacking: only single-furniture drags can stack (multi-drag is
+        // pure translate). stackId === null means "drag explicitly cleared
+        // any prior stack"; undefined means "no stacking activity this drag".
+        if (stackId !== undefined) {
+          patch.stackedOn = stackId
+          if (stackId) {
+            const parent = useStore.getState().furniture.find((f) => f.id === stackId)
+            if (parent) patch.levelId = parent.levelId
+            // Clear manual elevation so the stack chain owns Y unambiguously.
+            patch.elevation = null
+          }
+        }
+        onDragEnd?.(item.id, patch)
       }}
       onMouseDown={(e) => {
         if (e.evt.button === 0) {

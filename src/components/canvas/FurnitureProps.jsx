@@ -44,6 +44,11 @@ export default function FurnitureProps({ item, onUpdate }) {
       <Row label={t('furniture.position')} value={`${formatMeters(item.x)}, ${formatMeters(item.y)}`} />
       <Row label={t('furniture.model')} value={describeModelStatus(item.model ?? item.customModelId, t)} />
       {item.wallMounted && <MountHeightField item={item} onUpdate={onUpdate} />}
+      {!item.wallMounted && !item.stairStyle && !item.railingStyle && (
+        item.stackedOn
+          ? <StackedOnRow item={item} onUpdate={onUpdate} />
+          : <ElevationField item={item} onUpdate={onUpdate} />
+      )}
 
       {spec?.parts?.length > 0 && (
         <div className="mt-3">
@@ -151,6 +156,64 @@ function MountHeightField({ item, onUpdate }) {
         <span className="text-gray-500 text-[10px]">{t('furniture.above_floor')}</span>
       </div>
     </label>
+  )
+}
+
+function ElevationField({ item, onUpdate }) {
+  const { t } = useTranslation()
+  const initial = (item.elevation ?? 0).toFixed(2)
+  const [val, setVal] = useState(initial)
+  useEffect(() => { setVal((item.elevation ?? 0).toFixed(2)) }, [item.elevation])
+
+  function commit() {
+    const m = parseFloat(val)
+    if (!isFinite(m) || m < 0 || m > 20) { setVal((item.elevation ?? 0).toFixed(2)); return }
+    const rounded = Math.round(m * 100) / 100
+    // 0 → null so item falls back to its natural auto-offset (lighting) / floor.
+    onUpdate(item.id, { elevation: rounded > 0 ? rounded : null })
+    setVal(rounded.toFixed(2))
+  }
+
+  return (
+    <label className="block mt-2">
+      <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('furniture.elevation')}</span>
+      <div className="flex items-center gap-2 mt-1">
+        <input
+          type="number" step="0.05" min="0" max="20"
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commit() }
+            if (e.key === 'Escape') { e.preventDefault(); setVal((item.elevation ?? 0).toFixed(2)); e.currentTarget.blur() }
+          }}
+          dir="ltr"
+          className="w-20 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-200 text-sm font-mono focus:border-blue-500 focus:outline-none"
+        />
+        <span className="text-gray-500 text-[10px]">{t('furniture.above_floor')}</span>
+      </div>
+    </label>
+  )
+}
+
+function StackedOnRow({ item, onUpdate }) {
+  const { t } = useTranslation()
+  const parent = useStore((s) => s.furniture.find((f) => f.id === item.stackedOn))
+  const parentSpec = parent ? getFurnitureSpec(parent.type) : null
+  const parentLabel = parentSpec?.label ?? parent?.label ?? parent?.type ?? '—'
+  return (
+    <div className="mt-2 flex items-center justify-between py-1 border-b border-gray-800">
+      <span className="text-gray-500 text-[11px] uppercase tracking-wider">{t('furniture.stacked_on')}</span>
+      <div className="flex items-center gap-2">
+        <span className="text-gray-200 text-[12px] font-mono truncate max-w-[110px]">{parentLabel}</span>
+        <button
+          onClick={() => onUpdate(item.id, { stackedOn: null })}
+          className="text-[10px] text-gray-400 hover:text-gray-200 underline"
+        >
+          {t('furniture.unstack')}
+        </button>
+      </div>
+    </div>
   )
 }
 
