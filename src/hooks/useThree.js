@@ -182,9 +182,9 @@ export default function useThree(containerRef) {
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping  = true
     controls.zoomSpeed      = 0.8   // slightly slower than default to match 2D wheel feel
-    controls.panSpeed       = 0.8
-    controls.minDistance    = 1.5   // ~75 Konva px ≈ close zoom limit
-    controls.maxDistance    = 80    // ~4000 Konva px ≈ far zoom limit
+    controls.panSpeed       = 2.0   // higher right-drag pan sensitivity
+    controls.minDistance    = 0.4   // ~20 Konva px ≈ very close zoom-in
+    controls.maxDistance    = 200   // ~10 000 Konva px ≈ far zoom-out
     controls.target.set(0, 1, 0)
     controls.update()
 
