@@ -364,10 +364,12 @@ export default function useThree(containerRef) {
       const lvWalls = walls.filter((w) => (w.levelId ?? activeLevel) === lv.id)
       const lvRooms = detectRooms(lvWalls).map((r) => ({ ...r, id: `${lv.id}:${r.id}`, levelId: lv.id }))
       const isStairItem = (f) => f.stairStyle != null || f.type === 'stairs'
-      // Derive "arrives at lv" — use stored toLevel when set; fall back to
-      // level-order when toLevel is null (stair placed before the floor existed).
+      // Derive "arrives at lv". Use stored toLevel when it points to a real
+      // level; fall back to "the level directly above where the stair lives"
+      // when toLevel is missing OR stale (e.g., the target level was deleted).
+      const levelIdSet = new Set(sortedLevels.map((l) => l.id))
       const stairArrivesAt = (f) => {
-        if (f.toLevel != null) return f.toLevel === lv.id
+        if (f.toLevel != null && levelIdSet.has(f.toLevel)) return f.toLevel === lv.id
         const fromIdx = sortedLevels.findIndex((l) => l.id === (f.levelId ?? activeLevel))
         return fromIdx >= 0 && fromIdx + 1 < sortedLevels.length && sortedLevels[fromIdx + 1].id === lv.id
       }
