@@ -24,6 +24,7 @@ export default function useCanvasKeyboard() {
   const removeVoid = useStore((s) => s.removeVoid)
   const cancelVoidDraft = useStore((s) => s.cancelVoidDraft)
   const finishVoidDraft = useStore((s) => s.finishVoidDraft)
+  const cancelPaste = useStore((s) => s.cancelPaste)
   const rotateFurniture = useStore((s) => s.rotateFurniture)
   const cancelCalibration = useStore((s) => s.cancelCalibration)
   const selectAll = useStore((s) => s.selectAll)
@@ -52,6 +53,7 @@ export default function useCanvasKeyboard() {
         cancelAreaDraft()
         cancelPoolDraft()
         cancelVoidDraft()
+        cancelPaste()
         if (calibration) cancelCalibration()
         else { setDrawStart(null); clearSelection() }
       }
@@ -141,5 +143,5 @@ export default function useCanvasKeyboard() {
     }
     window.addEventListener('keydown', down)
     return () => window.removeEventListener('keydown', down)
-  }, [selection, calibration, walkthrough, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, removeArea, cancelAreaDraft, finishAreaDraft, removePool, cancelPoolDraft, finishPoolDraft, removeVoid, cancelVoidDraft, finishVoidDraft, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement, furniture, walls, openings, setClipboard, pasteClipboard, pushToast, toggleShortcuts, toggleActiveTool, toggle3d])
+  }, [selection, calibration, walkthrough, setDrawStart, clearSelection, removeWall, removeFurniture, removeOpening, removeArea, cancelAreaDraft, finishAreaDraft, removePool, cancelPoolDraft, finishPoolDraft, removeVoid, cancelVoidDraft, finishVoidDraft, cancelPaste, rotateFurniture, cancelCalibration, selectAll, clearPendingPlacement, furniture, walls, openings, setClipboard, pasteClipboard, pushToast, toggleShortcuts, toggleActiveTool, toggle3d])
 }
