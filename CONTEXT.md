@@ -843,6 +843,10 @@ interior-studio/
   - The void floor-hole machinery only cut **detected rooms** on the level above (walls-derived). If the upper floor was an outdoor **area** (drawn polygon) — common case for an outdoor mezzanine / second-floor patio — the void had no effect on it, so it cut the ceiling of level X but not the floor of level X+1. The areas effect now also cuts each area's floor with voids from the level directly below (mirroring how it already cuts area floors with same-level pools). Pool cutting on areas was also tightened to same-level pools only.
   - 512 tests still passing.
 
+- [x] Fix: placing objects on top of a selected wall in 2D did nothing (2026-05-30)
+  - PR #86 (translate-selection by dragging a selected wall) set `e.cancelBubble = true` in `Wall.jsx onMouseDown` whenever the wall was selected, so the Stage's `onMouseDown` handler — which is where `pendingPlacement` and the pasted-paste `commitPaste` get applied — never saw the click when the user clicked on top of an already-selected wall. The user perceived this as "place objects in 2D doesn't work / snaps and crashes" because clicks were being silently swallowed by selected walls. Fix: `Wall.jsx` accepts a new `placing` prop (set by `CanvasArea.jsx` to `!!pendingPlacement || !!pendingPaste`) and bails out of the translate-drag setup AND the click-to-select handler when it's true, so the click reaches the Stage handler that drops the item / commits the paste. Translate-drag still works any other time.
+  - Build green, 512 tests still passing.
+
 ### 🚧 In Progress
 - (nothing active)
 

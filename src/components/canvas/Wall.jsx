@@ -9,7 +9,7 @@ import { wallColorFor } from './wallMaterials'
 //
 // Selection + delete handlers live on the Group so clicks on any segment
 // of the wall behave identically.
-export default function Wall({ wall, segments, onContextMenu, onClick, onShiftSelect, onTranslateDrag, selected, drawMode }) {
+export default function Wall({ wall, segments, onContextMenu, onClick, onShiftSelect, onTranslateDrag, selected, drawMode, placing }) {
   const stroke = selected ? '#3b82f6' : wallColorFor(wall)
   const sw = WALL_THICKNESS
   const hit = Math.max(WALL_THICKNESS, 16)
@@ -27,6 +27,9 @@ export default function Wall({ wall, segments, onContextMenu, onClick, onShiftSe
   const onMouseDown = (e) => {
     if (e.evt.button !== 0) return
     if (!selected || drawMode) return
+    // Placement / paste flows want the click to reach the stage handler so the
+    // item drops at this exact point — don't intercept for translate-drag.
+    if (placing) return
     if (e.evt.shiftKey || !onTranslateDrag) return
     e.cancelBubble = true
     const stage = e.target.getStage()
@@ -58,6 +61,9 @@ export default function Wall({ wall, segments, onContextMenu, onClick, onShiftSe
           // chain from the projected point on the wall, handled by the
           // stage's onMouseDown. Skip selection here so the click only draws.
           if (drawMode || e.evt.altKey) return
+          // Same idea for placement / paste — the click already committed
+          // the item via the stage handler; don't also re-select the wall.
+          if (placing) return
           if (e.evt.shiftKey) onShiftSelect?.(wall.id)
           else onClick?.(wall.id)
         }
