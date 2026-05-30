@@ -180,12 +180,17 @@ export default function CanvasArea() {
     const sorted = [...levels].sort((a, b) => a.order - b.order)
     const activeIdx = sorted.findIndex((l) => l.id === activeLevel)
     if (activeIdx <= 0) return []
+    const belowId = sorted[activeIdx - 1].id
+    const levelIds = new Set(sorted.map((l) => l.id))
     const isStair = (f) => f.stairStyle != null || f.type === 'stairs'
     return allFurniture.filter((f) => {
       if (!isStair(f)) return false
-      if (f.toLevel != null) return f.toLevel === activeLevel
-      const fromIdx = sorted.findIndex((l) => l.id === (f.levelId ?? sorted[0]?.id))
-      return fromIdx >= 0 && fromIdx + 1 === activeIdx
+      // A stair "arrives at" the active level when its toLevel matches.
+      // Fall back to "the level directly above where the stair lives" when
+      // toLevel is missing OR points to a level that no longer exists
+      // (legacy data / deleted level).
+      if (f.toLevel != null && levelIds.has(f.toLevel)) return f.toLevel === activeLevel
+      return (f.levelId ?? sorted[0]?.id) === belowId
     })
   }, [levels, activeLevel, allFurniture])
 
