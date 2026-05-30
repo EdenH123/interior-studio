@@ -104,6 +104,7 @@ export default function CanvasArea() {
   const selection = useStore((s) => s.selection)
   const removeWall = useStore((s) => s.removeWall)
   const moveWallVertices = useStore((s) => s.moveWallVertices)
+  const translateSelection = useStore((s) => s.translateSelection)
   const moveAreaVertices = useStore((s) => s.moveAreaVertices)
   const updateFurniture = useStore((s) => s.updateFurniture)
   const removeFurniture = useStore((s) => s.removeFurniture)
@@ -413,6 +414,7 @@ export default function CanvasArea() {
                 drawMode={activeTool !== 'select'}
                 onClick={(id) => select('wall', id)}
                 onShiftSelect={(id) => addToSelection('wall', id)}
+                onTranslateDrag={translateSelection}
                 onContextMenu={removeWall} />
             ))}
             {layers.walls && walls.map((w) => (

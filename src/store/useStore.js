@@ -146,6 +146,38 @@ const useStore = create(persist(
         }
       }),
 
+    // Bulk-translate every selected item by (dx, dy) in one set — used by the
+    // "drag a selected wall to move the whole selection" interaction so a
+    // pasted cluster (walls + furniture + openings + areas/pools/voids) moves
+    // as a rigid group. Openings have positions normalised along their wall,
+    // so they naturally ride the wall without being touched here.
+    translateSelection: (dx, dy) =>
+      set((s) => {
+        const items = s.selection?.items ?? []
+        if (items.length === 0 || (dx === 0 && dy === 0)) return s
+        const wIds = new Set(), fIds = new Set(), aIds = new Set(), pIds = new Set(), vIds = new Set()
+        for (const it of items) {
+          if (it.kind === 'wall')      wIds.add(it.id)
+          else if (it.kind === 'furniture') fIds.add(it.id)
+          else if (it.kind === 'area')      aIds.add(it.id)
+          else if (it.kind === 'pool')      pIds.add(it.id)
+          else if (it.kind === 'void')      vIds.add(it.id)
+        }
+        const shift = (v) => ({ x: v.x + dx, y: v.y + dy })
+        return {
+          walls: wIds.size ? s.walls.map((w) => wIds.has(w.id)
+            ? { ...w, x1: w.x1 + dx, y1: w.y1 + dy, x2: w.x2 + dx, y2: w.y2 + dy } : w) : s.walls,
+          furniture: fIds.size ? s.furniture.map((f) => fIds.has(f.id)
+            ? { ...f, x: f.x + dx, y: f.y + dy } : f) : s.furniture,
+          areas: aIds.size ? s.areas.map((a) => aIds.has(a.id)
+            ? { ...a, verts: a.verts.map(shift) } : a) : s.areas,
+          pools: pIds.size ? s.pools.map((p) => pIds.has(p.id)
+            ? { ...p, verts: p.verts.map(shift) } : p) : s.pools,
+          voids: vIds.size ? s.voids.map((v) => vIds.has(v.id)
+            ? { ...v, verts: v.verts.map(shift) } : v) : s.voids,
+        }
+      }),
+
     // Cmd+V enters a "pending paste" mode: a ghost preview follows the cursor
     // and a canvas click drops the items there. The anchor is the bbox centre
     // of all furniture positions + wall endpoints; openings ride their walls
