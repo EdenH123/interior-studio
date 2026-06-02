@@ -97,11 +97,16 @@ export function rayHitsWalls(posXZ, dirXZ, walls, maxDist, opts = {}) {
 export function stairGroundY(playerX, playerZ, stair, margin = 0.1) {
   const dx = playerX - stair.cx
   const dz = playerZ - stair.cz
-  // Inverse of Y rotation by `yaw` — world to local.
+  // World→local: rotate by -yaw around Y. Three.js Y-rotation matrix has
+  //   x' =  cosθ·x + sinθ·z
+  //   z' = -sinθ·x + cosθ·z
+  // so applying R_Y(-yaw) to (dx, dz):
+  //   localX =  cos(yaw)·dx − sin(yaw)·dz
+  //   localZ =  sin(yaw)·dx + cos(yaw)·dz
   const cosY = Math.cos(stair.yaw)
   const sinY = Math.sin(stair.yaw)
-  const localX = dx * cosY + dz * sinY
-  const localZ = -dx * sinY + dz * cosY
+  const localX = cosY * dx - sinY * dz
+  const localZ = sinY * dx + cosY * dz
   const halfW = stair.width / 2 + margin
   const halfD = stair.depth / 2 + margin
   if (Math.abs(localX) > halfW || Math.abs(localZ) > halfD) return null

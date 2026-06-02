@@ -226,10 +226,18 @@ describe('stairGroundY', () => {
     expect(stairGroundY(0, 0, upper)).toBeCloseTo(3.6)  // 2.4 + 1.2 ramp
   })
 
-  it('handles rotated stairs (yaw 90° → climbing axis is world -X)', () => {
+  it('handles rotated stairs (yaw +90° → climbing axis is world +X)', () => {
+    // Three.js R_Y(+π/2) takes local +Z (climb axis) to world +X. So the TOP of
+    // the stair sits at world (+1.5, 0) and the BOTTOM at world (−1.5, 0).
     const rotated = { ...STAIR, yaw: Math.PI / 2 }
-    // Three.js Y rotation is CCW from above. After +90° rotation, the stair's
-    // local +Z axis (top of stairs) maps to world -X.
+    expect(stairGroundY(1.5, 0, rotated)).toBeCloseTo(2.4)
+    expect(stairGroundY(-1.5, 0, rotated)).toBeCloseTo(0)
+  })
+
+  it('handles Konva-rotated stairs (yaw −π/2, the real flow) — climb axis world −X', () => {
+    // Konva top-down rotation of +90° → konvaRotationToThreeY = −π/2 → climb
+    // direction world −X. Player standing on world (−1.5, 0) is at the TOP.
+    const rotated = { ...STAIR, yaw: -Math.PI / 2 }
     expect(stairGroundY(-1.5, 0, rotated)).toBeCloseTo(2.4)
     expect(stairGroundY(1.5, 0, rotated)).toBeCloseTo(0)
   })
